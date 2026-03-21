@@ -113,9 +113,11 @@ class Player {
       }
     }
 
-    // 캔버스 경계 클램프
-    this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
-    this.y = Math.max(this.collisionRadius, Math.min(600 - this.collisionRadius, this.y))
+    // 월드 경계 클램프
+    const WW = window.WORLD_W || 800
+    const WH = window.WORLD_H || 600
+    this.x = Math.max(this.collisionRadius, Math.min(WW - this.collisionRadius, this.x))
+    this.y = Math.max(this.collisionRadius, Math.min(WH - this.collisionRadius, this.y))
 
     // GameState 동기화
     if (window.GameState) {
@@ -198,8 +200,10 @@ class Player {
     const len = Math.sqrt(dx * dx + dy * dy) || 1
     this.x += (dx / len) * distance
     this.y += (dy / len) * distance
-    this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
-    this.y = Math.max(this.collisionRadius, Math.min(600 - this.collisionRadius, this.y))
+    const WW2 = window.WORLD_W || 800
+    const WH2 = window.WORLD_H || 600
+    this.x = Math.max(this.collisionRadius, Math.min(WW2 - this.collisionRadius, this.x))
+    this.y = Math.max(this.collisionRadius, Math.min(WH2 - this.collisionRadius, this.y))
   }
 
   // ── 렌더링 ──

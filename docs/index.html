@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dev Survivor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -250,9 +253,11 @@ class Player {
       }
     }
 
-    // 캔버스 경계 클램프
-    this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
-    this.y = Math.max(this.collisionRadius, Math.min(600 - this.collisionRadius, this.y))
+    // 월드 경계 클램프
+    const WW = window.WORLD_W || 800
+    const WH = window.WORLD_H || 600
+    this.x = Math.max(this.collisionRadius, Math.min(WW - this.collisionRadius, this.x))
+    this.y = Math.max(this.collisionRadius, Math.min(WH - this.collisionRadius, this.y))
 
     // GameState 동기화
     if (window.GameState) {
@@ -335,8 +340,10 @@ class Player {
     const len = Math.sqrt(dx * dx + dy * dy) || 1
     this.x += (dx / len) * distance
     this.y += (dy / len) * distance
-    this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
-    this.y = Math.max(this.collisionRadius, Math.min(600 - this.collisionRadius, this.y))
+    const WW2 = window.WORLD_W || 800
+    const WH2 = window.WORLD_H || 600
+    this.x = Math.max(this.collisionRadius, Math.min(WW2 - this.collisionRadius, this.x))
+    this.y = Math.max(this.collisionRadius, Math.min(WH2 - this.collisionRadius, this.y))
   }
 
   // ── 렌더링 ──
@@ -1364,7 +1371,7 @@ function updateAndRenderEffects(ctx, deltaTime) {
     } else if (e.type === 'float') {
       const floatY = e.y - (1 - alpha) * 36
       ctx.fillStyle = e.color
-      ctx.font = e.font || 'bold 14px monospace'
+      ctx.font = e.font || 'bold 10px "Press Start 2P", monospace'
       ctx.textAlign = 'center'
       ctx.shadowColor = e.color
       ctx.shadowBlur = 6
@@ -1640,7 +1647,7 @@ class SkillManager {
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 16px monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 10px "Press Start 2P", monospace' })
   }
 
   // 피규어 청소하기: 받는 피해 -40% (4초), 주변 150px 적 넉백 120px, 쿨 12초
@@ -1670,7 +1677,7 @@ class SkillManager {
     p.heal(healAmt)
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 18px monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 12px "Press Start 2P", monospace' })
   }
 
   // 낮잠자기: 이동 1.5초 정지 후 HP 50% 회복, 쿨 30초
@@ -1679,7 +1686,7 @@ class SkillManager {
     this.player.applyBuff('speed', 0, 1.5)
     this.napTimer = 1.5
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
-    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
+    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 12px "Press Start 2P", monospace' })
   }
 }
 
@@ -1705,124 +1712,152 @@ if (window.Game && Game.player) {
   <!-- systems/tilemap.js -->
   <script>
 /**
- * systems/tilemap.js — Modern tiles Room_Builder 타일맵 배경 렌더러
+ * systems/tilemap.js — 스크롤 가능한 2400×1800 오피스 월드
  * 타일셋: assets/backgrounds/tileset_room.png (272×368, 17×23 tiles, 16px each)
- * 캔버스: 800×600, 타일 스케일 2× → 32px 표시
- *
- * 타일 좌표 (col, row) — 0-indexed, tileset 기준
- * Row_Builder 레이아웃 추정:
- *   row 0: 빈 타일 / 벽 상단
- *   row 1: 바닥 타일 (기본)
- *   row 2: 바닥 타일 변형
- *   row 3~: 벽/가구
+ * 캔버스: 800×600 (뷰포트), 월드: 2400×1800
+ * 타일 스케일 2× → 32px 표시
  */
 
+window.WORLD_W = 2400
+window.WORLD_H = 1800
+
 window.TilemapSystem = (() => {
-  const TILE = 16
+  const TILE  = 16
   const SCALE = 2
   const TSIZE = TILE * SCALE  // 32px
 
-  // 캔버스 25×19 타일 (800/32=25, 600/32=18.75)
-  const COLS = 25
-  const ROWS = 19
+  const WORLD_COLS = window.WORLD_W / TSIZE  // 75
+  const WORLD_ROWS = window.WORLD_H / TSIZE  // 56
 
   // ─── 타일셋 좌표 상수 (col, row) ──────────────────────────
-  // Room_Builder_free_16x16.png 17열×23행
-  // 오피스 배경에 맞게 추정한 타일 좌표
   const T = {
-    FLOOR:      [0, 1],   // 기본 바닥
-    FLOOR_ALT:  [1, 1],   // 바닥 변형
-    FLOOR_DARK: [2, 1],   // 어두운 바닥
-    WALL_TOP:   [0, 0],   // 상단 벽
-    WALL_SIDE:  [3, 0],   // 측면 벽
-    CORNER_TL:  [0, 2],   // 모서리
-    CORNER_TR:  [2, 2],
-    CORNER_BL:  [0, 4],
-    CORNER_BR:  [2, 4],
-    DESK:       [4, 3],   // 책상
-    PLANT:      [8, 2],   // 화분
-    CARPET:     [5, 1],   // 카펫
+    FLOOR:      [0, 1],
+    FLOOR_ALT:  [1, 1],
+    FLOOR_DARK: [2, 1],
+    WALL_TOP:   [0, 0],
+    CARPET:     [5, 1],
   }
 
-  // ─── 타일맵 정의 (25×19) ──────────────────────────────────
-  // F=바닥, W=벽(상단), A=바닥변형, D=어두운바닥
-  // 상단 2행은 HUD가 가리므로 벽 처리
-  const F = 'F', A = 'A', D = 'D', W = 'W', C = 'C'  // C=카펫
+  // ─── 세계 타일맵 생성 ────────────────────────────────────
+  // 여러 오피스 구역이 이어지는 대형 맵
+  // F=기본바닥  A=변형바닥  D=어두운바닥  C=카펫  W=벽
+  const F = 'F', A = 'A', D = 'D', C = 'C', W = 'W'
 
-  const MAP = [
-    // row 0 (HUD 아래, y=0)
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    // row 1
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 2
-    [W,F,C,C,C,F,F,F,A,A,A,A,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 3
-    [W,F,C,C,C,F,F,F,A,A,A,A,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 4
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 5
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 6
-    [W,F,A,A,A,A,F,F,F,C,C,C,F,F,F,A,A,A,A,F,F,F,F,F,W],
-    // row 7
-    [W,F,A,A,A,A,F,F,F,C,C,C,F,F,F,A,A,A,A,F,F,F,F,F,W],
-    // row 8
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 9 (중간)
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 10
-    [W,F,D,D,F,F,F,A,A,A,A,F,F,F,C,C,C,F,F,F,D,D,F,F,W],
-    // row 11
-    [W,F,D,D,F,F,F,A,A,A,A,F,F,F,C,C,C,F,F,F,D,D,F,F,W],
-    // row 12
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 13
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 14
-    [W,F,C,C,C,F,F,F,A,A,A,F,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 15
-    [W,F,C,C,C,F,F,F,A,A,A,F,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 16
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 17 (HUD 바닥 근처)
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 18
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-  ]
+  // 75×56 맵을 구역별로 생성
+  function _buildWorldMap() {
+    const map = []
+    for (let r = 0; r < WORLD_ROWS; r++) {
+      map.push(new Array(WORLD_COLS).fill(F))
+    }
 
-  // 타일 코드 → tileset (col, row) 매핑
-  const TILE_LOOKUP = {
-    F: T.FLOOR,
-    A: T.FLOOR_ALT,
-    D: T.FLOOR_DARK,
-    W: T.WALL_TOP,
-    C: T.CARPET,
+    // 벽 경계 (맵 전체 테두리)
+    for (let c = 0; c < WORLD_COLS; c++) {
+      map[0][c] = W; map[WORLD_ROWS - 1][c] = W
+    }
+    for (let r = 0; r < WORLD_ROWS; r++) {
+      map[r][0] = W; map[r][WORLD_COLS - 1] = W
+    }
+
+    // ── 구역 1: 개발팀 오피스 (좌상단) ────────────────
+    // 책상 구역 (카펫 패턴)
+    _fillRect(map, 2, 2, 20, 8, C)
+    _fillRect(map, 3, 3, 4, 3, A)    // 책상 1
+    _fillRect(map, 9, 3, 4, 3, A)    // 책상 2
+    _fillRect(map, 15, 3, 4, 3, A)   // 책상 3
+
+    // 구역 2: 회의실 (상단 중앙)
+    _fillRect(map, 26, 2, 22, 12, D)
+    _fillRect(map, 29, 4, 16, 7, C)  // 회의 테이블
+
+    // 구역 3: 서버실 (상단 우측)
+    _fillRect(map, 52, 2, 20, 10, D)
+    _fillRect(map, 54, 4, 4, 6, A)
+    _fillRect(map, 60, 4, 4, 6, A)
+    _fillRect(map, 66, 4, 4, 6, A)
+
+    // ── 구역 4: 메인 오픈플랜 오피스 (중앙) ──────────
+    _fillRect(map, 2, 14, 70, 24, F)
+    // 책상 군집들 (중앙)
+    for (let group = 0; group < 4; group++) {
+      const baseC = 6 + group * 17
+      const baseR = 16
+      _fillRect(map, baseC,   baseR, 5, 4, C)
+      _fillRect(map, baseC+8, baseR, 5, 4, C)
+      _fillRect(map, baseC,   baseR+7, 5, 4, C)
+      _fillRect(map, baseC+8, baseR+7, 5, 4, C)
+      // 개인 책상 (변형 바닥)
+      _fillRect(map, baseC+1,   baseR+1, 3, 2, A)
+      _fillRect(map, baseC+9,   baseR+1, 3, 2, A)
+      _fillRect(map, baseC+1,   baseR+8, 3, 2, A)
+      _fillRect(map, baseC+9,   baseR+8, 3, 2, A)
+    }
+
+    // ── 구역 5: 휴게실 (하단 좌측) ───────────────────
+    _fillRect(map, 2, 40, 20, 14, C)
+    _fillRect(map, 4, 42, 8, 5, A)   // 소파/테이블 구역
+    _fillRect(map, 14, 42, 5, 5, D)  // 자판기 구역
+
+    // ── 구역 6: 중간 복도 ─────────────────────────────
+    _fillRect(map, 2, 12, 70, 2, D)   // 수평 복도
+    _fillRect(map, 2, 38, 70, 2, D)   // 수평 복도 2
+    _fillRect(map, 36, 2,  2, 52, D)  // 수직 복도
+
+    // ── 구역 7: 기획팀 오피스 (중앙 우측) ────────────
+    _fillRect(map, 40, 14, 30, 24, F)
+    _fillRect(map, 42, 16, 12, 8, C)
+    _fillRect(map, 58, 16, 10, 8, C)
+    _fillRect(map, 42, 27, 12, 8, A)
+    _fillRect(map, 58, 27, 10, 8, A)
+
+    // ── 구역 8: 보스룸 (하단 우측) ───────────────────
+    _fillRect(map, 52, 40, 20, 14, D)
+    _fillRect(map, 55, 43, 13, 8, C)  // 보스 책상 카펫
+
+    // ── 구역 9: 하단 복도 / 창고 ─────────────────────
+    _fillRect(map, 24, 40, 26, 14, F)
+    _fillRect(map, 26, 43, 8, 6, A)
+    _fillRect(map, 36, 43, 8, 6, D)
+
+    return map
   }
 
-  // ─── 타일셋 이미지 ─────────────────────────────────────────
+  function _fillRect(map, c, r, w, h, code) {
+    for (let dr = 0; dr < h; dr++) {
+      for (let dc = 0; dc < w; dc++) {
+        const row = r + dr, col = c + dc
+        if (row >= 0 && row < WORLD_ROWS && col >= 0 && col < WORLD_COLS) {
+          map[row][col] = code
+        }
+      }
+    }
+  }
+
+  const TILE_LOOKUP = { F: T.FLOOR, A: T.FLOOR_ALT, D: T.FLOOR_DARK, W: T.WALL_TOP, C: T.CARPET }
+
+  // ─── 타일셋 이미지 ─────────────────────────────────────
   const _img = new Image()
   _img.src = 'assets/backgrounds/tileset_room.png'
   let _loaded = false
   _img.onload = () => { _loaded = true }
 
-  // ─── 오프스크린 캔버스 (첫 로드 후 한 번 렌더 → 이후 blit) ─
+  // ─── 오프스크린 캔버스 (전체 월드 한 번 렌더 → blit) ──
   let _offscreen = null
-  let _offCtx = null
   let _baked = false
+  const _worldMap = _buildWorldMap()
 
   function _bake() {
     if (!_loaded) return
     _offscreen = document.createElement('canvas')
-    _offscreen.width  = 800
-    _offscreen.height = 600
-    _offCtx = _offscreen.getContext('2d')
-    _offCtx.imageSmoothingEnabled = false
+    _offscreen.width  = window.WORLD_W
+    _offscreen.height = window.WORLD_H
+    const offCtx = _offscreen.getContext('2d')
+    offCtx.imageSmoothingEnabled = false
 
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        const code = MAP[row]?.[col] ?? 'F'
+    for (let row = 0; row < WORLD_ROWS; row++) {
+      for (let col = 0; col < WORLD_COLS; col++) {
+        const code = _worldMap[row]?.[col] ?? 'F'
         const [tc, tr] = TILE_LOOKUP[code] ?? T.FLOOR
-        _offCtx.drawImage(
+        offCtx.drawImage(
           _img,
           tc * TILE, tr * TILE, TILE, TILE,
           col * TSIZE, row * TSIZE, TSIZE, TSIZE
@@ -1832,19 +1867,22 @@ window.TilemapSystem = (() => {
     _baked = true
   }
 
-  // ─── 공개 API ─────────────────────────────────────────────
+  // ─── 공개 API ─────────────────────────────────────────
   return {
-    render(ctx) {
+    // camX, camY: 뷰포트 카메라 위치 (월드 좌표)
+    render(ctx, camX, camY) {
+      const cx = camX || 0, cy = camY || 0
       if (!_baked) {
         if (_loaded) _bake()
         else {
-          // 폴백: 단색 배경
           ctx.fillStyle = '#1a1a2a'
           ctx.fillRect(0, 0, 800, 600)
           return
         }
       }
-      ctx.drawImage(_offscreen, 0, 0)
+      // 월드 오프스크린에서 뷰포트 영역만 blit
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(_offscreen, cx, cy, 800, 600, 0, 0, 800, 600)
     },
   }
 })()
@@ -1941,14 +1979,23 @@ class Spawner {
   }
 
   _randomEdgePosition() {
-    const margin = 30
+    const margin = 40
+    const camX = window.Camera?.x || 0
+    const camY = window.Camera?.y || 0
+    const WW = window.WORLD_W || 800
+    const WH = window.WORLD_H || 600
     const side = Math.floor(Math.random() * 4)
+    let x, y
     switch (side) {
-      case 0: return { x: Math.random() * 800, y: -margin }
-      case 1: return { x: Math.random() * 800, y: 600 + margin }
-      case 2: return { x: -margin, y: Math.random() * 600 }
-      case 3: return { x: 800 + margin, y: Math.random() * 600 }
+      case 0: x = camX + Math.random() * 800; y = camY - margin; break          // 위
+      case 1: x = camX + Math.random() * 800; y = camY + 600 + margin; break    // 아래
+      case 2: x = camX - margin; y = camY + Math.random() * 600; break          // 왼쪽
+      default: x = camX + 800 + margin; y = camY + Math.random() * 600; break   // 오른쪽
     }
+    // 월드 경계 클램프
+    x = Math.max(40, Math.min(WW - 40, x))
+    y = Math.max(40, Math.min(WH - 40, y))
+    return { x, y }
   }
 
   // game.js의 렌더 루프에서 호출
@@ -2249,11 +2296,11 @@ class LevelUpManager {
 
     // 제목
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 32px monospace'
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(`Level Up!  Lv ${GameState.playerLevel - 1} → ${GameState.playerLevel}`, 400, 160)
 
-    ctx.font = '16px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillStyle = '#aaaaaa'
     ctx.fillText('클릭하거나 1 / 2 / 3 키로 선택하세요', 400, 190)
 
@@ -2301,18 +2348,18 @@ class LevelUpManager {
 
       // 번호 레이블
       ctx.fillStyle = '#FFD700'
-      ctx.font = 'bold 14px monospace'
+      ctx.font = 'bold 10px "Press Start 2P", monospace'
       ctx.textAlign = 'center'
       ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 68)
 
       // 이름
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 14px monospace'
+      ctx.font = 'bold 10px "Press Start 2P", monospace'
       ctx.fillText(c.label, cx + cardW / 2, cy + 90)
 
       // 설명 (줄바꿈 처리)
       ctx.fillStyle = '#aaccff'
-      ctx.font = '11px monospace'
+      ctx.font = '8px "Press Start 2P", monospace'
       const maxW = cardW - 16
       this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 110, maxW, 16, true)
 
@@ -2532,6 +2579,30 @@ const MetaManager = {
     }
   },
 
+  // ── 메타 업그레이드 아이콘 매핑 ───────────────────────────────────────
+  _iconMap: {
+    '조금 더 버티기':     'assets/custom/icons/skill_emergency_fix.png',
+    '더 빠르게 움직이기': 'assets/custom/icons/skill_coffee.png',
+    '정리 속도 높이기':   'assets/custom/icons/skill_debug.png',
+    '빠른 판단':          'assets/custom/icons/skill_priority_sort.png',
+    '회복 습관':          'assets/custom/icons/skill_pet_dog.png',
+    '실수 줄이기':        'assets/custom/icons/skill_figure_clean.png',
+    '준비된 하루':        'assets/custom/icons/skill_autosave.png',
+    '손이 빨라짐':        'assets/custom/icons/skill_emergency_fix.png',
+    '성과 더 받기':       'assets/custom/icons/skill_priority_sort.png',
+    '시작부터 하나 더':   'assets/custom/icons/skill_nap.png',
+  },
+  _iconCache: {},
+  _getIcon(name) {
+    const src = this._iconMap[name]
+    if (!src) return null
+    if (!this._iconCache[name]) {
+      const img = new Image(); img.src = src
+      this._iconCache[name] = img
+    }
+    return this._iconCache[name]
+  },
+
   // ── 업그레이드 화면 렌더링 ─────────────────────────────────────────────
   _buyRects: [],
 
@@ -2552,10 +2623,10 @@ const MetaManager = {
     // 헤더
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 26px monospace'
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
     ctx.fillText('업그레이드', 400, 34)
     ctx.fillStyle = '#FFD700'
-    ctx.font = '15px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
 
     // 아이템 그리드 (2열 × 5행)
@@ -2582,30 +2653,44 @@ const MetaManager = {
       ctx.fillRect(bx, by, colW, rowH - 6)
       ctx.strokeRect(bx, by, colW, rowH - 6)
 
+      // 아이콘 (좌측)
+      const icon = this._getIcon(upg.name)
+      const iconSize = 28
+      if (icon?.complete && icon.naturalWidth > 0) {
+        ctx.save()
+        ctx.imageSmoothingEnabled = true
+        ctx.globalAlpha = maxed ? 1 : canBuy ? 0.9 : 0.4
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 5, iconSize, iconSize)
+        ctx.globalAlpha = 1
+        ctx.restore()
+      }
+
+      const textX = bx + (icon ? iconSize + 12 : 8)
+
       // 이름
       ctx.fillStyle = '#ddeeff'
-      ctx.font = 'bold 12px monospace'
+      ctx.font = 'bold 8px "Press Start 2P", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(upg.name, bx + 8, by + 18)
+      ctx.fillText(upg.name, textX, by + 18)
 
       // 레벨 별
       let stars = ''
       for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
       ctx.fillStyle = '#FFD700'
-      ctx.font = '12px monospace'
+      ctx.font = '8px "Press Start 2P", monospace'
       ctx.textAlign = 'right'
       ctx.fillText(stars, bx + colW - 8, by + 18)
 
       // 효과 설명
       ctx.fillStyle = '#778899'
-      ctx.font = '11px monospace'
+      ctx.font = '8px "Press Start 2P", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, bx + 8, by + 38)
+      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, textX, by + 38)
 
       // 구매 버튼 또는 MAX
       if (maxed) {
         ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 12px monospace'
+        ctx.font = 'bold 8px "Press Start 2P", monospace'
         ctx.textAlign = 'right'
         ctx.fillText('MAX', bx + colW - 8, by + 62)
         this._buyRects.push(null)
@@ -2618,7 +2703,7 @@ const MetaManager = {
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '11px monospace'
+        ctx.font = '8px "Press Start 2P", monospace'
         ctx.textAlign = 'center'
         if (canBuy) {
           ctx.fillStyle = '#ffffff'
@@ -2638,7 +2723,7 @@ const MetaManager = {
     ctx.fillRect(300, 540, 200, 44)
     ctx.strokeRect(300, 540, 200, 44)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 16px monospace'
+    ctx.font = 'bold 10px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 돌아가기 ]', 400, 568)
     ctx.textAlign = 'left'
@@ -2726,13 +2811,13 @@ class HUD {
     ctx.lineWidth = 1
     ctx.strokeRect(12, 12, 180, 16)
     ctx.fillStyle = '#fff'
-    ctx.font = '12px monospace'
+    ctx.font = '8px "Press Start 2P", monospace'
     ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 24)
 
     // 보호막 아이콘
     if (player.shields > 0) {
       ctx.fillStyle = '#44aaff'
-      ctx.font = '12px monospace'
+      ctx.font = '8px "Press Start 2P", monospace'
       ctx.fillText(`🛡 ${player.shields}`, 200, 24)
     }
 
@@ -2742,7 +2827,7 @@ class HUD {
     const secs = Math.floor(remaining % 60)
     const timeStr = `${mins}:${secs.toString().padStart(2,'0')}`
     ctx.fillStyle = remaining <= 30 ? '#ff4444' : '#ffffff'
-    ctx.font = 'bold 22px monospace'
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(timeStr, 400, 30)
     ctx.textAlign = 'left'
@@ -2753,12 +2838,12 @@ class HUD {
     ctx.fillStyle = '#44ffaa'
     ctx.fillRect(520, 12, 140 * (GameState.releaseProgress / 100), 10)
     ctx.fillStyle = '#aaa'
-    ctx.font = '11px monospace'
+    ctx.font = '8px "Press Start 2P", monospace'
     ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 522, 34)
 
     // 점수
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.textAlign = 'right'
     ctx.fillText(`${GameState.score.toLocaleString()}`, 788, 24)
     ctx.textAlign = 'left'
@@ -2805,13 +2890,13 @@ class HUD {
 
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
-        ctx.font = '11px monospace'
+        ctx.font = '8px "Press Start 2P", monospace'
         ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {
           ctx.fillStyle = '#ff8844'
-          ctx.font = 'bold 13px monospace'
+          ctx.font = 'bold 10px "Press Start 2P", monospace'
           ctx.textAlign = 'center'
           ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 68, sy + 36)
           ctx.textAlign = 'left'
@@ -2824,7 +2909,7 @@ class HUD {
           ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
         } else {
           ctx.fillStyle = '#44ff88'
-          ctx.font = '10px monospace'
+          ctx.font = '8px "Press Start 2P", monospace'
           ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
@@ -2833,7 +2918,7 @@ class HUD {
       ctx.fillStyle = 'rgba(0,0,0,0.65)'
       ctx.fillRect(sx + 2, sy + 2, 14, 13)
       ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
-      ctx.font = 'bold 10px monospace'
+      ctx.font = 'bold 8px "Press Start 2P", monospace'
       ctx.fillText(keys[i], sx + 4, sy + 13)
     }
 
@@ -2841,7 +2926,7 @@ class HUD {
     const allEmpty = !Game.skillManager?.slots?.some(Boolean)
     if (allEmpty) {
       ctx.fillStyle = '#556688'
-      ctx.font = '11px monospace'
+      ctx.font = '8px "Press Start 2P", monospace'
       ctx.textAlign = 'center'
       ctx.fillText('적을 처치해 경험치를 모으면 레벨업 시 스킬을 획득합니다', 250, 571)
       ctx.textAlign = 'left'
@@ -2851,7 +2936,7 @@ class HUD {
     const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     ctx.fillStyle = '#ccaaff'
-    ctx.font = 'bold 12px monospace'
+    ctx.font = 'bold 8px "Press Start 2P", monospace'
     ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
 
     const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
@@ -2870,7 +2955,7 @@ class HUD {
 
     // 처치 수
     ctx.fillStyle = '#aaa'
-    ctx.font = '11px monospace'
+    ctx.font = '8px "Press Start 2P", monospace'
     ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
   }
 
@@ -2965,29 +3050,29 @@ class Lobby {
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 48px monospace'
+    ctx.font = 'bold 16px "Press Start 2P", monospace'
     ctx.fillText('DEV', 400, 100)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 48px monospace'
+    ctx.font = 'bold 16px "Press Start 2P", monospace'
     ctx.fillText('SURVIVAL', 400, 150)
 
     // 부제
     ctx.fillStyle = '#7788aa'
-    ctx.font = '14px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 178)
 
     // 점수 / 포인트 (한 줄)
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 202)
     ctx.fillStyle = '#88ffaa'
     ctx.fillText(`출시 포인트: ${pts}`, 535, 202)
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
-    ctx.font = '12px monospace'
+    ctx.font = '8px "Press Start 2P", monospace'
     ctx.fillText('── 캐릭터 선택 ──', 400, 238)
 
     // 캐릭터 카드
@@ -3001,8 +3086,9 @@ class Lobby {
     ctx.fillRect(s.x, s.y, s.w, s.h)
     ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 20px monospace'
-    ctx.fillText('[ 시작하기 ]', 400, s.y + 30)
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + 30)
 
     // 업그레이드 버튼
     const u = this.upgradeBtnRect
@@ -3012,14 +3098,21 @@ class Lobby {
     ctx.fillRect(u.x, u.y, u.w, u.h)
     ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 15px monospace'
-    ctx.fillText('[ 업그레이드 ]', 400, u.y + 26)
+    ctx.font = 'bold 10px "Press Start 2P", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 26)
 
     // 조작 안내
-    ctx.fillStyle = '#556677'
-    ctx.font = '12px monospace'
-    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 514)
-    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 532)
+    ctx.fillStyle = '#aaccdd'
+    ctx.font = '8px "Press Start 2P", monospace'
+    ctx.textAlign = 'center'
+    // 텍스트 배경
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.fillRect(0, 503, 800, 40)
+    ctx.fillStyle = '#aaccdd'
+    ctx.fillText('WASD 이동  /  Q~R 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 519)
+    ctx.fillStyle = '#778899'
+    ctx.fillText('경험치를 쌓아 레벨업하고 스킬을 획득하세요', 400, 537)
 
     ctx.textAlign = 'left'
   }
@@ -3044,7 +3137,7 @@ class Lobby {
       // 선택 표시 (우상단 ▶)
       if (sel) {
         ctx.fillStyle = '#4488ff'
-        ctx.font = '9px monospace'
+        ctx.font = '8px "Press Start 2P", monospace'
         ctx.textAlign = 'right'
         ctx.fillText('▶', card.x + card.w - 5, card.y + 12)
       }
@@ -3077,18 +3170,18 @@ class Lobby {
         ctx.fillStyle = '#1a2240'
         ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
         ctx.fillStyle = '#334466'
-        ctx.font = '28px monospace'
+        ctx.font = '12px "Press Start 2P", monospace'
         ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
-      ctx.font = `bold 12px monospace`
+      ctx.font = `bold 8px "Press Start 2P", monospace`
       ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 14)
 
       // 서브라벨
       ctx.fillStyle = sel ? '#88aaff' : '#556677'
-      ctx.font = '10px monospace'
+      ctx.font = '8px "Press Start 2P", monospace'
       ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 2)
     }
 
@@ -3177,13 +3270,13 @@ class Result {
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 56px monospace'
+    ctx.font = 'bold 24px "Press Start 2P", monospace'
     ctx.shadowColor = '#FFD700'
     ctx.shadowBlur = 24
     ctx.fillText('배포 성공!', 400, 94)
     ctx.shadowBlur = 0
     ctx.fillStyle = '#88ff88'
-    ctx.font = '14px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
     ctx.restore()
 
@@ -3205,7 +3298,7 @@ class Result {
     const secs = Math.floor(t % 60)
     const prevRate = parseInt(localStorage.getItem('devSurvivor_survivalRate') || '30')
 
-    ctx.font = '13px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillStyle = '#aaddcc'
     ctx.textAlign = 'left'
     const sx = 222
@@ -3221,10 +3314,10 @@ class Result {
       const ry = 186 + i * 32
       ctx.fillStyle = '#aaddcc'
       ctx.textAlign = 'left'
-      ctx.font = '13px monospace'
+      ctx.font = '10px "Press Start 2P", monospace'
       ctx.fillText(label, sx, ry)
       ctx.fillStyle = i === 5 ? '#88ddff' : '#ffffff'
-      ctx.font = 'bold 13px monospace'
+      ctx.font = 'bold 10px "Press Start 2P", monospace'
       ctx.textAlign = 'right'
       ctx.fillText(val, 578, ry)
     })
@@ -3238,17 +3331,17 @@ class Result {
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 17px monospace'
+    ctx.font = 'bold 10px "Press Start 2P", monospace'
     ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 432)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
-    ctx.font = '12px monospace'
+    ctx.font = '8px "Press Start 2P", monospace'
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
     const r = this._winRestartRect, u = this._winUpgradeRect
     ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
     ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px monospace'
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 10px "Press Start 2P", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
 
     ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
@@ -3290,10 +3383,10 @@ class Result {
     ctx.save()
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
-    ctx.font = 'bold 128px monospace'
+    ctx.font = 'bold 32px "Press Start 2P", monospace'
     ctx.fillStyle = '#6b0000'
     ctx.fillText('AI', 400, 172)
-    ctx.font = 'bold 82px monospace'
+    ctx.font = 'bold 32px "Press Start 2P", monospace'
     ctx.fillStyle = '#b81010'
     ctx.fillText('승  리', 400, 266)
     ctx.restore()
@@ -3312,33 +3405,52 @@ class Result {
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // 다리 (가로로 뻗음)
-    ctx.fillStyle = '#2255cc'
-    ctx.fillRect(cx, cy - 5, 34, 10)
-    // 신발
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(cx + 32, cy - 6, 10, 6)
-    ctx.fillRect(cx + 32, cy + 3, 10, 6)
-    // 몸통
-    ctx.fillStyle = '#4488ff'
-    ctx.fillRect(cx - 24, cy - 9, 27, 18)
-    // 팔 (늘어진)
-    ctx.fillRect(cx - 32, cy + 3, 12, 7)
-    // 머리 (바닥에 붙음)
-    ctx.fillStyle = '#66aaff'
-    ctx.beginPath()
-    ctx.arc(cx - 30, cy - 2, 12, 0, Math.PI * 2)
-    ctx.fill()
-    // 눈물
+    // 선택된 캐릭터 스프라이트로 쓰러진 모습 표현
+    const charKey = window.GameState?.selectedCharacter || 'adam'
+    const cfg = window.CHAR_CONFIGS?.[charKey]
+    const spr = window.CHAR_SPRITES?.[charKey]
+    const anim = cfg?.hit || cfg?.idle
+    const img  = spr?.hit || spr?.idle
+
+    if (img?.complete && img.naturalWidth > 0 && anim) {
+      const scale = (cfg.scale || 1) * 2.0  // 패배 화면에서 2배 크게
+      const dw = cfg.renderW ? cfg.renderW * 2 : Math.round(anim.fw * scale)
+      const dh = cfg.renderH ? cfg.renderH * 2 : Math.round(anim.fh * scale)
+      ctx.imageSmoothingEnabled = false
+      // 90도 회전해서 쓰러진 모습
+      ctx.translate(cx, cy)
+      ctx.rotate(Math.PI / 2)
+      ctx.drawImage(img, 0, 0, anim.fw, anim.fh, -dw / 2, -dh / 2, dw, dh)
+      ctx.rotate(-Math.PI / 2)
+      ctx.translate(-cx, -cy)
+    } else {
+      // 폴백: 기존 캔버스 드로잉
+      ctx.fillStyle = '#2255cc'
+      ctx.fillRect(cx, cy - 5, 34, 10)
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(cx + 32, cy - 6, 10, 6)
+      ctx.fillRect(cx + 32, cy + 3, 10, 6)
+      ctx.fillStyle = '#4488ff'
+      ctx.fillRect(cx - 24, cy - 9, 27, 18)
+      ctx.fillRect(cx - 32, cy + 3, 12, 7)
+      ctx.fillStyle = '#66aaff'
+      ctx.beginPath()
+      ctx.arc(cx - 30, cy - 2, 12, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // 눈물 파티클
     ctx.fillStyle = '#88ccff'
-    ctx.beginPath(); ctx.arc(cx - 20, cy + 13, 3, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(cx - 10, cy + 16, 2, 0, Math.PI * 2); ctx.fill()
+    ctx.globalAlpha = alpha * 0.8
+    ctx.beginPath(); ctx.arc(cx - 20, cy + 30, 4, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(cx - 8, cy + 36, 3, 0, Math.PI * 2); ctx.fill()
     // 느낌표
+    ctx.globalAlpha = alpha
     ctx.fillStyle = '#ffdd44'
-    ctx.font = 'bold 18px monospace'
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('!', cx + 8,  cy - 22)
-    ctx.fillText('!', cx + 22, cy - 36)
+    ctx.fillText('!', cx + 30, cy - 20)
+    ctx.fillText('!', cx + 46, cy - 36)
 
     ctx.restore()
   }
@@ -3396,13 +3508,13 @@ class Result {
     ctx.fillStyle = '#881111'
     ctx.fillRect(px, py, pw, 40)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 19px monospace'
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
 
     // 원인
     ctx.fillStyle = '#444'
-    ctx.font = '13px monospace'
+    ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillText(cause, 400, py + 62)
 
     // 구분선 1
@@ -3423,17 +3535,17 @@ class Result {
     const c2l = px + 318, c2r = px + pw - 20
     statRows.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px monospace'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#666'; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c1l, ry)
-      ctx.fillStyle = '#111'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'right'
+      ctx.fillStyle = '#111'; ctx.font = 'bold 8px "Press Start 2P", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c1r, ry)
     })
     statRows2.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px monospace'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#666'; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c2l, ry)
       ctx.fillStyle = i === 1 ? '#1a44cc' : '#111'
-      ctx.font = 'bold 12px monospace'; ctx.textAlign = 'right'
+      ctx.font = 'bold 8px "Press Start 2P", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c2r, ry)
     })
 
@@ -3442,11 +3554,11 @@ class Result {
     ctx.beginPath(); ctx.moveTo(px+24, py+178); ctx.lineTo(px+pw-24, py+178); ctx.stroke()
 
     // 포인트 요약
-    ctx.fillStyle = '#333'; ctx.font = '12px monospace'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#333'; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'
     ctx.fillText(`출시 포인트 +${earned} 획득  (누적: ${total}pt)`, 400, py + 200)
 
     // 블랙코미디 멘트
-    ctx.fillStyle = '#888'; ctx.font = '11px monospace'
+    ctx.fillStyle = '#888'; ctx.font = '8px "Press Start 2P", monospace'
     ctx.fillText(comment, 400, py + 222)
 
     // 구분선 3
@@ -3457,7 +3569,7 @@ class Result {
     const r = this._loseRestartRect, u = this._loseUpgradeRect
     ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
     ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 10px "Press Start 2P", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
 
     ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
@@ -3668,15 +3780,15 @@ class VirtualJoystick {
       if (skill) {
         // 키 레이블 (위쪽 작게)
         ctx.fillStyle = '#aaccff'
-        ctx.font = 'bold 10px monospace'
+        ctx.font = 'bold 8px "Press Start 2P", monospace'
         ctx.fillText(btn.label, btn.x, btn.y - 9)
         // 스킬 이름 앞 3자 (아래쪽)
         ctx.fillStyle = cd > 0 ? '#778899' : '#ffffff'
-        ctx.font = 'bold 11px monospace'
+        ctx.font = 'bold 8px "Press Start 2P", monospace'
         ctx.fillText(skill.slice(0, 3), btn.x, btn.y + 7)
       } else {
         ctx.fillStyle = '#555'
-        ctx.font = 'bold 14px monospace'
+        ctx.font = 'bold 10px "Press Start 2P", monospace'
         ctx.fillText(btn.label, btn.x, btn.y)
       }
     }
@@ -3753,11 +3865,24 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { inputKeys[e.code] = false })
 
 // ─────────────────────────────────────────
+// 카메라 시스템
+// ─────────────────────────────────────────
+window.Camera = { x: 0, y: 0 }
+
+function updateCamera(player) {
+  if (!player) return
+  const WW = window.WORLD_W || 800
+  const WH = window.WORLD_H || 600
+  Camera.x = Math.max(0, Math.min(WW - 800, player.x - 400))
+  Camera.y = Math.max(0, Math.min(WH - 600, player.y - 300))
+}
+
+// ─────────────────────────────────────────
 // 배경 렌더링
 // ─────────────────────────────────────────
 function drawBackground(ctx) {
   if (window.TilemapSystem) {
-    window.TilemapSystem.render(ctx)
+    window.TilemapSystem.render(ctx, Camera.x, Camera.y)
   } else {
     ctx.fillStyle = '#0d0d1a'
     ctx.fillRect(0, 0, 800, 600)
@@ -3816,9 +3941,12 @@ window.Game = {
       aiBotIntroTimer: 0,
     })
 
-    // 플레이어 생성
+    // 카메라 초기화
+    if (window.Camera) { Camera.x = 0; Camera.y = 0 }
+
+    // 플레이어 생성 (월드 중앙 근처)
     if (window.Player) {
-      Game.player = new window.Player(400, 300)
+      Game.player = new window.Player(1200, 900)
       // skills.js가 playerCreated 이벤트를 듣고 SkillManager를 등록
       window.dispatchEvent(new CustomEvent('playerCreated', { detail: { player: Game.player } }))
       // 메타 업그레이드 효과 적용
@@ -3896,6 +4024,7 @@ function _loop(now) {
 
     if (player) {
       player.update(deltaTime, inputKeys)
+      updateCamera(player)
       Game.enemySystem?.update(deltaTime)
       Game.skillManager?.update(deltaTime)
 
@@ -3937,9 +4066,9 @@ function _loop(now) {
 
   // ── 렌더링 ──
   ctx.clearRect(0, 0, 800, 600)
-  drawBackground(ctx)
 
   if (gs.screen === 'lobby') {
+    drawBackground(ctx)
     window._lobby?.render(ctx)
 
   } else if (gs.screen === 'result') {
@@ -3949,14 +4078,23 @@ function _loop(now) {
     window.MetaManager?.render(ctx)
 
   } else {
-    // playing or paused
-    // 적 + 투사체 + 방해 구역 (Spawner의 레이어 순서대로)
+    // playing or paused — 월드 공간은 카메라 오프셋 적용
+    drawBackground(ctx)
+
+    // 월드 공간 렌더: ctx를 카메라만큼 이동
+    ctx.save()
+    ctx.translate(-Camera.x, -Camera.y)
+
+    // 적 + 투사체 + 방해 구역
     Game.enemySystem?.renderEnemies?.(ctx)
     // 스킬 이펙트
     Game.skillManager?.renderEffects?.(ctx, deltaTime)
     // 플레이어
     player?.render?.(ctx)
-    // HUD
+
+    ctx.restore()
+
+    // 스크린 공간 렌더 (HUD 등 카메라 영향 없음)
     window._hud?.render(ctx, gs.gameTime)
     // 레벨업 오버레이 (paused 포함)
     window._levelUpManager?.render(ctx)
@@ -3970,11 +4108,11 @@ function _loop(now) {
       ctx.save()
       ctx.globalAlpha = alpha
       ctx.fillStyle = '#ff2222'
-      ctx.font = 'bold 36px monospace'
+      ctx.font = 'bold 16px "Press Start 2P", monospace'
       ctx.textAlign = 'center'
       ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
       ctx.fillStyle = '#ffffff'
-      ctx.font = '20px monospace'
+      ctx.font = '12px "Press Start 2P", monospace'
       ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
       ctx.restore()
     }

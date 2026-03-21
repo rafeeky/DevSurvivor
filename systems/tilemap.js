@@ -1,122 +1,150 @@
 /**
- * systems/tilemap.js — Modern tiles Room_Builder 타일맵 배경 렌더러
+ * systems/tilemap.js — 스크롤 가능한 2400×1800 오피스 월드
  * 타일셋: assets/backgrounds/tileset_room.png (272×368, 17×23 tiles, 16px each)
- * 캔버스: 800×600, 타일 스케일 2× → 32px 표시
- *
- * 타일 좌표 (col, row) — 0-indexed, tileset 기준
- * Row_Builder 레이아웃 추정:
- *   row 0: 빈 타일 / 벽 상단
- *   row 1: 바닥 타일 (기본)
- *   row 2: 바닥 타일 변형
- *   row 3~: 벽/가구
+ * 캔버스: 800×600 (뷰포트), 월드: 2400×1800
+ * 타일 스케일 2× → 32px 표시
  */
 
+window.WORLD_W = 2400
+window.WORLD_H = 1800
+
 window.TilemapSystem = (() => {
-  const TILE = 16
+  const TILE  = 16
   const SCALE = 2
   const TSIZE = TILE * SCALE  // 32px
 
-  // 캔버스 25×19 타일 (800/32=25, 600/32=18.75)
-  const COLS = 25
-  const ROWS = 19
+  const WORLD_COLS = window.WORLD_W / TSIZE  // 75
+  const WORLD_ROWS = window.WORLD_H / TSIZE  // 56
 
   // ─── 타일셋 좌표 상수 (col, row) ──────────────────────────
-  // Room_Builder_free_16x16.png 17열×23행
-  // 오피스 배경에 맞게 추정한 타일 좌표
   const T = {
-    FLOOR:      [0, 1],   // 기본 바닥
-    FLOOR_ALT:  [1, 1],   // 바닥 변형
-    FLOOR_DARK: [2, 1],   // 어두운 바닥
-    WALL_TOP:   [0, 0],   // 상단 벽
-    WALL_SIDE:  [3, 0],   // 측면 벽
-    CORNER_TL:  [0, 2],   // 모서리
-    CORNER_TR:  [2, 2],
-    CORNER_BL:  [0, 4],
-    CORNER_BR:  [2, 4],
-    DESK:       [4, 3],   // 책상
-    PLANT:      [8, 2],   // 화분
-    CARPET:     [5, 1],   // 카펫
+    FLOOR:      [0, 1],
+    FLOOR_ALT:  [1, 1],
+    FLOOR_DARK: [2, 1],
+    WALL_TOP:   [0, 0],
+    CARPET:     [5, 1],
   }
 
-  // ─── 타일맵 정의 (25×19) ──────────────────────────────────
-  // F=바닥, W=벽(상단), A=바닥변형, D=어두운바닥
-  // 상단 2행은 HUD가 가리므로 벽 처리
-  const F = 'F', A = 'A', D = 'D', W = 'W', C = 'C'  // C=카펫
+  // ─── 세계 타일맵 생성 ────────────────────────────────────
+  // 여러 오피스 구역이 이어지는 대형 맵
+  // F=기본바닥  A=변형바닥  D=어두운바닥  C=카펫  W=벽
+  const F = 'F', A = 'A', D = 'D', C = 'C', W = 'W'
 
-  const MAP = [
-    // row 0 (HUD 아래, y=0)
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    // row 1
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 2
-    [W,F,C,C,C,F,F,F,A,A,A,A,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 3
-    [W,F,C,C,C,F,F,F,A,A,A,A,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 4
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 5
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 6
-    [W,F,A,A,A,A,F,F,F,C,C,C,F,F,F,A,A,A,A,F,F,F,F,F,W],
-    // row 7
-    [W,F,A,A,A,A,F,F,F,C,C,C,F,F,F,A,A,A,A,F,F,F,F,F,W],
-    // row 8
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 9 (중간)
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 10
-    [W,F,D,D,F,F,F,A,A,A,A,F,F,F,C,C,C,F,F,F,D,D,F,F,W],
-    // row 11
-    [W,F,D,D,F,F,F,A,A,A,A,F,F,F,C,C,C,F,F,F,D,D,F,F,W],
-    // row 12
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 13
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 14
-    [W,F,C,C,C,F,F,F,A,A,A,F,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 15
-    [W,F,C,C,C,F,F,F,A,A,A,F,F,F,F,D,D,F,F,F,C,C,C,F,W],
-    // row 16
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 17 (HUD 바닥 근처)
-    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
-    // row 18
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-  ]
+  // 75×56 맵을 구역별로 생성
+  function _buildWorldMap() {
+    const map = []
+    for (let r = 0; r < WORLD_ROWS; r++) {
+      map.push(new Array(WORLD_COLS).fill(F))
+    }
 
-  // 타일 코드 → tileset (col, row) 매핑
-  const TILE_LOOKUP = {
-    F: T.FLOOR,
-    A: T.FLOOR_ALT,
-    D: T.FLOOR_DARK,
-    W: T.WALL_TOP,
-    C: T.CARPET,
+    // 벽 경계 (맵 전체 테두리)
+    for (let c = 0; c < WORLD_COLS; c++) {
+      map[0][c] = W; map[WORLD_ROWS - 1][c] = W
+    }
+    for (let r = 0; r < WORLD_ROWS; r++) {
+      map[r][0] = W; map[r][WORLD_COLS - 1] = W
+    }
+
+    // ── 구역 1: 개발팀 오피스 (좌상단) ────────────────
+    // 책상 구역 (카펫 패턴)
+    _fillRect(map, 2, 2, 20, 8, C)
+    _fillRect(map, 3, 3, 4, 3, A)    // 책상 1
+    _fillRect(map, 9, 3, 4, 3, A)    // 책상 2
+    _fillRect(map, 15, 3, 4, 3, A)   // 책상 3
+
+    // 구역 2: 회의실 (상단 중앙)
+    _fillRect(map, 26, 2, 22, 12, D)
+    _fillRect(map, 29, 4, 16, 7, C)  // 회의 테이블
+
+    // 구역 3: 서버실 (상단 우측)
+    _fillRect(map, 52, 2, 20, 10, D)
+    _fillRect(map, 54, 4, 4, 6, A)
+    _fillRect(map, 60, 4, 4, 6, A)
+    _fillRect(map, 66, 4, 4, 6, A)
+
+    // ── 구역 4: 메인 오픈플랜 오피스 (중앙) ──────────
+    _fillRect(map, 2, 14, 70, 24, F)
+    // 책상 군집들 (중앙)
+    for (let group = 0; group < 4; group++) {
+      const baseC = 6 + group * 17
+      const baseR = 16
+      _fillRect(map, baseC,   baseR, 5, 4, C)
+      _fillRect(map, baseC+8, baseR, 5, 4, C)
+      _fillRect(map, baseC,   baseR+7, 5, 4, C)
+      _fillRect(map, baseC+8, baseR+7, 5, 4, C)
+      // 개인 책상 (변형 바닥)
+      _fillRect(map, baseC+1,   baseR+1, 3, 2, A)
+      _fillRect(map, baseC+9,   baseR+1, 3, 2, A)
+      _fillRect(map, baseC+1,   baseR+8, 3, 2, A)
+      _fillRect(map, baseC+9,   baseR+8, 3, 2, A)
+    }
+
+    // ── 구역 5: 휴게실 (하단 좌측) ───────────────────
+    _fillRect(map, 2, 40, 20, 14, C)
+    _fillRect(map, 4, 42, 8, 5, A)   // 소파/테이블 구역
+    _fillRect(map, 14, 42, 5, 5, D)  // 자판기 구역
+
+    // ── 구역 6: 중간 복도 ─────────────────────────────
+    _fillRect(map, 2, 12, 70, 2, D)   // 수평 복도
+    _fillRect(map, 2, 38, 70, 2, D)   // 수평 복도 2
+    _fillRect(map, 36, 2,  2, 52, D)  // 수직 복도
+
+    // ── 구역 7: 기획팀 오피스 (중앙 우측) ────────────
+    _fillRect(map, 40, 14, 30, 24, F)
+    _fillRect(map, 42, 16, 12, 8, C)
+    _fillRect(map, 58, 16, 10, 8, C)
+    _fillRect(map, 42, 27, 12, 8, A)
+    _fillRect(map, 58, 27, 10, 8, A)
+
+    // ── 구역 8: 보스룸 (하단 우측) ───────────────────
+    _fillRect(map, 52, 40, 20, 14, D)
+    _fillRect(map, 55, 43, 13, 8, C)  // 보스 책상 카펫
+
+    // ── 구역 9: 하단 복도 / 창고 ─────────────────────
+    _fillRect(map, 24, 40, 26, 14, F)
+    _fillRect(map, 26, 43, 8, 6, A)
+    _fillRect(map, 36, 43, 8, 6, D)
+
+    return map
   }
 
-  // ─── 타일셋 이미지 ─────────────────────────────────────────
+  function _fillRect(map, c, r, w, h, code) {
+    for (let dr = 0; dr < h; dr++) {
+      for (let dc = 0; dc < w; dc++) {
+        const row = r + dr, col = c + dc
+        if (row >= 0 && row < WORLD_ROWS && col >= 0 && col < WORLD_COLS) {
+          map[row][col] = code
+        }
+      }
+    }
+  }
+
+  const TILE_LOOKUP = { F: T.FLOOR, A: T.FLOOR_ALT, D: T.FLOOR_DARK, W: T.WALL_TOP, C: T.CARPET }
+
+  // ─── 타일셋 이미지 ─────────────────────────────────────
   const _img = new Image()
   _img.src = 'assets/backgrounds/tileset_room.png'
   let _loaded = false
   _img.onload = () => { _loaded = true }
 
-  // ─── 오프스크린 캔버스 (첫 로드 후 한 번 렌더 → 이후 blit) ─
+  // ─── 오프스크린 캔버스 (전체 월드 한 번 렌더 → blit) ──
   let _offscreen = null
-  let _offCtx = null
   let _baked = false
+  const _worldMap = _buildWorldMap()
 
   function _bake() {
     if (!_loaded) return
     _offscreen = document.createElement('canvas')
-    _offscreen.width  = 800
-    _offscreen.height = 600
-    _offCtx = _offscreen.getContext('2d')
-    _offCtx.imageSmoothingEnabled = false
+    _offscreen.width  = window.WORLD_W
+    _offscreen.height = window.WORLD_H
+    const offCtx = _offscreen.getContext('2d')
+    offCtx.imageSmoothingEnabled = false
 
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        const code = MAP[row]?.[col] ?? 'F'
+    for (let row = 0; row < WORLD_ROWS; row++) {
+      for (let col = 0; col < WORLD_COLS; col++) {
+        const code = _worldMap[row]?.[col] ?? 'F'
         const [tc, tr] = TILE_LOOKUP[code] ?? T.FLOOR
-        _offCtx.drawImage(
+        offCtx.drawImage(
           _img,
           tc * TILE, tr * TILE, TILE, TILE,
           col * TSIZE, row * TSIZE, TSIZE, TSIZE
@@ -126,19 +154,22 @@ window.TilemapSystem = (() => {
     _baked = true
   }
 
-  // ─── 공개 API ─────────────────────────────────────────────
+  // ─── 공개 API ─────────────────────────────────────────
   return {
-    render(ctx) {
+    // camX, camY: 뷰포트 카메라 위치 (월드 좌표)
+    render(ctx, camX, camY) {
+      const cx = camX || 0, cy = camY || 0
       if (!_baked) {
         if (_loaded) _bake()
         else {
-          // 폴백: 단색 배경
           ctx.fillStyle = '#1a1a2a'
           ctx.fillRect(0, 0, 800, 600)
           return
         }
       }
-      ctx.drawImage(_offscreen, 0, 0)
+      // 월드 오프스크린에서 뷰포트 영역만 blit
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(_offscreen, cx, cy, 800, 600, 0, 0, 800, 600)
     },
   }
 })()

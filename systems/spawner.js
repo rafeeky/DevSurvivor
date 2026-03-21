@@ -86,14 +86,23 @@ class Spawner {
   }
 
   _randomEdgePosition() {
-    const margin = 30
+    const margin = 40
+    const camX = window.Camera?.x || 0
+    const camY = window.Camera?.y || 0
+    const WW = window.WORLD_W || 800
+    const WH = window.WORLD_H || 600
     const side = Math.floor(Math.random() * 4)
+    let x, y
     switch (side) {
-      case 0: return { x: Math.random() * 800, y: -margin }
-      case 1: return { x: Math.random() * 800, y: 600 + margin }
-      case 2: return { x: -margin, y: Math.random() * 600 }
-      case 3: return { x: 800 + margin, y: Math.random() * 600 }
+      case 0: x = camX + Math.random() * 800; y = camY - margin; break          // 위
+      case 1: x = camX + Math.random() * 800; y = camY + 600 + margin; break    // 아래
+      case 2: x = camX - margin; y = camY + Math.random() * 600; break          // 왼쪽
+      default: x = camX + 800 + margin; y = camY + Math.random() * 600; break   // 오른쪽
     }
+    // 월드 경계 클램프
+    x = Math.max(40, Math.min(WW - 40, x))
+    y = Math.max(40, Math.min(WH - 40, y))
+    return { x, y }
   }
 
   // game.js의 렌더 루프에서 호출

@@ -66,11 +66,24 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { inputKeys[e.code] = false })
 
 // ─────────────────────────────────────────
+// 카메라 시스템
+// ─────────────────────────────────────────
+window.Camera = { x: 0, y: 0 }
+
+function updateCamera(player) {
+  if (!player) return
+  const WW = window.WORLD_W || 800
+  const WH = window.WORLD_H || 600
+  Camera.x = Math.max(0, Math.min(WW - 800, player.x - 400))
+  Camera.y = Math.max(0, Math.min(WH - 600, player.y - 300))
+}
+
+// ─────────────────────────────────────────
 // 배경 렌더링
 // ─────────────────────────────────────────
 function drawBackground(ctx) {
   if (window.TilemapSystem) {
-    window.TilemapSystem.render(ctx)
+    window.TilemapSystem.render(ctx, Camera.x, Camera.y)
   } else {
     ctx.fillStyle = '#0d0d1a'
     ctx.fillRect(0, 0, 800, 600)
@@ -129,9 +142,12 @@ window.Game = {
       aiBotIntroTimer: 0,
     })
 
-    // 플레이어 생성
+    // 카메라 초기화
+    if (window.Camera) { Camera.x = 0; Camera.y = 0 }
+
+    // 플레이어 생성 (월드 중앙 근처)
     if (window.Player) {
-      Game.player = new window.Player(400, 300)
+      Game.player = new window.Player(1200, 900)
       // skills.js가 playerCreated 이벤트를 듣고 SkillManager를 등록
       window.dispatchEvent(new CustomEvent('playerCreated', { detail: { player: Game.player } }))
       // 메타 업그레이드 효과 적용
@@ -209,6 +225,7 @@ function _loop(now) {
 
     if (player) {
       player.update(deltaTime, inputKeys)
+      updateCamera(player)
       Game.enemySystem?.update(deltaTime)
       Game.skillManager?.update(deltaTime)
 
@@ -250,9 +267,9 @@ function _loop(now) {
 
   // ── 렌더링 ──
   ctx.clearRect(0, 0, 800, 600)
-  drawBackground(ctx)
 
   if (gs.screen === 'lobby') {
+    drawBackground(ctx)
     window._lobby?.render(ctx)
 
   } else if (gs.screen === 'result') {
@@ -262,14 +279,23 @@ function _loop(now) {
     window.MetaManager?.render(ctx)
 
   } else {
-    // playing or paused
-    // 적 + 투사체 + 방해 구역 (Spawner의 레이어 순서대로)
+    // playing or paused — 월드 공간은 카메라 오프셋 적용
+    drawBackground(ctx)
+
+    // 월드 공간 렌더: ctx를 카메라만큼 이동
+    ctx.save()
+    ctx.translate(-Camera.x, -Camera.y)
+
+    // 적 + 투사체 + 방해 구역
     Game.enemySystem?.renderEnemies?.(ctx)
     // 스킬 이펙트
     Game.skillManager?.renderEffects?.(ctx, deltaTime)
     // 플레이어
     player?.render?.(ctx)
-    // HUD
+
+    ctx.restore()
+
+    // 스크린 공간 렌더 (HUD 등 카메라 영향 없음)
     window._hud?.render(ctx, gs.gameTime)
     // 레벨업 오버레이 (paused 포함)
     window._levelUpManager?.render(ctx)

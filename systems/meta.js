@@ -123,6 +123,30 @@ const MetaManager = {
     }
   },
 
+  // ── 메타 업그레이드 아이콘 매핑 ───────────────────────────────────────
+  _iconMap: {
+    '조금 더 버티기':     'assets/custom/icons/skill_emergency_fix.png',
+    '더 빠르게 움직이기': 'assets/custom/icons/skill_coffee.png',
+    '정리 속도 높이기':   'assets/custom/icons/skill_debug.png',
+    '빠른 판단':          'assets/custom/icons/skill_priority_sort.png',
+    '회복 습관':          'assets/custom/icons/skill_pet_dog.png',
+    '실수 줄이기':        'assets/custom/icons/skill_figure_clean.png',
+    '준비된 하루':        'assets/custom/icons/skill_autosave.png',
+    '손이 빨라짐':        'assets/custom/icons/skill_emergency_fix.png',
+    '성과 더 받기':       'assets/custom/icons/skill_priority_sort.png',
+    '시작부터 하나 더':   'assets/custom/icons/skill_nap.png',
+  },
+  _iconCache: {},
+  _getIcon(name) {
+    const src = this._iconMap[name]
+    if (!src) return null
+    if (!this._iconCache[name]) {
+      const img = new Image(); img.src = src
+      this._iconCache[name] = img
+    }
+    return this._iconCache[name]
+  },
+
   // ── 업그레이드 화면 렌더링 ─────────────────────────────────────────────
   _buyRects: [],
 
@@ -173,11 +197,25 @@ const MetaManager = {
       ctx.fillRect(bx, by, colW, rowH - 6)
       ctx.strokeRect(bx, by, colW, rowH - 6)
 
+      // 아이콘 (좌측)
+      const icon = this._getIcon(upg.name)
+      const iconSize = 28
+      if (icon?.complete && icon.naturalWidth > 0) {
+        ctx.save()
+        ctx.imageSmoothingEnabled = true
+        ctx.globalAlpha = maxed ? 1 : canBuy ? 0.9 : 0.4
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 5, iconSize, iconSize)
+        ctx.globalAlpha = 1
+        ctx.restore()
+      }
+
+      const textX = bx + (icon ? iconSize + 12 : 8)
+
       // 이름
       ctx.fillStyle = '#ddeeff'
       ctx.font = 'bold 12px monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(upg.name, bx + 8, by + 18)
+      ctx.fillText(upg.name, textX, by + 18)
 
       // 레벨 별
       let stars = ''
@@ -191,7 +229,7 @@ const MetaManager = {
       ctx.fillStyle = '#778899'
       ctx.font = '11px monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, bx + 8, by + 38)
+      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, textX, by + 38)
 
       // 구매 버튼 또는 MAX
       if (maxed) {

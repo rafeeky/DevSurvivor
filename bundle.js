@@ -67,12 +67,15 @@ for (const rel of SCRIPTS) {
 const gameJs = processGameJs(readFile('game.js'))
 scriptBlocks += `\n  <!-- game.js -->\n  <script>\n${gameJs}\n  </script>\n`
 
-const html = `<!DOCTYPE html>
+let html = `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dev Survivor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>${css}</style>
 </head>
 <body>
@@ -81,6 +84,20 @@ ${scriptBlocks}
 </body>
 </html>
 `
+
+// ── 픽셀 폰트 변환: monospace → "Press Start 2P" ──────────────────────────
+// 한글은 fallback monospace 사용, 숫자/영문은 픽셀 폰트 적용
+html = html.replace(/(\d+)px monospace/g, (match, sizeStr) => {
+  const size = parseInt(sizeStr)
+  let newSize
+  if (size >= 80) newSize = 32
+  else if (size >= 50) newSize = 24
+  else if (size >= 36) newSize = 16
+  else if (size >= 18) newSize = 12
+  else if (size >= 13) newSize = 10
+  else newSize = 8
+  return `${newSize}px "Press Start 2P", monospace`
+})
 
 const outPath = path.join(BASE, 'docs', 'index.html')
 fs.mkdirSync(path.join(BASE, 'docs'), { recursive: true })
@@ -212,7 +229,7 @@ try {
   const src = path.join(BASE, 'assets')
   const dst = path.join(BASE, 'docs', 'assets')
   execSync(
-    `powershell -Command "Copy-Item -Path '${src}' -Destination '${dst}' -Recurse -Force"`,
+    `powershell -Command "Copy-Item -Path '${src}\\*' -Destination '${dst}' -Recurse -Force"`,
     { stdio: 'pipe' }
   )
   console.log('✅ assets/ → docs/assets/ 복사 완료')

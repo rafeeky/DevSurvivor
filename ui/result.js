@@ -206,33 +206,52 @@ class Result {
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // 다리 (가로로 뻗음)
-    ctx.fillStyle = '#2255cc'
-    ctx.fillRect(cx, cy - 5, 34, 10)
-    // 신발
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(cx + 32, cy - 6, 10, 6)
-    ctx.fillRect(cx + 32, cy + 3, 10, 6)
-    // 몸통
-    ctx.fillStyle = '#4488ff'
-    ctx.fillRect(cx - 24, cy - 9, 27, 18)
-    // 팔 (늘어진)
-    ctx.fillRect(cx - 32, cy + 3, 12, 7)
-    // 머리 (바닥에 붙음)
-    ctx.fillStyle = '#66aaff'
-    ctx.beginPath()
-    ctx.arc(cx - 30, cy - 2, 12, 0, Math.PI * 2)
-    ctx.fill()
-    // 눈물
+    // 선택된 캐릭터 스프라이트로 쓰러진 모습 표현
+    const charKey = window.GameState?.selectedCharacter || 'adam'
+    const cfg = window.CHAR_CONFIGS?.[charKey]
+    const spr = window.CHAR_SPRITES?.[charKey]
+    const anim = cfg?.hit || cfg?.idle
+    const img  = spr?.hit || spr?.idle
+
+    if (img?.complete && img.naturalWidth > 0 && anim) {
+      const scale = (cfg.scale || 1) * 2.0  // 패배 화면에서 2배 크게
+      const dw = cfg.renderW ? cfg.renderW * 2 : Math.round(anim.fw * scale)
+      const dh = cfg.renderH ? cfg.renderH * 2 : Math.round(anim.fh * scale)
+      ctx.imageSmoothingEnabled = false
+      // 90도 회전해서 쓰러진 모습
+      ctx.translate(cx, cy)
+      ctx.rotate(Math.PI / 2)
+      ctx.drawImage(img, 0, 0, anim.fw, anim.fh, -dw / 2, -dh / 2, dw, dh)
+      ctx.rotate(-Math.PI / 2)
+      ctx.translate(-cx, -cy)
+    } else {
+      // 폴백: 기존 캔버스 드로잉
+      ctx.fillStyle = '#2255cc'
+      ctx.fillRect(cx, cy - 5, 34, 10)
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(cx + 32, cy - 6, 10, 6)
+      ctx.fillRect(cx + 32, cy + 3, 10, 6)
+      ctx.fillStyle = '#4488ff'
+      ctx.fillRect(cx - 24, cy - 9, 27, 18)
+      ctx.fillRect(cx - 32, cy + 3, 12, 7)
+      ctx.fillStyle = '#66aaff'
+      ctx.beginPath()
+      ctx.arc(cx - 30, cy - 2, 12, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // 눈물 파티클
     ctx.fillStyle = '#88ccff'
-    ctx.beginPath(); ctx.arc(cx - 20, cy + 13, 3, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(cx - 10, cy + 16, 2, 0, Math.PI * 2); ctx.fill()
+    ctx.globalAlpha = alpha * 0.8
+    ctx.beginPath(); ctx.arc(cx - 20, cy + 30, 4, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(cx - 8, cy + 36, 3, 0, Math.PI * 2); ctx.fill()
     // 느낌표
+    ctx.globalAlpha = alpha
     ctx.fillStyle = '#ffdd44'
     ctx.font = 'bold 18px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('!', cx + 8,  cy - 22)
-    ctx.fillText('!', cx + 22, cy - 36)
+    ctx.fillText('!', cx + 30, cy - 20)
+    ctx.fillText('!', cx + 46, cy - 36)
 
     ctx.restore()
   }

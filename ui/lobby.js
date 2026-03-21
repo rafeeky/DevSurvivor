@@ -109,7 +109,8 @@ class Lobby {
     ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 20px monospace'
-    ctx.fillText('[ 시작하기 ]', 400, s.y + 30)
+    ctx.textAlign = 'center'
+    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + 30)
 
     // 업그레이드 버튼
     const u = this.upgradeBtnRect
@@ -120,13 +121,20 @@ class Lobby {
     ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
     ctx.font = 'bold 15px monospace'
-    ctx.fillText('[ 업그레이드 ]', 400, u.y + 26)
+    ctx.textAlign = 'center'
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 26)
 
     // 조작 안내
-    ctx.fillStyle = '#556677'
+    ctx.fillStyle = '#aaccdd'
     ctx.font = '12px monospace'
-    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 514)
-    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 532)
+    ctx.textAlign = 'center'
+    // 텍스트 배경
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.fillRect(0, 503, 800, 40)
+    ctx.fillStyle = '#aaccdd'
+    ctx.fillText('WASD 이동  /  Q~R 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 519)
+    ctx.fillStyle = '#778899'
+    ctx.fillText('경험치를 쌓아 레벨업하고 스킬을 획득하세요', 400, 537)
 
     ctx.textAlign = 'left'
   }
