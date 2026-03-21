@@ -187,12 +187,12 @@ class Lobby {
           drawX = card.x + (card.w - dispW) / 2
           drawY = portraitY + 2
         } else {
-          // 대형 스프라이트: 너비에 맞춰 스케일 → 세로 clip
-          const scaleToW = (card.w - 4) / fw
-          dispW = card.w - 4
-          dispH = fh * scaleToW
-          drawX = card.x + 2
-          drawY = portraitY
+          // 대형 스프라이트: 높이에 맞춰 스케일 → 수평 중앙 정렬
+          const scaleToH = (portraitH - 4) / fh
+          dispH = portraitH - 4
+          dispW = fw * scaleToH
+          drawX = card.x + (card.w - dispW) / 2
+          drawY = portraitY + 2
         }
         ctx.save()
         ctx.beginPath()
