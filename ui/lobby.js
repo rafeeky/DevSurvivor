@@ -16,6 +16,7 @@ class Lobby {
     ]
     this.startBtnRect   = { x: 210, y: 342, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 416, w: 220, h: 34 }
+    this._lockPopup = null  // { timer: 3.0 }
     this._bindClick()
   }
 
@@ -36,7 +37,10 @@ class Lobby {
 
       for (const card of this._cards) {
         if (x >= card.x && x <= card.x + card.w && y >= card.y && y <= card.y + card.h) {
-          if (!window.MetaManager?.isUnlocked(card.key)) return  // locked, ignore click
+          if (!window.MetaManager?.isUnlocked(card.key)) {
+            this._lockPopup = { timer: 3.0 }
+            return
+          }
           this._select(card.key)
           return
         }
@@ -148,7 +152,38 @@ class Lobby {
     ctx.textAlign = 'center'
     ctx.fillText('이동: WASD  /  스킬: 1~4  /  레벨업 시 스킬 선택', 400, 488)
 
+    this._drawLockPopup(ctx)
     ctx.textAlign = 'left'
+  }
+
+  _drawLockPopup(ctx) {
+    if (!this._lockPopup || this._lockPopup.timer <= 0) return
+    this._lockPopup.timer -= 1/60
+    const alpha = Math.min(1, this._lockPopup.timer * 2)
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Background panel (centered, above cards)
+    const pw = 360, ph = 54
+    const px = (800 - pw) / 2
+    const py = 340
+
+    ctx.fillStyle = 'rgba(20,5,40,0.92)'
+    ctx.fillRect(px, py, pw, ph)
+    ctx.strokeStyle = '#aa44ff'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(px, py, pw, ph)
+
+    // Icon + text
+    ctx.fillStyle = '#dd99ff'
+    ctx.font = '16px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('🔒 보스를 처치하고 골드 다이아를 얻어 해금할 수 있습니다.', 400, py + 34)
+
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
   }
 
   _drawCharCards(ctx) {

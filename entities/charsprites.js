@@ -7,7 +7,7 @@
 
 window.CHAR_CONFIGS = {
   adam: {
-    label: '주니어 개발자 (남)',
+    label: '개발자 (남)',
     sublabel: '빠른 적응',
     roleType: '속도형',
     roleColor: '#44ffaa',
@@ -34,7 +34,7 @@ window.CHAR_CONFIGS = {
     yAnchor: 0.75,
   },
   amelia: {
-    label: '주니어 개발자 (여)',
+    label: '개발자 (여)',
     sublabel: '끈까지 버티기',
     roleType: '생존형',
     roleColor: '#cc88ff',
