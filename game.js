@@ -35,6 +35,8 @@ window.GameState = {
   playerLevel: 1,
   playerExp: 0,
   _lastWin: false,
+  aiBotIntro: false,
+  aiBotIntroTimer: 0,
   // 메타 업그레이드 배율 (MetaManager.applyToPlayer 에서 설정)
   skillDamageMult: 1,
   expMultiplier:   1,
@@ -124,6 +126,8 @@ window.Game = {
       expMultiplier:   1,
       healMultiplier:  1,
       lastEarnedPoints: 0,
+      aiBotIntro: false,
+      aiBotIntroTimer: 0,
     })
 
     // 플레이어 생성
@@ -224,6 +228,11 @@ function _loop(now) {
 
       gs.playerDanger = player.hp / player.maxHp < 0.3
 
+      if (gs.aiBotIntro) {
+        gs.aiBotIntroTimer += deltaTime
+        if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
+      }
+
       if (gs.gameTime >= 180) { Game.gameOver(true); return }
       if (!player.isAlive)    { Game.gameOver(false); return }
     }
@@ -259,6 +268,22 @@ function _loop(now) {
     window._hud?.render(ctx, gs.gameTime)
     // 레벨업 오버레이 (paused 포함)
     window._levelUpManager?.render(ctx)
+    // AIBot 등장 연출
+    if (gs.aiBotIntro) {
+      const alpha = 1 - gs.aiBotIntroTimer / 0.5
+      ctx.fillStyle = `rgba(0,0,0,${alpha * 0.85})`
+      ctx.fillRect(0, 0, 800, 600)
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#ff2222'
+      ctx.font = 'bold 36px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '20px monospace'
+      ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
+      ctx.restore()
+    }
   }
 
   requestAnimationFrame(_loop)

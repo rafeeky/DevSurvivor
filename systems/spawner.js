@@ -35,6 +35,8 @@ class Spawner {
     if (t >= 170) {
       if (!this.aiBotSpawned) {
         this.aiBotSpawned = true
+        GameState.aiBotIntro = true
+        GameState.aiBotIntroTimer = 0
         const pos = this._randomEdgePosition()
         GameState.enemies.push(new AIBot(pos.x, pos.y))
       }
