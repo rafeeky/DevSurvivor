@@ -77,14 +77,35 @@ class BoxBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    ctx.fillStyle = '#C4A882'
-    ctx.fillRect(this.x - 12, this.y - 14, 24, 20)
-    ctx.fillStyle = '#333'
-    ctx.fillRect(this.x - 7, this.y - 11, 5, 4)
-    ctx.fillRect(this.x + 2, this.y - 11, 5, 4)
-    ctx.fillStyle = '#A08060'
-    ctx.fillRect(this.x - 9, this.y + 6, 7, 8)
-    ctx.fillRect(this.x + 2, this.y + 6, 7, 8)
+    const x = this.x, y = this.y
+    // 박스 본체
+    ctx.fillStyle = '#C8AA7A'
+    ctx.fillRect(x - 13, y - 13, 26, 22)
+    ctx.strokeStyle = '#8B6914'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x - 13, y - 13, 26, 22)
+    // 테이프 (수평/수직 크로스)
+    ctx.strokeStyle = '#E8CC88'
+    ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(x - 13, y - 2); ctx.lineTo(x + 13, y - 2); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.lineTo(x, y + 9); ctx.stroke()
+    // 눈 (픽셀)
+    const blink = Math.floor(Date.now() / 1200) % 8 !== 0
+    ctx.fillStyle = '#1a1a1a'
+    if (blink) {
+      ctx.fillRect(x - 8, y - 10, 5, 4)
+      ctx.fillRect(x + 3, y - 10, 5, 4)
+    } else {
+      ctx.fillRect(x - 8, y - 8, 5, 2)
+      ctx.fillRect(x + 3, y - 8, 5, 2)
+    }
+    // 팔 (양 옆 작은 돌출)
+    ctx.fillStyle = '#A88050'
+    ctx.fillRect(x - 18, y - 5, 5, 8)
+    ctx.fillRect(x + 13, y - 5, 5, 8)
+    // 발
+    ctx.fillRect(x - 10, y + 9, 7, 5)
+    ctx.fillRect(x + 3, y + 9, 7, 5)
     _drawHpBar(ctx, this, 28)
   }
 }
@@ -144,17 +165,36 @@ class CartBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    ctx.fillStyle = this.isDashing ? '#FF9944' : '#E8833A'
-    ctx.fillRect(this.x - 14, this.y - 14, 28, 20)
-    // 화면
-    ctx.fillStyle = '#222'
-    ctx.fillRect(this.x - 10, this.y - 11, 20, 10)
-    ctx.fillStyle = '#00FF88'
-    ctx.fillRect(this.x - 8, this.y - 9, 16, 6)
+    const x = this.x, y = this.y
+    const dash = this.isDashing
+    ctx.save()
+    if (dash) {
+      ctx.shadowColor = '#FF6600'
+      ctx.shadowBlur = 16
+    }
+    // 카트 바구니 (와이어 느낌)
+    ctx.strokeStyle = dash ? '#FFAA44' : '#E8833A'
+    ctx.lineWidth = 2.5
+    ctx.strokeRect(x - 14, y - 8, 28, 18)
+    // 카트 안쪽 격자
+    ctx.lineWidth = 1
+    ctx.strokeStyle = dash ? '#FF8822' : '#C06020'
+    ctx.beginPath(); ctx.moveTo(x - 7, y - 8); ctx.lineTo(x - 7, y + 10); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(x + 7, y - 8); ctx.lineTo(x + 7, y + 10); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(x - 14, y + 2); ctx.lineTo(x + 14, y + 2); ctx.stroke()
+    // 손잡이
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = dash ? '#FFCC44' : '#CC7730'
+    ctx.beginPath(); ctx.moveTo(x - 10, y - 8); ctx.lineTo(x - 10, y - 16); ctx.lineTo(x + 10, y - 16); ctx.lineTo(x + 10, y - 8); ctx.stroke()
     // 바퀴
-    ctx.fillStyle = '#333'
-    ctx.beginPath(); ctx.arc(this.x - 8, this.y + 9, 5, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(this.x + 8, this.y + 9, 5, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#222'
+    ctx.beginPath(); ctx.arc(x - 9, y + 13, 5, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(x + 9, y + 13, 5, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = '#555'
+    ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.arc(x - 9, y + 13, 5, 0, Math.PI * 2); ctx.stroke()
+    ctx.beginPath(); ctx.arc(x + 9, y + 13, 5, 0, Math.PI * 2); ctx.stroke()
+    ctx.restore()
     _drawHpBar(ctx, this, 32)
   }
 }
@@ -213,19 +253,43 @@ class PCBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    // 본체
-    ctx.fillStyle = '#888888'
-    ctx.fillRect(this.x - 16, this.y - 10, 32, 22)
-    // 모니터
-    ctx.fillStyle = '#222'
-    ctx.fillRect(this.x - 12, this.y - 22, 24, 16)
-    ctx.fillStyle = '#00AA55'
-    ctx.fillRect(this.x - 10, this.y - 20, 20, 10)
-    // 깜박이는 커서
-    if (Math.floor(Date.now() / 500) % 2 === 0) {
+    const x = this.x, y = this.y
+    const t = Date.now()
+    // 본체 (PC 타워)
+    ctx.fillStyle = '#9A9A9A'
+    ctx.fillRect(x - 10, y - 6, 20, 22)
+    ctx.strokeStyle = '#666'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x - 10, y - 6, 20, 22)
+    // 드라이브 슬롯
+    ctx.fillStyle = '#555'
+    ctx.fillRect(x - 7, y, 14, 3)
+    ctx.fillRect(x - 7, y + 5, 14, 3)
+    // 전원 버튼 (깜빡임)
+    ctx.fillStyle = Math.floor(t / 800) % 2 === 0 ? '#00FF44' : '#009922'
+    ctx.beginPath(); ctx.arc(x + 5, y - 2, 2.5, 0, Math.PI * 2); ctx.fill()
+    // CRT 모니터
+    ctx.fillStyle = '#555'
+    ctx.fillRect(x - 16, y - 32, 32, 24)
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 14, y - 30, 28, 20)
+    // 화면 (글리치 or 에러)
+    const glitch = Math.floor(t / 200) % 10 === 0
+    ctx.fillStyle = glitch ? '#FF2200' : '#003300'
+    ctx.fillRect(x - 12, y - 28, 24, 16)
+    // 코드 라인들
+    ctx.fillStyle = glitch ? '#FF6644' : '#00CC44'
+    ctx.fillRect(x - 10, y - 26, 14, 2)
+    ctx.fillRect(x - 10, y - 22, 18, 2)
+    ctx.fillRect(x - 10, y - 18, 10, 2)
+    // 커서
+    if (Math.floor(t / 500) % 2 === 0) {
       ctx.fillStyle = '#00FF88'
-      ctx.fillRect(this.x - 1, this.y - 16, 2, 6)
+      ctx.fillRect(x - 2, y - 18, 3, 8)
     }
+    // 모니터 받침
+    ctx.fillStyle = '#666'
+    ctx.fillRect(x - 4, y - 8, 8, 3)
     _drawHpBar(ctx, this, 36)
   }
 }
@@ -334,21 +398,50 @@ class MirrorBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    const x = this.x, y = this.y
     const isDashing = this.dashPhase === 'dashing'
-    ctx.fillStyle = isDashing ? '#E8E8FF' : '#C0C0C0'
-    // 머리
-    ctx.beginPath()
-    ctx.arc(this.x, this.y - 18, 9, 0, Math.PI * 2)
-    ctx.fill()
-    // 몸통
-    ctx.fillRect(this.x - 10, this.y - 9, 20, 20)
+    ctx.save()
+    // 돌진 잔상
+    if (isDashing) {
+      ctx.globalAlpha = 0.25
+      ctx.fillStyle = '#C0C0FF'
+      ctx.fillRect(x - 10 - 12, y - 9, 20, 30)
+      ctx.globalAlpha = 0.12
+      ctx.fillRect(x - 10 - 22, y - 9, 20, 30)
+      ctx.globalAlpha = 1
+      ctx.shadowColor = '#8888FF'
+      ctx.shadowBlur = 18
+    }
     // 다리
-    ctx.fillRect(this.x - 9, this.y + 11, 7, 11)
-    ctx.fillRect(this.x + 2, this.y + 11, 7, 11)
-    // 발광 눈
-    ctx.fillStyle = isDashing ? '#FF4444' : '#8888FF'
-    ctx.fillRect(this.x - 6, this.y - 22, 4, 3)
-    ctx.fillRect(this.x + 2, this.y - 22, 4, 3)
+    ctx.fillStyle = isDashing ? '#E0E0FF' : '#A8A8B8'
+    ctx.fillRect(x - 9, y + 11, 7, 13)
+    ctx.fillRect(x + 2, y + 11, 7, 13)
+    // 발 (약간 넓게)
+    ctx.fillRect(x - 11, y + 21, 9, 4)
+    ctx.fillRect(x + 2, y + 21, 9, 4)
+    // 몸통
+    ctx.fillStyle = isDashing ? '#E8E8FF' : '#C0C0C8'
+    ctx.fillRect(x - 11, y - 10, 22, 22)
+    // 몸통 하이라이트 (반사)
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'
+    ctx.fillRect(x - 9, y - 8, 6, 18)
+    // 머리
+    ctx.fillStyle = isDashing ? '#E8E8FF' : '#C8C8D8'
+    ctx.beginPath()
+    ctx.arc(x, y - 19, 10, 0, Math.PI * 2)
+    ctx.fill()
+    // 머리 하이라이트
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'
+    ctx.beginPath()
+    ctx.arc(x - 3, y - 22, 5, 0, Math.PI * 2)
+    ctx.fill()
+    // 눈
+    ctx.fillStyle = isDashing ? '#FF3333' : '#6666FF'
+    ctx.shadowColor = isDashing ? '#FF3333' : '#6666FF'
+    ctx.shadowBlur = 8
+    ctx.fillRect(x - 6, y - 23, 4, 4)
+    ctx.fillRect(x + 2, y - 23, 4, 4)
+    ctx.restore()
     _drawHpBar(ctx, this, 32)
   }
 }
@@ -456,46 +549,90 @@ class AIBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    const x = this.x, y = this.y
     const halfHp = this.hp <= this.maxHp * 0.5
+    const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'
+    const t = Date.now()
 
-    // 몸통 (인간형)
-    ctx.fillStyle = '#1a1a1a'
-    ctx.beginPath()
-    ctx.arc(this.x, this.y - 26, 13, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillRect(this.x - 15, this.y - 13, 30, 28)
-    ctx.fillRect(this.x - 13, this.y + 15, 10, 18)
-    ctx.fillRect(this.x + 3, this.y + 15, 10, 18)
-
-    // 발광 눈 (청색)
     ctx.save()
-    ctx.fillStyle = halfHp ? '#FF3C3C' : '#00FFFF'
-    ctx.shadowColor = halfHp ? '#FF3C3C' : '#00FFFF'
-    ctx.shadowBlur = 14
-    ctx.fillRect(this.x - 8, this.y - 30, 5, 4)
-    ctx.fillRect(this.x + 3, this.y - 30, 5, 4)
-    ctx.restore()
+    ctx.shadowColor = eyeColor
+    ctx.shadowBlur = halfHp ? 30 : 20
 
-    // HP 50% 이하 — 붉은 광환
+    // 맥동 광환 (바깥)
+    const pulse = 0.7 + 0.3 * Math.sin(t / 300)
+    ctx.globalAlpha = 0.18 * pulse
+    ctx.strokeStyle = eyeColor
+    ctx.lineWidth = halfHp ? 5 : 3
+    ctx.beginPath(); ctx.arc(x, y - 5, 42, 0, Math.PI * 2); ctx.stroke()
+    ctx.globalAlpha = 0.10 * pulse
+    ctx.beginPath(); ctx.arc(x, y - 5, 54, 0, Math.PI * 2); ctx.stroke()
+    ctx.globalAlpha = 1
+
+    // 다리
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 14, y + 15, 11, 20)
+    ctx.fillRect(x + 3, y + 15, 11, 20)
+    // 발
+    ctx.fillStyle = '#1a1a1a'
+    ctx.fillRect(x - 16, y + 31, 14, 5)
+    ctx.fillRect(x + 2, y + 31, 14, 5)
+
+    // 팔
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 24, y - 12, 10, 26)
+    ctx.fillRect(x + 14, y - 12, 10, 26)
+    // 손 (클로)
+    ctx.fillRect(x - 26, y + 10, 5, 8)
+    ctx.fillRect(x - 22, y + 12, 5, 8)
+    ctx.fillRect(x + 21, y + 10, 5, 8)
+    ctx.fillRect(x + 17, y + 12, 5, 8)
+
+    // 몸통
+    ctx.fillStyle = '#0d0d0d'
+    ctx.fillRect(x - 15, y - 13, 30, 29)
+    // 코어 (가슴)
+    ctx.fillStyle = halfHp ? '#FF3C3C' : '#00FFFF'
+    ctx.shadowBlur = 20
+    ctx.beginPath(); ctx.arc(x, y + 2, 6, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath(); ctx.arc(x, y + 2, 2.5, 0, Math.PI * 2); ctx.fill()
+
+    // 머리
+    ctx.shadowBlur = 0
+    ctx.fillStyle = '#111'
+    ctx.beginPath(); ctx.arc(x, y - 26, 14, 0, Math.PI * 2); ctx.fill()
+
+    // 눈
+    ctx.fillStyle = eyeColor
+    ctx.shadowColor = eyeColor
+    ctx.shadowBlur = 16
+    ctx.fillRect(x - 9, y - 30, 6, 5)
+    ctx.fillRect(x + 3, y - 30, 6, 5)
+
+    // HP 50% → 이마 금 균열
     if (halfHp) {
-      ctx.save()
-      ctx.strokeStyle = '#FF3C3C'
-      ctx.shadowColor = '#FF3C3C'
-      ctx.shadowBlur = 20
-      ctx.lineWidth = 2
+      ctx.strokeStyle = '#FF6644'
+      ctx.lineWidth = 1.5
+      ctx.shadowBlur = 6
       ctx.beginPath()
-      ctx.arc(this.x, this.y - 5, 32, 0, Math.PI * 2)
+      ctx.moveTo(x - 2, y - 37)
+      ctx.lineTo(x + 1, y - 30)
+      ctx.lineTo(x - 1, y - 24)
       ctx.stroke()
-      ctx.restore()
     }
+
+    ctx.restore()
 
     // HP 바
     if (this.hp < this.maxHp) {
-      const barW = 50
-      ctx.fillStyle = '#444'
-      ctx.fillRect(this.x - barW / 2, this.y - 48, barW, 5)
-      ctx.fillStyle = halfHp ? '#FF3C3C' : '#ff4444'
-      ctx.fillRect(this.x - barW / 2, this.y - 48, barW * (this.hp / this.maxHp), 5)
+      const barW = 54
+      ctx.fillStyle = '#222'
+      ctx.fillRect(x - barW / 2, y - 52, barW, 6)
+      ctx.fillStyle = halfHp ? '#FF3C3C' : '#00CCFF'
+      ctx.fillRect(x - barW / 2, y - 52, barW * (this.hp / this.maxHp), 6)
+      ctx.strokeStyle = '#444'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x - barW / 2, y - 52, barW, 6)
     }
   }
 }

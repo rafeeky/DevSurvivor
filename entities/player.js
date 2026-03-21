@@ -167,43 +167,86 @@ class Player {
   // ── 렌더링 ──
 
   render(ctx) {
-    // 피격 깜빡임
-    if (this.flashTimer > 0) {
-      ctx.globalAlpha = 0.4
-    }
+    const x = this.x, y = this.y
+    const flash = this.flashTimer > 0
+    ctx.save()
+    if (flash) ctx.globalAlpha = 0.35
 
     // 보호막 글로우
     if (this.shields > 0) {
-      ctx.beginPath()
-      ctx.arc(this.x, this.y, this.collisionRadius + 8, 0, Math.PI * 2)
+      ctx.save()
       ctx.strokeStyle = '#44aaff'
-      ctx.lineWidth = 2
+      ctx.shadowColor = '#44aaff'
+      ctx.shadowBlur = 14
+      ctx.lineWidth = 2.5
+      ctx.beginPath()
+      ctx.arc(x, y - 4, this.collisionRadius + 10, 0, Math.PI * 2)
       ctx.stroke()
+      ctx.restore()
     }
 
-    // 몸통 (파란 계열 사람 실루엣 — 단순 사각형 + 원)
+    // 다리
+    ctx.fillStyle = '#2255cc'
+    ctx.fillRect(x - 8, y + 10, 6, 14)
+    ctx.fillRect(x + 2, y + 10, 6, 14)
+    // 신발
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(x - 9, y + 21, 8, 4)
+    ctx.fillRect(x + 1, y + 21, 8, 4)
+
+    // 몸통 (후디)
     ctx.fillStyle = '#4488ff'
-    ctx.fillRect(this.x - 10, this.y - 14, 20, 24)   // 몸통
-    ctx.beginPath()
-    ctx.arc(this.x, this.y - 20, 10, 0, Math.PI * 2) // 머리
+    ctx.fillRect(x - 11, y - 13, 22, 24)
+    // 후디 포켓
+    ctx.fillStyle = '#3366cc'
+    ctx.fillRect(x - 7, y + 4, 14, 7)
+
+    // 팔 (왼쪽 — 노트북 들고 있음)
+    ctx.fillStyle = '#4488ff'
+    ctx.fillRect(x - 17, y - 10, 7, 18)
+    ctx.fillRect(x + 10, y - 10, 7, 14)
+
+    // 노트북 (왼팔에 걸침)
+    ctx.fillStyle = '#888'
+    ctx.fillRect(x - 19, y - 2, 13, 9)
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(x - 18, y - 1, 11, 7)
+    ctx.fillStyle = '#2244aa'
+    ctx.fillRect(x - 17, y, 9, 5)
+    // 화면 글로우
+    ctx.fillStyle = '#44aaff'
+    ctx.fillRect(x - 16, y + 1, 3, 1)
+
+    // 머리
     ctx.fillStyle = '#66aaff'
+    ctx.beginPath()
+    ctx.arc(x, y - 21, 10, 0, Math.PI * 2)
     ctx.fill()
+    // 머리 하이라이트
+    ctx.fillStyle = 'rgba(200,230,255,0.4)'
+    ctx.beginPath()
+    ctx.arc(x - 3, y - 24, 5, 0, Math.PI * 2)
+    ctx.fill()
+    // 눈 (안경 느낌)
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x - 7, y - 24, 5, 4)
+    ctx.strokeRect(x + 2, y - 24, 5, 4)
+    ctx.fillStyle = '#aaddff'
+    ctx.fillRect(x - 6, y - 23, 3, 2)
+    ctx.fillRect(x + 3, y - 23, 3, 2)
 
-    // 노트북 (작은 회색 사각형)
-    ctx.fillStyle = '#aaaaaa'
-    ctx.fillRect(this.x + 6, this.y - 8, 10, 7)
+    ctx.restore()
 
-    // HP 바 (플레이어 하단)
-    const barWidth = 36
-    const barX = this.x - barWidth / 2
-    const barY = this.y + 22
-    ctx.fillStyle = '#333'
-    ctx.fillRect(barX, barY, barWidth, 5)
+    // HP 바
+    const barW = 38
+    const barX = x - barW / 2
+    const barY = y + 27
+    ctx.fillStyle = '#222'
+    ctx.fillRect(barX, barY, barW, 5)
     const hpRatio = this.hp / this.maxHp
     ctx.fillStyle = hpRatio > 0.5 ? '#44ff88' : hpRatio > 0.3 ? '#ffaa00' : '#ff3333'
-    ctx.fillRect(barX, barY, barWidth * hpRatio, 5)
-
-    ctx.globalAlpha = 1
+    ctx.fillRect(barX, barY, barW * hpRatio, 5)
   }
 }
 
