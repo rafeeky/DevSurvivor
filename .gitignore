@@ -10,6 +10,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code 로컬 설정 (API 키 포함 가능)
+.claude/settings.local.json
+
 # Build output
 dist/
 build/
