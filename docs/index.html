@@ -2794,16 +2794,16 @@ const MetaManager = {
     // 헤더
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 12px "Press Start 2P", monospace'
+    ctx.font = 'bold 26px "Pixelify Sans", sans-serif'
     ctx.fillText('업그레이드', 400, 34)
     ctx.fillStyle = '#FFD700'
-    ctx.font = '10px "Press Start 2P", monospace'
+    ctx.font = '15px "Pixelify Sans", sans-serif'
     ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
 
     // 페이지 표시
     const totalPages = Math.ceil(META_UPGRADES.length / 6)
     ctx.fillStyle = '#778899'
-    ctx.font = '8px "Press Start 2P", monospace'
+    ctx.font = '12px "Pixelify Sans", sans-serif'
     ctx.fillText(`${this._page + 1} / ${totalPages} 페이지`, 400, 72)
 
     // 아이템 그리드 (2열 × 3행, 페이지당 6개)
@@ -2850,7 +2850,7 @@ const MetaManager = {
 
       // 이름
       ctx.fillStyle = '#ddeeff'
-      ctx.font = 'bold 10px "Press Start 2P", monospace'
+      ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'left'
       ctx.fillText(upg.name, textX, by + 24)
 
@@ -2858,20 +2858,20 @@ const MetaManager = {
       let stars = ''
       for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
       ctx.fillStyle = '#FFD700'
-      ctx.font = '10px "Press Start 2P", monospace'
+      ctx.font = '14px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(stars, bx + colW - 8, by + 24)
 
       // 효과 설명
       ctx.fillStyle = '#aabbcc'
-      ctx.font = '10px "Press Start 2P", monospace'
+      ctx.font = '13px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'left'
       ctx.fillText(lv > 0 ? `${upg.desc} (${lv}단계)` : upg.desc, textX, by + 50)
 
       // 구매 버튼 또는 MAX
       if (maxed) {
         ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 10px "Press Start 2P", monospace'
+        ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
         ctx.textAlign = 'right'
         ctx.fillText('MAX', bx + colW - 8, by + 90)
         this._buyRects.push(null)
@@ -2884,7 +2884,7 @@ const MetaManager = {
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '10px "Press Start 2P", monospace'
+        ctx.font = '13px "Pixelify Sans", sans-serif'
         ctx.textAlign = 'center'
         if (canBuy) {
           ctx.fillStyle = '#ffffff'
@@ -2910,7 +2910,7 @@ const MetaManager = {
       ctx.fillRect(190, navY, 140, 36)
       ctx.strokeRect(190, navY, 140, 36)
       ctx.fillStyle = '#88aaff'
-      ctx.font = '10px "Press Start 2P", monospace'
+      ctx.font = '13px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('◀ 이전', 260, navY + 23)
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
@@ -2923,7 +2923,7 @@ const MetaManager = {
       ctx.fillRect(470, navY, 140, 36)
       ctx.strokeRect(470, navY, 140, 36)
       ctx.fillStyle = '#88aaff'
-      ctx.font = '10px "Press Start 2P", monospace'
+      ctx.font = '13px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('다음 ▶', 540, navY + 23)
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
@@ -2936,7 +2936,7 @@ const MetaManager = {
     ctx.fillRect(300, 492, 200, 44)
     ctx.strokeRect(300, 492, 200, 44)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 10px "Press Start 2P", monospace'
+    ctx.font = 'bold 16px "Pixelify Sans", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('[ 돌아가기 ]', 400, 520)
     ctx.textAlign = 'left'
@@ -3431,7 +3431,7 @@ class Lobby {
         ctx.fillRect(badgeX, badgeY, badgeW, badgeH)
         ctx.strokeRect(badgeX, badgeY, badgeW, badgeH)
         ctx.fillStyle = roleColor
-        ctx.font = 'bold 8px "Press Start 2P", monospace'
+        ctx.font = 'bold 9px "Pixelify Sans", sans-serif'
         ctx.fillText(roleType, cx, badgeY + 10)
       }
 
@@ -3526,7 +3526,7 @@ class Result {
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 56px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 24px "Press Start 2P", monospace'
     ctx.shadowColor = '#FFD700'
     ctx.shadowBlur = 24
     ctx.fillText('배포 성공!', 400, 94)
@@ -3639,10 +3639,10 @@ class Result {
     ctx.save()
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
-    ctx.font = 'bold 128px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 32px "Press Start 2P", monospace'
     ctx.fillStyle = '#6b0000'
     ctx.fillText('AI', 400, 172)
-    ctx.font = 'bold 82px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 32px "Press Start 2P", monospace'
     ctx.fillStyle = '#b81010'
     ctx.fillText('승  리', 400, 266)
     ctx.restore()
@@ -4157,18 +4157,18 @@ function _drawEnemyAnnouncement(ctx, ann) {
 
   // 레이블
   ctx.fillStyle = '#ff6644'
-  ctx.font = '10px "Press Start 2P", monospace'
+  ctx.font = '22px "VT323", cursive'
   ctx.textAlign = 'center'
   ctx.fillText('⚠  신규 적 등장  ⚠', 400, 94)
 
   // 적 이름
   ctx.fillStyle = '#ff3333'
-  ctx.font = 'bold 12px "Press Start 2P", monospace'
+  ctx.font = 'bold 38px "VT323", cursive'
   ctx.fillText(ann.name, 400, 130)
 
   // 설명
   ctx.fillStyle = '#ddbbaa'
-  ctx.font = '10px "Press Start 2P", monospace'
+  ctx.font = '20px "VT323", cursive'
   ctx.fillText(ann.desc, 400, 158)
 
   ctx.restore()
@@ -4443,11 +4443,11 @@ function _loop(now) {
       ctx.save()
       ctx.globalAlpha = alpha
       ctx.fillStyle = '#ff2222'
-      ctx.font = 'bold 16px "Press Start 2P", monospace'
+      ctx.font = 'bold 48px "VT323", cursive'
       ctx.textAlign = 'center'
       ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
       ctx.fillStyle = '#ffffff'
-      ctx.font = '12px "Press Start 2P", monospace'
+      ctx.font = '28px "VT323", cursive'
       ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
       ctx.restore()
     }

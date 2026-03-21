@@ -170,16 +170,16 @@ const MetaManager = {
     // 헤더
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 26px monospace'
+    ctx.font = 'bold 26px "Pixelify Sans", sans-serif'
     ctx.fillText('업그레이드', 400, 34)
     ctx.fillStyle = '#FFD700'
-    ctx.font = '15px monospace'
+    ctx.font = '15px "Pixelify Sans", sans-serif'
     ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
 
     // 페이지 표시
     const totalPages = Math.ceil(META_UPGRADES.length / 6)
     ctx.fillStyle = '#778899'
-    ctx.font = '12px monospace'
+    ctx.font = '12px "Pixelify Sans", sans-serif'
     ctx.fillText(`${this._page + 1} / ${totalPages} 페이지`, 400, 72)
 
     // 아이템 그리드 (2열 × 3행, 페이지당 6개)
@@ -226,7 +226,7 @@ const MetaManager = {
 
       // 이름
       ctx.fillStyle = '#ddeeff'
-      ctx.font = 'bold 14px monospace'
+      ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'left'
       ctx.fillText(upg.name, textX, by + 24)
 
@@ -234,20 +234,20 @@ const MetaManager = {
       let stars = ''
       for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
       ctx.fillStyle = '#FFD700'
-      ctx.font = '14px monospace'
+      ctx.font = '14px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(stars, bx + colW - 8, by + 24)
 
       // 효과 설명
       ctx.fillStyle = '#aabbcc'
-      ctx.font = '13px monospace'
+      ctx.font = '13px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'left'
       ctx.fillText(lv > 0 ? `${upg.desc} (${lv}단계)` : upg.desc, textX, by + 50)
 
       // 구매 버튼 또는 MAX
       if (maxed) {
         ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 14px monospace'
+        ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
         ctx.textAlign = 'right'
         ctx.fillText('MAX', bx + colW - 8, by + 90)
         this._buyRects.push(null)
@@ -260,7 +260,7 @@ const MetaManager = {
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '13px monospace'
+        ctx.font = '13px "Pixelify Sans", sans-serif'
         ctx.textAlign = 'center'
         if (canBuy) {
           ctx.fillStyle = '#ffffff'
@@ -286,7 +286,7 @@ const MetaManager = {
       ctx.fillRect(190, navY, 140, 36)
       ctx.strokeRect(190, navY, 140, 36)
       ctx.fillStyle = '#88aaff'
-      ctx.font = '13px monospace'
+      ctx.font = '13px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('◀ 이전', 260, navY + 23)
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
@@ -299,7 +299,7 @@ const MetaManager = {
       ctx.fillRect(470, navY, 140, 36)
       ctx.strokeRect(470, navY, 140, 36)
       ctx.fillStyle = '#88aaff'
-      ctx.font = '13px monospace'
+      ctx.font = '13px "Pixelify Sans", sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('다음 ▶', 540, navY + 23)
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
@@ -312,7 +312,7 @@ const MetaManager = {
     ctx.fillRect(300, 492, 200, 44)
     ctx.strokeRect(300, 492, 200, 44)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 16px monospace'
+    ctx.font = 'bold 16px "Pixelify Sans", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('[ 돌아가기 ]', 400, 520)
     ctx.textAlign = 'left'

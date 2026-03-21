@@ -102,18 +102,18 @@ function _drawEnemyAnnouncement(ctx, ann) {
 
   // 레이블
   ctx.fillStyle = '#ff6644'
-  ctx.font = '13px monospace'
+  ctx.font = '22px "VT323", cursive'
   ctx.textAlign = 'center'
   ctx.fillText('⚠  신규 적 등장  ⚠', 400, 94)
 
   // 적 이름
   ctx.fillStyle = '#ff3333'
-  ctx.font = 'bold 28px monospace'
+  ctx.font = 'bold 38px "VT323", cursive'
   ctx.fillText(ann.name, 400, 130)
 
   // 설명
   ctx.fillStyle = '#ddbbaa'
-  ctx.font = '14px monospace'
+  ctx.font = '20px "VT323", cursive'
   ctx.fillText(ann.desc, 400, 158)
 
   ctx.restore()
@@ -388,11 +388,11 @@ function _loop(now) {
       ctx.save()
       ctx.globalAlpha = alpha
       ctx.fillStyle = '#ff2222'
-      ctx.font = 'bold 36px monospace'
+      ctx.font = 'bold 48px "VT323", cursive'
       ctx.textAlign = 'center'
       ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
       ctx.fillStyle = '#ffffff'
-      ctx.font = '20px monospace'
+      ctx.font = '28px "VT323", cursive'
       ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
       ctx.restore()
     }
