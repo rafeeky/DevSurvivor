@@ -1122,6 +1122,50 @@ GDD 문서를 실제 개발 과정에 맞게 지속적으로 업데이트하고 
 
 ---
 
+## Part 12: UI/UX 개선 방향 (v0.7 결정사항)
+
+### 12.1 메인 로비 화면 개선 원칙
+
+| 원칙 | 내용 |
+|------|------|
+| 화면 역할 단일화 | 로비 = 캐릭터 선택 + 시작 유도 |
+| 버튼 위계 | `[시작하기]` 단독 메인 CTA, `[업그레이드]` 한 단계 작게 |
+| 배경 무드화 | bg_title.png (어두운 야근 사무실 + 모니터 불빛) — overlay 최소화 |
+| 텍스트 절감 | 조작 안내는 핵심 1줄만 유지 |
+| 컬러 통일 | 메인 팔레트 남색 + 포인트 1색 (민트 or 노랑) |
+
+### 12.2 적 스프라이트 확정 매핑 (v0.7)
+
+| 적 이름 | 출현 순서 | 스프라이트 소스 | 특이사항 |
+|---------|---------|--------------|---------|
+| BoxBot  | 1번째   | `assets/custom/enemies/boxbot.png` (RGBA 단일 프레임 1024×1024) | 고정 이미지 |
+| CartBot | 2번째   | sprite-pack-3 / Gum Bot (32×32, RGB→RGBA) | |
+| PCBot   | 3번째   | sprite-pack-3 / Robot J5 (32×32, RGB→RGBA) | |
+| MirrorBot | 4번째 | sprite-pack-3 / Geralt (32×32, RGB→RGBA) | Alex 플레이어와 동일 소스 |
+| AIBot   | 5번째 (최종) | 플레이어 Tommy 스프라이트 + 붉은 shadowColor 외곽선 | D003 A안 결정 |
+
+### 12.3 플레이어 스프라이트 확정 (v0.7)
+
+| 캐릭터 | 스프라이트 | 변경 이력 |
+|--------|---------|---------|
+| Adam (주니어 남) | sprite-pack-3 / Tommy 32×32 | 유지 |
+| Alex (시니어 남) | sprite-pack-3 / Geralt 32×32 | v0.7: 16×16 chibi → 32×32 교체 |
+| Amelia (주니어 여) | sprite-pack-3 / Twiggy 32×32 | v0.7: Julia → Twiggy 교체 |
+
+### 12.4 VFX 스킬 이펙트 매핑 (v0.7, Free Pixel Effects Pack 100×100px/frame)
+
+| 스킬 | VFX 시트 | 근거 |
+|------|---------|------|
+| 긴급수정 | 11_fire_spritesheet | 화재·긴박감 |
+| 디버그 | 5_magickahit_spritesheet | 정밀 타격 |
+| 우선순위정리 | 13_vortex_spritesheet | 소용돌이·정리 |
+| 커피 한 잔 | 9_brightfire_spritesheet | 에너지 충전 |
+| 피규어청소 | 8_protectioncircle_spritesheet | 보호막 원형 |
+| 강아지쓰다듬기 | 3_bluefire_spritesheet | 온화한 파란불꽃 |
+| 낮잠자기 | 12_nebula_spritesheet | 몽환적 성운 |
+
+---
+
 ## 문서 변경 이력
 
 | 버전 | 날짜 | 변경 내용 |
@@ -1132,3 +1176,4 @@ GDD 문서를 실제 개발 과정에 맞게 지속적으로 업데이트하고 
 | 0.4 | 2026-03-21 | M1~M2 구현 완료 — 에이전트 협업 1차 실행 (Raf/Marv/Haon/Mason) |
 | 0.5 | 2026-03-21 | Part 5.2 스킬 수치 동기화 (Milli) — 커피 한 잔 쿨다운 20초, 피규어 청소하기 쿨다운 12초/넉백 150px, 우선순위 정리 부채꼴 120° 명시, 낮잠자기 미구현 항목 표시 |
 | 0.6 | 2026-03-21 | 캐릭터 3종 패시브 시스템 추가 (3.4~3.6), 폰트 규칙 정의 (7.0), 오피스 맵 방향 추가 (8.1b), 애셋 탐색 지침 추가 (Part 11), 스킬 단축키 1/2/3/4로 갱신 |
+| 0.7 | 2026-03-22 | 스프라이트 교체 (Amelia→Twiggy, Alex→Geralt 32×32), 적 매핑 재정의 (BoxBot/CartBot/PCBot/MirrorBot/AIBot), VFX 스킬 이펙트 연결, UI 개선 방향 반영 (배경·버튼 위계·캐릭터 카드), 로비 배경 bg_title.png 교체 |

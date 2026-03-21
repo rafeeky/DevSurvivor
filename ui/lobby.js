@@ -1,6 +1,6 @@
-// 로비 배경 이미지 (bg_office.png)
+// 로비 배경 이미지 (bg_title.png)
 const _lobbyBgImg = new Image()
-_lobbyBgImg.src = 'assets/custom/backgrounds/bg_office.png'
+_lobbyBgImg.src = 'assets/backgrounds/bg_title.png'
 
 class Lobby {
   constructor() {
@@ -13,7 +13,7 @@ class Lobby {
       { key: 'amelia', x: 505, y: 180, w: 170, h: 148 },
     ]
     this.startBtnRect   = { x: 210, y: 342, w: 380, h: 60 }
-    this.upgradeBtnRect = { x: 255, y: 412, w: 290, h: 50 }
+    this.upgradeBtnRect = { x: 290, y: 416, w: 220, h: 34 }
     this._bindClick()
   }
 
@@ -59,7 +59,7 @@ class Lobby {
     // 배경 (bg_office.png 또는 폴백 그리드)
     if (_lobbyBgImg.complete && _lobbyBgImg.naturalWidth > 0) {
       ctx.drawImage(_lobbyBgImg, 0, 0, _lobbyBgImg.naturalWidth, _lobbyBgImg.naturalHeight, 0, 0, 800, 600)
-      ctx.fillStyle = 'rgba(0,0,20,0.68)'
+      ctx.fillStyle = 'rgba(0,0,10,0.22)'
       ctx.fillRect(0, 0, 800, 600)
     } else {
       ctx.fillStyle = '#0d0d1a'
@@ -100,40 +100,41 @@ class Lobby {
     // 캐릭터 카드
     this._drawCharCards(ctx)
 
-    // 시작 버튼
+    // 시작 버튼 (메인 CTA — 글로우 강조)
     const s = this.startBtnRect
-    ctx.fillStyle = '#1e3a6e'
-    ctx.strokeStyle = '#4488ff'
+    ctx.save()
+    ctx.shadowColor = '#4488ff'
+    ctx.shadowBlur = 18
+    ctx.fillStyle = '#1a3060'
+    ctx.strokeStyle = '#66aaff'
     ctx.lineWidth = 2.5
     ctx.fillRect(s.x, s.y, s.w, s.h)
     ctx.strokeRect(s.x, s.y, s.w, s.h)
+    ctx.restore()
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 36px "Pixelify Sans", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
-    // 업그레이드 버튼
+    // 업그레이드 버튼 (보조 — 작고 어둡게)
     const u = this.upgradeBtnRect
-    ctx.fillStyle = '#0d1a0d'
-    ctx.strokeStyle = '#44aa44'
-    ctx.lineWidth = 2
+    ctx.fillStyle = 'rgba(10,20,10,0.7)'
+    ctx.strokeStyle = '#336633'
+    ctx.lineWidth = 1
     ctx.fillRect(u.x, u.y, u.w, u.h)
     ctx.strokeRect(u.x, u.y, u.w, u.h)
-    ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 26px "Pixelify Sans", sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + u.h / 2 + 8)
-
-    // 조작 안내
-    ctx.fillStyle = 'rgba(0,0,0,0.65)'
-    ctx.fillRect(0, 458, 800, 62)
-    ctx.fillStyle = '#aaddff'
-    ctx.font = '22px "Pixelify Sans", sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText('WASD 이동  /  1~4 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 480)
-    ctx.fillStyle = '#88aacc'
+    ctx.fillStyle = '#66aa66'
     ctx.font = '18px "Pixelify Sans", sans-serif'
-    ctx.fillText('경험치를 모아 레벨업하고 스킬을 획득하세요', 400, 503)
+    ctx.textAlign = 'center'
+    ctx.fillText('업그레이드', u.x + u.w / 2, u.y + u.h / 2 + 6)
+
+    // 조작 안내 (1줄로 축소)
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.fillRect(0, 468, 800, 32)
+    ctx.fillStyle = '#7799bb'
+    ctx.font = '16px "Pixelify Sans", sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('이동: WASD  /  스킬: 1~4  /  레벨업 시 스킬 선택', 400, 488)
 
     ctx.textAlign = 'left'
   }
@@ -148,12 +149,24 @@ class Lobby {
       const sel = this._selected === card.key
       const cx  = card.x + card.w / 2
 
-      // 카드 배경
-      ctx.fillStyle   = sel ? 'rgba(68,136,255,0.22)' : 'rgba(0,0,20,0.72)'
-      ctx.strokeStyle = sel ? '#4488ff' : '#2a3a55'
-      ctx.lineWidth   = sel ? 2 : 1
-      ctx.fillRect(card.x, card.y, card.w, card.h)
-      ctx.strokeRect(card.x, card.y, card.w, card.h)
+      // 카드 배경 (선택된 카드 글로우 강조)
+      if (sel) {
+        ctx.save()
+        ctx.shadowColor = '#4488ff'
+        ctx.shadowBlur = 14
+        ctx.fillStyle = 'rgba(68,136,255,0.28)'
+        ctx.strokeStyle = '#66aaff'
+        ctx.lineWidth = 2.5
+        ctx.fillRect(card.x, card.y, card.w, card.h)
+        ctx.strokeRect(card.x, card.y, card.w, card.h)
+        ctx.restore()
+      } else {
+        ctx.fillStyle = 'rgba(0,0,20,0.72)'
+        ctx.strokeStyle = '#2a3a55'
+        ctx.lineWidth = 1
+        ctx.fillRect(card.x, card.y, card.w, card.h)
+        ctx.strokeRect(card.x, card.y, card.w, card.h)
+      }
 
       // 선택 표시 (우상단 ▶)
       if (sel) {

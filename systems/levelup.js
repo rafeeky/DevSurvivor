@@ -291,45 +291,49 @@ class LevelUpManager {
       ctx.fill()
       ctx.stroke()
 
-      // 스킬 아이콘 (있으면 상단 중앙 44×44)
+      // ── 좌측 아이콘 박스 (꽉 채우기) ─────────────────────────────────
       const icon = _getLUIcon(c.skillId)
-      const iconSize = 44
-      const iconX = cx + cardW / 2 - iconSize / 2
-      const iconY = cy + 10
+      const boxSize = 60
+      const boxX = cx + 8
+      const boxY = cy + (cardH - boxSize) / 2  // 세로 중앙 정렬
+      // 박스 배경
+      ctx.fillStyle = 'rgba(15,25,60,0.95)'
+      ctx.fillRect(boxX, boxY, boxSize, boxSize)
+      ctx.strokeStyle = c.skillId ? '#4488cc' : '#2a3a55'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(boxX, boxY, boxSize, boxSize)
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.save()
         ctx.imageSmoothingEnabled = true
-        // 아이콘 배경 원
-        ctx.fillStyle = 'rgba(68,102,170,0.35)'
-        ctx.beginPath()
-        ctx.arc(cx + cardW / 2, iconY + iconSize / 2, iconSize / 2 + 4, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX, iconY, iconSize, iconSize)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, boxX + 3, boxY + 3, boxSize - 6, boxSize - 6)
         ctx.restore()
       } else if (c.skillId) {
-        // 로딩 중 원 플레이스홀더
-        ctx.fillStyle = 'rgba(68,102,170,0.2)'
-        ctx.beginPath()
-        ctx.arc(cx + cardW / 2, iconY + iconSize / 2, iconSize / 2 + 4, 0, Math.PI * 2)
-        ctx.fill()
+        // 로딩 중 플레이스홀더
+        ctx.fillStyle = 'rgba(68,102,170,0.25)'
+        ctx.fillRect(boxX + 3, boxY + 3, boxSize - 6, boxSize - 6)
       }
 
-      // 번호 레이블
+      // 번호 레이블 (좌상단)
       ctx.fillStyle = '#FFD700'
-      ctx.font = 'bold 14px monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 68)
+      ctx.font = 'bold 12px monospace'
+      ctx.textAlign = 'left'
+      ctx.fillText(`[${i + 1}]`, cx + 6, cy + 16)
+
+      // ── 우측 텍스트 영역 ───────────────────────────────────────────
+      const textX = cx + boxSize + 16
+      const textW = cardW - boxSize - 22
 
       // 이름
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 14px monospace'
-      ctx.fillText(c.label, cx + cardW / 2, cy + 90)
+      ctx.font = 'bold 12px monospace'
+      ctx.textAlign = 'left'
+      ctx.fillText(c.label, textX, cy + 36)
 
       // 설명 (줄바꿈 처리)
       ctx.fillStyle = '#aaccff'
-      ctx.font = '11px monospace'
-      const maxW = cardW - 16
-      this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 110, maxW, 16, true)
+      ctx.font = '10px monospace'
+      const maxW = textW
+      this._wrapText(ctx, c.desc, textX, cy + 56, maxW, 15, false)
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
     }

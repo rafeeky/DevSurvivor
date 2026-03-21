@@ -619,7 +619,13 @@ class AIBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 50); return }
+    // D003 A안: 붉은 외곽선 (shadowColor)
+    ctx.save()
+    ctx.shadowColor = '#ff2222'
+    ctx.shadowBlur = 14
+    const didSprite = this._renderSprite(ctx)
+    ctx.restore()
+    if (didSprite) { _drawHpBar(ctx, this, 50); return }
     const x = this.x, y = this.y
     const halfHp = this.hp <= this.maxHp * 0.5
     const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'

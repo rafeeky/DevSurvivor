@@ -286,6 +286,36 @@ for (const { src, dst } of GERALT_SPRITES) {
 }
 console.log(`✅ Geralt(Alex) 스프라이트 변환 완료 (${geraltCount}/${GERALT_SPRITES.length})`)
 
+// Amelia(Twiggy) 스프라이트 변환 (sprite-pack-3 RGB → assets/custom/player/ RGBA)
+const TWIGGY_SPRITES = [
+  { src: `${SP3}/2 - Twiggy/Idle (32 x 32).png`,             dst: `${DST}/twiggy_idle.png` },
+  { src: `${SP3}/2 - Twiggy/Running (32 x 32).png`,           dst: `${DST}/twiggy_walk.png` },
+  { src: `${SP3}/2 - Twiggy/Hurt_&_Recovery (32 x 32).png`,   dst: `${DST}/twiggy_hit.png`  },
+]
+let twiggyCount = 0
+for (const { src, dst } of TWIGGY_SPRITES) {
+  try { convertRGBtoRGBA(src, dst); twiggyCount++ } catch (e) { console.warn('⚠️ Twiggy 변환 실패:', src, e.message) }
+}
+console.log(`✅ Twiggy(Amelia) 스프라이트 변환 완료 (${twiggyCount}/${TWIGGY_SPRITES.length})`)
+
+// 적 스프라이트 RGBA 변환 (sprite-pack-3 RGB → assets/enemies/ RGBA)
+const ENEMY_DST = path.join(BASE, 'assets/enemies')
+const ENEMY_CONVERT = [
+  { src: `${SP3}/1 - Gum Bot/Idle (32 x 32).png`,     dst: `${ENEMY_DST}/GumBot_idle.png` },
+  { src: `${SP3}/1 - Gum Bot/Walking (32 x 32).png`,  dst: `${ENEMY_DST}/GumBot_walk.png` },
+  { src: `${SP3}/3 - Robot J5/Idle (32 x 32).png`,    dst: `${ENEMY_DST}/RobotJ5_idle.png` },
+  { src: `${SP3}/3 - Robot J5/Running (32 x 32).png`, dst: `${ENEMY_DST}/RobotJ5_walk.png` },
+  { src: `${SP3}/5 - Geralt/Idle (32 x 32).png`,      dst: `${ENEMY_DST}/Geralt_idle.png` },
+  { src: `${SP3}/5 - Geralt/Running (32 x 32).png`,   dst: `${ENEMY_DST}/Geralt_run.png`  },
+  { src: `${SP3}/4 - Tommy/Idle_Poses (32 x 32).png`, dst: `${ENEMY_DST}/Tommy_idle.png`  },
+  { src: `${SP3}/4 - Tommy/Running (32 x 32).png`,    dst: `${ENEMY_DST}/Tommy_run.png`   },
+]
+let enemyConvCount = 0
+for (const { src, dst } of ENEMY_CONVERT) {
+  try { convertRGBtoRGBA(src, dst); enemyConvCount++ } catch (e) { console.warn('⚠️ 적 스프라이트 변환 실패:', src, e.message) }
+}
+console.log(`✅ 적 스프라이트 RGBA 변환 완료 (${enemyConvCount}/${ENEMY_CONVERT.length})`)
+
 // assets/ → docs/assets/ 동기화
 // (한글 경로 환경에서 fs.cpSync segfault 방지 → PowerShell 사용)
 const { execSync } = require('child_process')

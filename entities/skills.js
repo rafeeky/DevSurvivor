@@ -11,6 +11,28 @@ function addEffect(effect) {
   _skillEffects.push(effect)
 }
 
+// ---------------------------------------------------------------------------
+// VFX 스프라이트시트 사전 로드 (Free Pixel Effects Pack, 100×100px/frame)
+// ---------------------------------------------------------------------------
+const _VFX = {}
+;(function _loadVFX() {
+  const DIR = 'assets/packs/Free Pixel Effects Pack'
+  const MAP = {
+    fire:       '11_fire_spritesheet.png',        // 긴급수정
+    magickahit: '5_magickahit_spritesheet.png',   // 디버그
+    vortex:     '13_vortex_spritesheet.png',      // 우선순위정리
+    brightfire: '9_brightfire_spritesheet.png',   // 커피
+    protection: '8_protectioncircle_spritesheet.png', // 피규어청소
+    bluefire:   '3_bluefire_spritesheet.png',     // 강아지
+    nebula:     '12_nebula_spritesheet.png',      // 낮잠
+  }
+  for (const [key, file] of Object.entries(MAP)) {
+    const img = new Image()
+    img.src = DIR + '/' + file
+    _VFX[key] = img
+  }
+})()
+
 function updateAndRenderEffects(ctx, deltaTime) {
   for (let i = _skillEffects.length - 1; i >= 0; i--) {
     const e = _skillEffects[i]
@@ -69,6 +91,25 @@ function updateAndRenderEffects(ctx, deltaTime) {
       ctx.shadowBlur = 6
       ctx.fillText(e.text, e.x, floatY)
       ctx.textAlign = 'left'
+    } else if (e.type === 'sprite') {
+      // VFX 스프라이트시트 애니메이션
+      if (e.img?.complete && e.img.naturalWidth > 0) {
+        e.frameTimer = (e.frameTimer || 0) + deltaTime
+        const frameDur = 1 / (e.fps || 24)
+        if (e.frameTimer >= frameDur) {
+          e.frameTimer -= frameDur
+          e.frame = ((e.frame || 0) + 1) % (e.totalFrames || 1)
+        }
+        const fw = e.fw || 100
+        const fh = e.fh || 100
+        const cols = e.cols || Math.floor(e.img.naturalWidth / fw)
+        const col = (e.frame || 0) % cols
+        const row = Math.floor((e.frame || 0) / cols)
+        const size = e.size || 128
+        ctx.imageSmoothingEnabled = true
+        ctx.drawImage(e.img, col * fw, row * fh, fw, fh, e.x - size / 2, e.y - size / 2, size, size)
+        ctx.imageSmoothingEnabled = false
+      }
     }
     ctx.restore()
   }
@@ -261,6 +302,7 @@ class SkillManager {
     addEffect({ type: 'circle', x: p.x, y: p.y, radius, color: '#ffaa00', life: 0.4, maxLife: 0.4 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 14, radius: radius * 0.7, color: '#ffcc44', life: 0.45, maxLife: 0.45 })
     addEffect({ type: 'float', x: p.x, y: p.y - 20, text: 'BUG FIX!', color: '#ffaa00', life: 0.6, maxLife: 0.6 })
+    addEffect({ type: 'sprite', img: _VFX.fire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 30, totalFrames: 24, size: 200, life: 0.8, maxLife: 0.8 })
   }
 
   // 디버그: 가장 가까운 적 1명(Lv3+: 2명)에게 피해 70
@@ -285,6 +327,7 @@ class SkillManager {
       alive[i].takeDamage(damage)
       addEffect({ type: 'hit', x: alive[i].x, y: alive[i].y, radius: 14, color: '#44ffaa', life: 0.4, maxLife: 0.4 })
       addEffect({ type: 'beam', x: p.x, y: p.y, x2: alive[i].x, y2: alive[i].y, color: '#44ffaa', width: 4, life: 0.2, maxLife: 0.2 })
+      addEffect({ type: 'sprite', img: _VFX.magickahit, x: alive[i].x, y: alive[i].y, fw: 100, fh: 100, fps: 30, totalFrames: 20, size: 120, life: 0.67, maxLife: 0.67 })
     }
     addEffect({ type: 'float', x: p.x, y: p.y - 20, text: 'DEBUG', color: '#44ffaa', life: 0.5, maxLife: 0.5 })
   }
@@ -328,6 +371,7 @@ class SkillManager {
       color: 'rgba(255,136,68,0.4)',
       life: 0.35, maxLife: 0.35,
     })
+    addEffect({ type: 'sprite', img: _VFX.vortex, x: p.x, y: p.y, fw: 100, fh: 100, fps: 28, totalFrames: 22, size: 180, life: 0.8, maxLife: 0.8 })
   }
 
   // 커피 한 잔: 이동속도 +40% (5초), 현재 쿨다운 20% 단축, 쿨 20초
@@ -340,6 +384,7 @@ class SkillManager {
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 16px monospace' })
+    addEffect({ type: 'sprite', img: _VFX.brightfire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 110, life: 0.83, maxLife: 0.83 })
   }
 
   // 피규어 청소하기: 받는 피해 -40% (4초), 주변 150px 적 넉백 120px, 쿨 12초
@@ -360,6 +405,7 @@ class SkillManager {
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 150, color: '#aaddff', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 12, radius: 140, color: '#aaddff', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'float', x: p.x, y: p.y - 20, text: 'GUARD', color: '#aaddff', life: 0.7, maxLife: 0.7 })
+    addEffect({ type: 'sprite', img: _VFX.protection, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 28, size: 190, life: 1.17, maxLife: 1.17 })
   }
 
   // 강아지 쓰다듬기: 최대 HP 25% 회복, 쿨 15초 (20→15 밸런스 조정)
@@ -370,6 +416,7 @@ class SkillManager {
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 18px monospace' })
+    addEffect({ type: 'sprite', img: _VFX.bluefire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 100, life: 0.83, maxLife: 0.83 })
   }
 
   // 낮잠자기: 이동 1.5초 정지 후 HP 50% 회복, 쿨 30초
@@ -379,6 +426,7 @@ class SkillManager {
     this.napTimer = 1.5
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
     addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
+    addEffect({ type: 'sprite', img: _VFX.nebula, x: this.player.x, y: this.player.y, fw: 100, fh: 100, fps: 18, totalFrames: 27, size: 90, life: 1.5, maxLife: 1.5 })
   }
 }
 

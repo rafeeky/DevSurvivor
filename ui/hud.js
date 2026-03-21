@@ -39,18 +39,35 @@ class HUD {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'
     ctx.fillRect(0, 0, 800, 48)
 
-    // HP 바
-    ctx.fillStyle = '#333'
-    ctx.fillRect(12, 12, 180, 16)
+    // HP 바 (개선: 두껍고 선명하게, 틱 마크)
     const hpRatio = player.hp / player.maxHp
-    ctx.fillStyle = hpRatio < 0.3 ? '#ff3333' : hpRatio < 0.6 ? '#ffaa00' : '#33cc66'
-    ctx.fillRect(12, 12, 180 * hpRatio, 16)
-    ctx.strokeStyle = '#555'
+    const hpColor = hpRatio < 0.3 ? '#ff3333' : hpRatio < 0.6 ? '#ffaa00' : '#33cc66'
+    // 바 외곽 테두리
+    ctx.fillStyle = '#111'
+    ctx.fillRect(10, 10, 184, 22)
+    // 바 배경
+    ctx.fillStyle = '#222'
+    ctx.fillRect(12, 12, 180, 18)
+    // HP 채움 (글로우)
+    ctx.save()
+    ctx.shadowColor = hpColor
+    ctx.shadowBlur = hpRatio < 0.3 ? 8 : 4
+    ctx.fillStyle = hpColor
+    ctx.fillRect(12, 12, 180 * hpRatio, 18)
+    ctx.restore()
+    // 10% 틱 마크
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'
     ctx.lineWidth = 1
-    ctx.strokeRect(12, 12, 180, 16)
+    for (let t = 1; t < 10; t++) {
+      ctx.beginPath(); ctx.moveTo(12 + 18 * t, 12); ctx.lineTo(12 + 18 * t, 30); ctx.stroke()
+    }
+    // 테두리
+    ctx.strokeStyle = '#444'
+    ctx.lineWidth = 1
+    ctx.strokeRect(12, 12, 180, 18)
     ctx.fillStyle = '#fff'
-    ctx.font = '12px "Pixelify Sans", sans-serif'
-    ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 24)
+    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 26)
 
     // 보호막 아이콘
     if (player.shields > 0) {
@@ -118,9 +135,10 @@ class HUD {
         const icon = _getSkillIcon(state.name)
         if (icon?.complete && icon.naturalWidth > 0) {
           ctx.save()
-          ctx.globalAlpha = state.cooldownRemaining > 0 ? 0.35 : 0.85
+          ctx.globalAlpha = state.cooldownRemaining > 0 ? 0.3 : 1.0
           ctx.imageSmoothingEnabled = true
-          ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, sx + 2, sy + 4, 32, 32)
+          // 아이콘을 슬롯 왼쪽에 꽉 채워 넣기 (36×36)
+          ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, sx + 2, sy + 2, 36, 36)
           ctx.globalAlpha = 1
           ctx.imageSmoothingEnabled = false
           ctx.restore()
