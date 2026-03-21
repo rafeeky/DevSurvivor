@@ -154,6 +154,124 @@ window.TilemapSystem = (() => {
     _baked = true
   }
 
+  // ─── 오피스 프랍 (시각 장식 레이어) ───────────────────
+  // { img, x, y } — 월드 픽셀 좌표, SCALE(2×) 적용해 렌더
+  const _props = []
+
+  ;(() => {
+    const P = 'assets/packs/office-props/'
+    const J = 'assets/packs/julia/'
+    const add = (src, x, y) => {
+      const img = new Image()
+      img.src = src
+      _props.push({ img, x, y })
+    }
+
+    // ── 구역 1: 개발팀 오피스 (cols 2-20, rows 2-9) ──
+    // 책상 세 묶음 (카펫 위)
+    add(P+'Desk.png',          3*TSIZE,  3*TSIZE)
+    add(P+'Chair.png',         4*TSIZE,  4*TSIZE)
+    add(P+'Desk.png',          9*TSIZE,  3*TSIZE)
+    add(P+'Chair.png',        10*TSIZE,  4*TSIZE)
+    add(P+'Desk.png',         15*TSIZE,  3*TSIZE)
+    add(P+'Chair.png',        16*TSIZE,  4*TSIZE)
+    // 벽쪽 장식
+    add(P+'Tall-Bookshelf.png', 2*TSIZE, 2*TSIZE)
+    add(P+'Small-Plant.png',   19*TSIZE, 2*TSIZE)
+    add(P+'Wall-Clock.png',    10*TSIZE, 2*TSIZE)
+    add(P+'Papers.png',         6*TSIZE, 3*TSIZE)
+
+    // ── 구역 2: 회의실 (cols 26-47, rows 2-13) ──
+    add(P+'Big-Round-Table.png', 33*TSIZE, 5*TSIZE)
+    add(P+'Chair.png',           30*TSIZE, 7*TSIZE)
+    add(P+'Chair.png',           38*TSIZE, 7*TSIZE)
+    add(P+'Chair-2.png',         33*TSIZE, 3*TSIZE)
+    add(P+'Chair-2.png',         35*TSIZE, 10*TSIZE)
+    add(P+'Board.png',           27*TSIZE,  3*TSIZE)
+    add(P+'Wall-Graph.png',      43*TSIZE,  3*TSIZE)
+    add(P+'Small-Plant.png',     46*TSIZE,  2*TSIZE)
+
+    // ── 구역 3: 서버실 (cols 52-71, rows 2-11) ──
+    add(J+'PC1.png',                54*TSIZE, 4*TSIZE)
+    add(J+'PC1.png',                60*TSIZE, 4*TSIZE)
+    add(J+'PC1.png',                66*TSIZE, 4*TSIZE)
+    add(P+'Filing-Cabinet-Tall.png',52*TSIZE, 3*TSIZE)
+    add(P+'Filing-Cabinet-Tall.png',53*TSIZE, 3*TSIZE)
+    add(P+'Big-Office-Printer.png', 70*TSIZE, 3*TSIZE)
+
+    // ── 구역 4: 메인 오픈플랜 (4개 책상 클러스터) ──
+    for (let g = 0; g < 4; g++) {
+      const bC = 6 + g * 17
+      const bR = 16
+      // 좌상 책상
+      add(J+'desk-with-pc.png', (bC+1)*TSIZE, (bR+1)*TSIZE)
+      add(P+'Chair.png',        (bC+1)*TSIZE, (bR+3)*TSIZE)
+      // 우상 책상
+      add(J+'desk-with-pc.png', (bC+9)*TSIZE, (bR+1)*TSIZE)
+      add(P+'Chair.png',        (bC+9)*TSIZE, (bR+3)*TSIZE)
+      // 좌하 책상
+      add(J+'desk.png',         (bC+1)*TSIZE, (bR+8)*TSIZE)
+      add(P+'Chair.png',        (bC+1)*TSIZE, (bR+9)*TSIZE)
+      // 우하 책상
+      add(J+'desk.png',         (bC+9)*TSIZE, (bR+8)*TSIZE)
+      add(P+'Chair.png',        (bC+9)*TSIZE, (bR+9)*TSIZE)
+    }
+    // 메인 오피스 공용 장식
+    add(P+'Small-Plant.png',        35*TSIZE, 14*TSIZE)
+    add(P+'Small-Plant.png',        35*TSIZE, 37*TSIZE)
+    add(P+'Water-Dispenser.png',     2*TSIZE, 28*TSIZE)
+    add(P+'Big-Office-Printer.png',  2*TSIZE, 22*TSIZE)
+    add(P+'Bin.png',                37*TSIZE, 12*TSIZE)
+    add(P+'Bin.png',                37*TSIZE, 38*TSIZE)
+    add(P+'Wall-Note.png',           5*TSIZE, 14*TSIZE)
+    add(J+'office-partitions-1.png',22*TSIZE, 18*TSIZE)
+    add(J+'office-partitions-2.png',22*TSIZE, 25*TSIZE)
+
+    // ── 구역 5: 휴게실 (cols 2-21, rows 40-53) ──
+    add(P+'Big-Sofa.png',       4*TSIZE, 43*TSIZE)
+    add(P+'Big-Sofa-2.png',     4*TSIZE, 46*TSIZE)
+    add(P+'Small-Table.png',    8*TSIZE, 44*TSIZE)
+    add(P+'Coffee-Machine.png', 14*TSIZE, 42*TSIZE)
+    add(P+'Vending-Machine.png',17*TSIZE, 42*TSIZE)
+    add(P+'Big-Plant.png',       2*TSIZE, 40*TSIZE)
+    add(P+'Small-Plant.png',    19*TSIZE, 52*TSIZE)
+    add(J+'water-cooler.png',   12*TSIZE, 42*TSIZE)
+
+    // ── 구역 7: 기획팀 오피스 (cols 40-69, rows 14-37) ──
+    add(P+'Desk-2.png',         42*TSIZE, 17*TSIZE)
+    add(P+'Chair-2.png',        43*TSIZE, 19*TSIZE)
+    add(P+'Desk-2.png',         50*TSIZE, 17*TSIZE)
+    add(P+'Chair-2.png',        51*TSIZE, 19*TSIZE)
+    add(P+'Desk-2.png',         58*TSIZE, 17*TSIZE)
+    add(P+'Chair-2.png',        59*TSIZE, 19*TSIZE)
+    add(P+'Desk-2.png',         42*TSIZE, 28*TSIZE)
+    add(P+'Chair-2.png',        43*TSIZE, 30*TSIZE)
+    add(P+'Desk-2.png',         58*TSIZE, 28*TSIZE)
+    add(P+'Chair-2.png',        59*TSIZE, 30*TSIZE)
+    add(P+'Tall-Bookshelf.png', 69*TSIZE, 15*TSIZE)
+    add(P+'Bookshelf.png',      69*TSIZE, 20*TSIZE)
+    add(P+'Board.png',          41*TSIZE, 15*TSIZE)
+    add(P+'Wall-Graph.png',     55*TSIZE, 15*TSIZE)
+    add(P+'Small-Plant.png',    68*TSIZE, 35*TSIZE)
+    add(J+'office-partitions-1.png', 55*TSIZE, 16*TSIZE)
+
+    // ── 구역 8: 보스룸 (cols 52-71, rows 40-53) ──
+    add(P+'Boss-Desk.png',      57*TSIZE, 44*TSIZE)
+    add(P+'Boss-Chair.png',     60*TSIZE, 47*TSIZE)
+    add(P+'Big-Plant.png',      52*TSIZE, 40*TSIZE)
+    add(P+'Big-Plant.png',      69*TSIZE, 40*TSIZE)
+    add(P+'Tall-Bookshelf.png', 70*TSIZE, 42*TSIZE)
+    add(P+'Bookshelf.png',      70*TSIZE, 47*TSIZE)
+    add(P+'Wall-Clock.png',     62*TSIZE, 40*TSIZE)
+
+    // ── 구역 9: 하단 복도/창고 (cols 24-49, rows 40-53) ──
+    add(P+'Filing-Cabinet-Small.png', 26*TSIZE, 43*TSIZE)
+    add(P+'Wide-Filing-Cabinet.png',  28*TSIZE, 43*TSIZE)
+    add(P+'Folders.png',              30*TSIZE, 43*TSIZE)
+    add(J+'stamping-table.png',       36*TSIZE, 44*TSIZE)
+    add(P+'Bin.png',                  24*TSIZE, 52*TSIZE)
+  })()
+
   // ─── 공개 API ─────────────────────────────────────────
   return {
     // camX, camY: 뷰포트 카메라 위치 (월드 좌표)
@@ -170,6 +288,18 @@ window.TilemapSystem = (() => {
       // 월드 오프스크린에서 뷰포트 영역만 blit
       ctx.imageSmoothingEnabled = false
       ctx.drawImage(_offscreen, cx, cy, 800, 600, 0, 0, 800, 600)
+
+      // ── 오피스 프랍 렌더 (타일 위, 적/플레이어 아래) ──
+      for (const p of _props) {
+        if (!p.img.complete || p.img.naturalWidth === 0) continue
+        const sx = p.x - cx
+        const sy = p.y - cy
+        const dw = p.img.naturalWidth  * SCALE
+        const dh = p.img.naturalHeight * SCALE
+        // 뷰포트 밖이면 스킵 (컬링)
+        if (sx + dw < 0 || sx > 800 || sy + dh < 0 || sy > 600) continue
+        ctx.drawImage(p.img, sx, sy, dw, dh)
+      }
     },
   }
 })()
