@@ -1893,9 +1893,17 @@ window.TilemapSystem = (() => {
   <script>
 // ============================================================
 // spawner.js — M3: 스폰 타임라인 확장 (GDD Part 4.4)
+// 신규 적 첫 등장 알림 포함
 // CartBot / PCBot / MirrorBot / AIBot 스폰 추가
 // ErrorBullet / HazardZone 업데이트 & 렌더링 처리
 // ============================================================
+
+const ENEMY_INTRO_DATA = {
+  'BoxBot':    { name: '박스봇',    desc: '기본 돌진형 • 직선으로 플레이어를 향해 돌진한다' },
+  'CartBot':   { name: '카트봇',    desc: '신속형 • 카트를 몰아 빠르게 기동, 방향 전환 잦음' },
+  'PCBot':     { name: 'PC봇',      desc: '원거리형 • 오류 투사체를 원거리에서 발사한다' },
+  'MirrorBot': { name: '미러봇',    desc: '복사형 • 플레이어의 움직임 패턴을 그대로 흉내낸다' },
+}
 
 const SPAWN_TIMELINE = [
   { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 2.5, maxEnemies: 5  },
@@ -1910,6 +1918,7 @@ class Spawner {
   constructor() {
     this.spawnTimer = 0
     this.aiBotSpawned = false
+    this._announcedTypes = new Set()
   }
 
   update(deltaTime) {
@@ -1976,6 +1985,15 @@ class Spawner {
       default:          enemy = new BoxBot(pos.x, pos.y)
     }
     GameState.enemies.push(enemy)
+
+    // 신규 적 유형 첫 등장 알림
+    if (!this._announcedTypes.has(type)) {
+      this._announcedTypes.add(type)
+      const info = ENEMY_INTRO_DATA[type]
+      if (info) {
+        GameState.enemyAnnouncement = { name: info.name, desc: info.desc, timer: 3.2, maxTimer: 3.2 }
+      }
+    }
   }
 
   _randomEdgePosition() {
@@ -2605,6 +2623,9 @@ const MetaManager = {
 
   // ── 업그레이드 화면 렌더링 ─────────────────────────────────────────────
   _buyRects: [],
+  _page: 0,
+  _prevRect: null,
+  _nextRect: null,
 
   render(ctx) {
     if (GameState.screen !== 'upgrade') return
@@ -2629,15 +2650,25 @@ const MetaManager = {
     ctx.font = '10px "Press Start 2P", monospace'
     ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
 
-    // 아이템 그리드 (2열 × 5행)
-    this._buyRects = []
-    const colW = 384, rowH = 90
-    const colX = [8, 408]
-    const startY = 64
+    // 페이지 표시
+    const totalPages = Math.ceil(META_UPGRADES.length / 6)
+    ctx.fillStyle = '#778899'
+    ctx.font = '8px "Press Start 2P", monospace'
+    ctx.fillText(`${this._page + 1} / ${totalPages} 페이지`, 400, 72)
 
-    for (let i = 0; i < META_UPGRADES.length; i++) {
-      const col  = i % 2
-      const row  = Math.floor(i / 2)
+    // 아이템 그리드 (2열 × 3행, 페이지당 6개)
+    this._buyRects = []
+    const colW = 388, rowH = 120
+    const colX = [4, 408]
+    const startY = 78
+    const pageStart = this._page * 6
+
+    for (let pageIdx = 0; pageIdx < 6; pageIdx++) {
+      const i = pageStart + pageIdx
+      if (i >= META_UPGRADES.length) { this._buyRects.push(null); continue }
+
+      const col  = pageIdx % 2
+      const row  = Math.floor(pageIdx / 2)
       const bx   = colX[col]
       const by   = startY + row * rowH
       const upg  = META_UPGRADES[i]
@@ -2655,77 +2686,109 @@ const MetaManager = {
 
       // 아이콘 (좌측)
       const icon = this._getIcon(upg.name)
-      const iconSize = 28
+      const iconSize = 36
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.save()
         ctx.imageSmoothingEnabled = true
         ctx.globalAlpha = maxed ? 1 : canBuy ? 0.9 : 0.4
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 5, iconSize, iconSize)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 6, iconSize, iconSize)
         ctx.globalAlpha = 1
         ctx.restore()
       }
 
-      const textX = bx + (icon ? iconSize + 12 : 8)
+      const textX = bx + iconSize + 16
 
       // 이름
       ctx.fillStyle = '#ddeeff'
-      ctx.font = 'bold 8px "Press Start 2P", monospace'
+      ctx.font = 'bold 10px "Press Start 2P", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(upg.name, textX, by + 18)
+      ctx.fillText(upg.name, textX, by + 24)
 
       // 레벨 별
       let stars = ''
       for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
       ctx.fillStyle = '#FFD700'
-      ctx.font = '8px "Press Start 2P", monospace'
+      ctx.font = '10px "Press Start 2P", monospace'
       ctx.textAlign = 'right'
-      ctx.fillText(stars, bx + colW - 8, by + 18)
+      ctx.fillText(stars, bx + colW - 8, by + 24)
 
       // 효과 설명
-      ctx.fillStyle = '#778899'
-      ctx.font = '8px "Press Start 2P", monospace'
+      ctx.fillStyle = '#aabbcc'
+      ctx.font = '10px "Press Start 2P", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, textX, by + 38)
+      ctx.fillText(lv > 0 ? `${upg.desc} (${lv}단계)` : upg.desc, textX, by + 50)
 
       // 구매 버튼 또는 MAX
       if (maxed) {
         ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 8px "Press Start 2P", monospace'
+        ctx.font = 'bold 10px "Press Start 2P", monospace'
         ctx.textAlign = 'right'
-        ctx.fillText('MAX', bx + colW - 8, by + 62)
+        ctx.fillText('MAX', bx + colW - 8, by + 90)
         this._buyRects.push(null)
       } else {
-        const btnX = bx + colW - 104
-        const btnY = by + 46
-        const btnW = 96, btnH = 24
+        const btnX = bx + colW - 116
+        const btnY = by + 68
+        const btnW = 108, btnH = 32
         ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
         ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '8px "Press Start 2P", monospace'
+        ctx.font = '10px "Press Start 2P", monospace'
         ctx.textAlign = 'center'
         if (canBuy) {
           ctx.fillStyle = '#ffffff'
-          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 16)
+          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 21)
         } else {
           ctx.fillStyle = '#ff6666'
-          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 16)
+          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
         }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
       }
+    }
+
+    // 페이지 네비게이션 버튼
+    const navY = startY + 3 * rowH + 6  // 78 + 360 + 6 = 444
+
+    this._prevRect = null
+    this._nextRect = null
+
+    if (this._page > 0) {
+      ctx.fillStyle = '#1a2a4a'
+      ctx.strokeStyle = '#4466aa'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(190, navY, 140, 36)
+      ctx.strokeRect(190, navY, 140, 36)
+      ctx.fillStyle = '#88aaff'
+      ctx.font = '10px "Press Start 2P", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('◀ 이전', 260, navY + 23)
+      this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
+    }
+
+    if (this._page < totalPages - 1) {
+      ctx.fillStyle = '#1a2a4a'
+      ctx.strokeStyle = '#4466aa'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(470, navY, 140, 36)
+      ctx.strokeRect(470, navY, 140, 36)
+      ctx.fillStyle = '#88aaff'
+      ctx.font = '10px "Press Start 2P", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('다음 ▶', 540, navY + 23)
+      this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
     ctx.fillStyle = '#0d1a0d'
     ctx.strokeStyle = '#44aa44'
     ctx.lineWidth = 2
-    ctx.fillRect(300, 540, 200, 44)
-    ctx.strokeRect(300, 540, 200, 44)
+    ctx.fillRect(300, 492, 200, 44)
+    ctx.strokeRect(300, 492, 200, 44)
     ctx.fillStyle = '#88ff88'
     ctx.font = 'bold 10px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 돌아가기 ]', 400, 568)
+    ctx.fillText('[ 돌아가기 ]', 400, 520)
     ctx.textAlign = 'left'
   },
 
@@ -2738,7 +2801,18 @@ const MetaManager = {
         return
       }
     }
-    if (x >= 300 && x <= 500 && y >= 540 && y <= 584) {
+    if (this._prevRect && x >= this._prevRect.x && x <= this._prevRect.x + this._prevRect.w &&
+        y >= this._prevRect.y && y <= this._prevRect.y + this._prevRect.h) {
+      this._page = Math.max(0, this._page - 1)
+      return
+    }
+    if (this._nextRect && x >= this._nextRect.x && x <= this._nextRect.x + this._nextRect.w &&
+        y >= this._nextRect.y && y <= this._nextRect.y + this._nextRect.h) {
+      this._page = Math.min(Math.ceil(META_UPGRADES.length / 6) - 1, this._page + 1)
+      return
+    }
+    if (x >= 300 && x <= 500 && y >= 492 && y <= 536) {
+      this._page = 0
       GameState.screen = 'lobby'
     }
   },
@@ -2855,7 +2929,7 @@ class HUD {
     ctx.fillRect(0, 548, 800, 52)
 
     // 스킬 슬롯 4개 (Q/W/E/R)
-    const keys = ['Q','W','E','R']
+    const keys = ['1','2','3','4']
     for (let i = 0; i < 4; i++) {
       const sx = 12 + i * 112
       const sy = 553
@@ -2985,12 +3059,12 @@ class Lobby {
     this._selected = localStorage.getItem('devSurvivor_char') || 'adam'
     // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
     this._cards = [
-      { key: 'adam',   x: 125, y: 248, w: 170, h: 140 },
-      { key: 'alex',   x: 315, y: 248, w: 170, h: 140 },
-      { key: 'amelia', x: 505, y: 248, w: 170, h: 140 },
+      { key: 'adam',   x: 125, y: 192, w: 170, h: 120 },
+      { key: 'alex',   x: 315, y: 192, w: 170, h: 120 },
+      { key: 'amelia', x: 505, y: 192, w: 170, h: 120 },
     ]
-    this.startBtnRect   = { x: 275, y: 406, w: 250, h: 46 }
-    this.upgradeBtnRect = { x: 300, y: 460, w: 200, h: 40 }
+    this.startBtnRect   = { x: 210, y: 324, w: 380, h: 60 }
+    this.upgradeBtnRect = { x: 255, y: 394, w: 290, h: 50 }
     this._bindClick()
   }
 
@@ -3050,30 +3124,29 @@ class Lobby {
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 16px "Press Start 2P", monospace'
-    ctx.fillText('DEV', 400, 100)
+    ctx.font = 'bold 48px "Press Start 2P", monospace'
+    ctx.fillText('DEV', 400, 62)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 16px "Press Start 2P", monospace'
-    ctx.fillText('SURVIVAL', 400, 150)
+    ctx.fillText('SURVIVOR', 400, 116)
 
     // 부제
-    ctx.fillStyle = '#7788aa'
-    ctx.font = '10px "Press Start 2P", monospace'
-    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 178)
+    ctx.fillStyle = '#ffcc55'
+    ctx.font = '12px "Press Start 2P", monospace'
+    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 140)
 
     // 점수 / 포인트 (한 줄)
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
     ctx.font = '10px "Press Start 2P", monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 202)
+    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
     ctx.fillStyle = '#88ffaa'
-    ctx.fillText(`출시 포인트: ${pts}`, 535, 202)
+    ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
     ctx.font = '8px "Press Start 2P", monospace'
-    ctx.fillText('── 캐릭터 선택 ──', 400, 238)
+    ctx.fillText('── 캐릭터 선택 ──', 400, 181)
 
     // 캐릭터 카드
     this._drawCharCards(ctx)
@@ -3082,13 +3155,13 @@ class Lobby {
     const s = this.startBtnRect
     ctx.fillStyle = '#1e3a6e'
     ctx.strokeStyle = '#4488ff'
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2.5
     ctx.fillRect(s.x, s.y, s.w, s.h)
     ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 12px "Press Start 2P", monospace'
+    ctx.font = 'bold 16px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + 30)
+    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
     // 업그레이드 버튼
     const u = this.upgradeBtnRect
@@ -3098,21 +3171,20 @@ class Lobby {
     ctx.fillRect(u.x, u.y, u.w, u.h)
     ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 10px "Press Start 2P", monospace'
+    ctx.font = 'bold 12px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 26)
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + u.h / 2 + 8)
 
     // 조작 안내
-    ctx.fillStyle = '#aaccdd'
-    ctx.font = '8px "Press Start 2P", monospace'
+    ctx.fillStyle = 'rgba(0,0,0,0.65)'
+    ctx.fillRect(0, 458, 800, 62)
+    ctx.fillStyle = '#aaddff'
+    ctx.font = '12px "Press Start 2P", monospace'
     ctx.textAlign = 'center'
-    // 텍스트 배경
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, 503, 800, 40)
-    ctx.fillStyle = '#aaccdd'
-    ctx.fillText('WASD 이동  /  Q~R 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 519)
-    ctx.fillStyle = '#778899'
-    ctx.fillText('경험치를 쌓아 레벨업하고 스킬을 획득하세요', 400, 537)
+    ctx.fillText('WASD 이동  /  1~4 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 480)
+    ctx.fillStyle = '#88aacc'
+    ctx.font = '12px "Press Start 2P", monospace'
+    ctx.fillText('경험치를 모아 레벨업하고 스킬을 획득하세요', 400, 503)
 
     ctx.textAlign = 'left'
   }
@@ -3144,33 +3216,49 @@ class Lobby {
 
       ctx.textAlign = 'center'
 
-      // 캐릭터 프리뷰 — idle 스프라이트 frame0, fit-width 크롭으로 portrait 효과
+      // 캐릭터 프리뷰 — idle 스프라이트 frame0, portrait 효과
       const portraitH = card.h - 28  // 이름/서브라벨 28px 확보
       const portraitY = card.y + 2
       const idleImg = spr?.idle
+
+      // 캐릭터별 배경색
+      const charBg = { adam: '#0e1f3a', alex: '#0d2234', amelia: '#1a1230' }
+      ctx.fillStyle = charBg[card.key] || '#111827'
+      ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
+
       if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg?.idle) {
         const fw = cfg.idle.fw
         const fh = cfg.idle.fh
-        // 카드 너비에 맞춰 스케일 → 세로는 clip
-        const scaleToW = (card.w - 4) / fw
-        const dispW    = card.w - 4
-        const dispH    = fh * scaleToW        // 비율 유지 시 전체 높이
-        const drawX    = card.x + 2
+        let dispW, dispH, drawX, drawY
+        if (fw <= 16) {
+          // 소형 픽셀 아트 스프라이트: 높이 기준 스케일, 중앙 정렬, 픽셀 완벽 렌더링
+          const scale = (portraitH - 4) / fh
+          dispH = portraitH - 4
+          dispW = fw * scale
+          drawX = card.x + (card.w - dispW) / 2
+          drawY = portraitY + 2
+        } else {
+          // 대형 스프라이트: 너비에 맞춰 스케일 → 세로 clip
+          const scaleToW = (card.w - 4) / fw
+          dispW = card.w - 4
+          dispH = fh * scaleToW
+          drawX = card.x + 2
+          drawY = portraitY
+        }
         ctx.save()
         ctx.beginPath()
         ctx.rect(card.x, card.y, card.w, portraitH)
         ctx.clip()
-        ctx.imageSmoothingEnabled = true
-        ctx.imageSmoothingQuality = 'high'
-        ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, portraitY, dispW, dispH)
+        ctx.imageSmoothingEnabled = fw > 16
+        ctx.imageSmoothingQuality = fw > 16 ? 'high' : 'low'
+        ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, drawY, dispW, dispH)
         ctx.imageSmoothingEnabled = false
         ctx.restore()
       } else {
         // 로딩 전 플레이스홀더
-        ctx.fillStyle = '#1a2240'
-        ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
         ctx.fillStyle = '#334466'
         ctx.font = '12px "Press Start 2P", monospace'
+        ctx.textAlign = 'center'
         ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 
@@ -3836,6 +3924,7 @@ window.GameState = {
   _lastWin: false,
   aiBotIntro: false,
   aiBotIntroTimer: 0,
+  enemyAnnouncement: null,
   // 메타 업그레이드 배율 (MetaManager.applyToPlayer 에서 설정)
   skillDamageMult: 1,
   expMultiplier:   1,
@@ -3854,11 +3943,12 @@ window.inputKeys = inputKeys
 window.addEventListener('keydown', e => {
   inputKeys[e.code] = true
   if (
-    ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].includes(e.code) &&
+    ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code) &&
     GameState.screen === 'playing' &&
-    !GameState.isPaused
+    !GameState.isPaused &&
+    !window._levelUpManager?.pendingLevelUp
   ) {
-    const slot = ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].indexOf(e.code)
+    const slot = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code)
     Game.skillManager?.activateSkill(slot)
   }
 })
@@ -3875,6 +3965,45 @@ function updateCamera(player) {
   const WH = window.WORLD_H || 600
   Camera.x = Math.max(0, Math.min(WW - 800, player.x - 400))
   Camera.y = Math.max(0, Math.min(WH - 600, player.y - 300))
+}
+
+// ─────────────────────────────────────────
+// 적 등장 알림 렌더링
+// ─────────────────────────────────────────
+function _drawEnemyAnnouncement(ctx, ann) {
+  const elapsed = ann.maxTimer - ann.timer
+  let alpha
+  if (elapsed < 0.3) alpha = elapsed / 0.3
+  else if (ann.timer < 0.6) alpha = ann.timer / 0.6
+  else alpha = 1
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+
+  // 배너 배경
+  ctx.fillStyle = 'rgba(12, 4, 28, 0.9)'
+  ctx.fillRect(140, 72, 520, 100)
+  ctx.strokeStyle = '#cc2222'
+  ctx.lineWidth = 2
+  ctx.strokeRect(140, 72, 520, 100)
+
+  // 레이블
+  ctx.fillStyle = '#ff6644'
+  ctx.font = '10px "Press Start 2P", monospace'
+  ctx.textAlign = 'center'
+  ctx.fillText('⚠  신규 적 등장  ⚠', 400, 94)
+
+  // 적 이름
+  ctx.fillStyle = '#ff3333'
+  ctx.font = 'bold 12px "Press Start 2P", monospace'
+  ctx.fillText(ann.name, 400, 130)
+
+  // 설명
+  ctx.fillStyle = '#ddbbaa'
+  ctx.font = '10px "Press Start 2P", monospace'
+  ctx.fillText(ann.desc, 400, 158)
+
+  ctx.restore()
 }
 
 // ─────────────────────────────────────────
@@ -3939,6 +4068,7 @@ window.Game = {
       lastEarnedPoints: 0,
       aiBotIntro: false,
       aiBotIntroTimer: 0,
+      enemyAnnouncement: null,
     })
 
     // 카메라 초기화
@@ -3961,6 +4091,7 @@ window.Game = {
     if (Game.enemySystem) {
       Game.enemySystem.spawnTimer = 0
       Game.enemySystem.aiBotSpawned = false
+      Game.enemySystem._announcedTypes = new Set()
     }
 
     // LevelUpManager 리셋
@@ -4054,6 +4185,10 @@ function _loop(now) {
         if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
       }
 
+      if (gs.enemyAnnouncement?.timer > 0) {
+        gs.enemyAnnouncement.timer -= deltaTime
+      }
+
       if (gs.gameTime >= 180)  Game.gameOver(true)
       else if (!player.isAlive) Game.gameOver(false)
     }
@@ -4100,6 +4235,11 @@ function _loop(now) {
     window._levelUpManager?.render(ctx)
     // 모바일 조이스틱
     window._joystick?.render(ctx)
+    // 신규 적 등장 알림
+    if (gs.enemyAnnouncement?.timer > 0) {
+      _drawEnemyAnnouncement(ctx, gs.enemyAnnouncement)
+    }
+
     // AIBot 등장 연출
     if (gs.aiBotIntro) {
       const alpha = 1 - gs.aiBotIntroTimer / 0.5

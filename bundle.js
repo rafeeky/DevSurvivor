@@ -90,7 +90,8 @@ ${scriptBlocks}
 html = html.replace(/(\d+)px monospace/g, (match, sizeStr) => {
   const size = parseInt(sizeStr)
   let newSize
-  if (size >= 80) newSize = 32
+  if (size >= 200) newSize = 48
+  else if (size >= 80) newSize = 32
   else if (size >= 50) newSize = 24
   else if (size >= 36) newSize = 16
   else if (size >= 18) newSize = 12

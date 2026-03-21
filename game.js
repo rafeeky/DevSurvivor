@@ -37,6 +37,7 @@ window.GameState = {
   _lastWin: false,
   aiBotIntro: false,
   aiBotIntroTimer: 0,
+  enemyAnnouncement: null,
   // 메타 업그레이드 배율 (MetaManager.applyToPlayer 에서 설정)
   skillDamageMult: 1,
   expMultiplier:   1,
@@ -55,11 +56,12 @@ window.inputKeys = inputKeys
 window.addEventListener('keydown', e => {
   inputKeys[e.code] = true
   if (
-    ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].includes(e.code) &&
+    ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code) &&
     GameState.screen === 'playing' &&
-    !GameState.isPaused
+    !GameState.isPaused &&
+    !window._levelUpManager?.pendingLevelUp
   ) {
-    const slot = ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].indexOf(e.code)
+    const slot = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code)
     Game.skillManager?.activateSkill(slot)
   }
 })
@@ -76,6 +78,45 @@ function updateCamera(player) {
   const WH = window.WORLD_H || 600
   Camera.x = Math.max(0, Math.min(WW - 800, player.x - 400))
   Camera.y = Math.max(0, Math.min(WH - 600, player.y - 300))
+}
+
+// ─────────────────────────────────────────
+// 적 등장 알림 렌더링
+// ─────────────────────────────────────────
+function _drawEnemyAnnouncement(ctx, ann) {
+  const elapsed = ann.maxTimer - ann.timer
+  let alpha
+  if (elapsed < 0.3) alpha = elapsed / 0.3
+  else if (ann.timer < 0.6) alpha = ann.timer / 0.6
+  else alpha = 1
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+
+  // 배너 배경
+  ctx.fillStyle = 'rgba(12, 4, 28, 0.9)'
+  ctx.fillRect(140, 72, 520, 100)
+  ctx.strokeStyle = '#cc2222'
+  ctx.lineWidth = 2
+  ctx.strokeRect(140, 72, 520, 100)
+
+  // 레이블
+  ctx.fillStyle = '#ff6644'
+  ctx.font = '13px monospace'
+  ctx.textAlign = 'center'
+  ctx.fillText('⚠  신규 적 등장  ⚠', 400, 94)
+
+  // 적 이름
+  ctx.fillStyle = '#ff3333'
+  ctx.font = 'bold 28px monospace'
+  ctx.fillText(ann.name, 400, 130)
+
+  // 설명
+  ctx.fillStyle = '#ddbbaa'
+  ctx.font = '14px monospace'
+  ctx.fillText(ann.desc, 400, 158)
+
+  ctx.restore()
 }
 
 // ─────────────────────────────────────────
@@ -140,6 +181,7 @@ window.Game = {
       lastEarnedPoints: 0,
       aiBotIntro: false,
       aiBotIntroTimer: 0,
+      enemyAnnouncement: null,
     })
 
     // 카메라 초기화
@@ -162,6 +204,7 @@ window.Game = {
     if (Game.enemySystem) {
       Game.enemySystem.spawnTimer = 0
       Game.enemySystem.aiBotSpawned = false
+      Game.enemySystem._announcedTypes = new Set()
     }
 
     // LevelUpManager 리셋
@@ -255,6 +298,10 @@ function _loop(now) {
         if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
       }
 
+      if (gs.enemyAnnouncement?.timer > 0) {
+        gs.enemyAnnouncement.timer -= deltaTime
+      }
+
       if (gs.gameTime >= 180)  Game.gameOver(true)
       else if (!player.isAlive) Game.gameOver(false)
     }
@@ -301,6 +348,11 @@ function _loop(now) {
     window._levelUpManager?.render(ctx)
     // 모바일 조이스틱
     window._joystick?.render(ctx)
+    // 신규 적 등장 알림
+    if (gs.enemyAnnouncement?.timer > 0) {
+      _drawEnemyAnnouncement(ctx, gs.enemyAnnouncement)
+    }
+
     // AIBot 등장 연출
     if (gs.aiBotIntro) {
       const alpha = 1 - gs.aiBotIntroTimer / 0.5

@@ -149,6 +149,9 @@ const MetaManager = {
 
   // ── 업그레이드 화면 렌더링 ─────────────────────────────────────────────
   _buyRects: [],
+  _page: 0,
+  _prevRect: null,
+  _nextRect: null,
 
   render(ctx) {
     if (GameState.screen !== 'upgrade') return
@@ -173,15 +176,25 @@ const MetaManager = {
     ctx.font = '15px monospace'
     ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
 
-    // 아이템 그리드 (2열 × 5행)
-    this._buyRects = []
-    const colW = 384, rowH = 90
-    const colX = [8, 408]
-    const startY = 64
+    // 페이지 표시
+    const totalPages = Math.ceil(META_UPGRADES.length / 6)
+    ctx.fillStyle = '#778899'
+    ctx.font = '12px monospace'
+    ctx.fillText(`${this._page + 1} / ${totalPages} 페이지`, 400, 72)
 
-    for (let i = 0; i < META_UPGRADES.length; i++) {
-      const col  = i % 2
-      const row  = Math.floor(i / 2)
+    // 아이템 그리드 (2열 × 3행, 페이지당 6개)
+    this._buyRects = []
+    const colW = 388, rowH = 120
+    const colX = [4, 408]
+    const startY = 78
+    const pageStart = this._page * 6
+
+    for (let pageIdx = 0; pageIdx < 6; pageIdx++) {
+      const i = pageStart + pageIdx
+      if (i >= META_UPGRADES.length) { this._buyRects.push(null); continue }
+
+      const col  = pageIdx % 2
+      const row  = Math.floor(pageIdx / 2)
       const bx   = colX[col]
       const by   = startY + row * rowH
       const upg  = META_UPGRADES[i]
@@ -199,77 +212,109 @@ const MetaManager = {
 
       // 아이콘 (좌측)
       const icon = this._getIcon(upg.name)
-      const iconSize = 28
+      const iconSize = 36
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.save()
         ctx.imageSmoothingEnabled = true
         ctx.globalAlpha = maxed ? 1 : canBuy ? 0.9 : 0.4
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 5, iconSize, iconSize)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 6, iconSize, iconSize)
         ctx.globalAlpha = 1
         ctx.restore()
       }
 
-      const textX = bx + (icon ? iconSize + 12 : 8)
+      const textX = bx + iconSize + 16
 
       // 이름
       ctx.fillStyle = '#ddeeff'
-      ctx.font = 'bold 12px monospace'
+      ctx.font = 'bold 14px monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(upg.name, textX, by + 18)
+      ctx.fillText(upg.name, textX, by + 24)
 
       // 레벨 별
       let stars = ''
       for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
       ctx.fillStyle = '#FFD700'
-      ctx.font = '12px monospace'
+      ctx.font = '14px monospace'
       ctx.textAlign = 'right'
-      ctx.fillText(stars, bx + colW - 8, by + 18)
+      ctx.fillText(stars, bx + colW - 8, by + 24)
 
       // 효과 설명
-      ctx.fillStyle = '#778899'
-      ctx.font = '11px monospace'
+      ctx.fillStyle = '#aabbcc'
+      ctx.font = '13px monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, textX, by + 38)
+      ctx.fillText(lv > 0 ? `${upg.desc} (${lv}단계)` : upg.desc, textX, by + 50)
 
       // 구매 버튼 또는 MAX
       if (maxed) {
         ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 12px monospace'
+        ctx.font = 'bold 14px monospace'
         ctx.textAlign = 'right'
-        ctx.fillText('MAX', bx + colW - 8, by + 62)
+        ctx.fillText('MAX', bx + colW - 8, by + 90)
         this._buyRects.push(null)
       } else {
-        const btnX = bx + colW - 104
-        const btnY = by + 46
-        const btnW = 96, btnH = 24
+        const btnX = bx + colW - 116
+        const btnY = by + 68
+        const btnW = 108, btnH = 32
         ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
         ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '11px monospace'
+        ctx.font = '13px monospace'
         ctx.textAlign = 'center'
         if (canBuy) {
           ctx.fillStyle = '#ffffff'
-          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 16)
+          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 21)
         } else {
           ctx.fillStyle = '#ff6666'
-          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 16)
+          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
         }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
       }
+    }
+
+    // 페이지 네비게이션 버튼
+    const navY = startY + 3 * rowH + 6  // 78 + 360 + 6 = 444
+
+    this._prevRect = null
+    this._nextRect = null
+
+    if (this._page > 0) {
+      ctx.fillStyle = '#1a2a4a'
+      ctx.strokeStyle = '#4466aa'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(190, navY, 140, 36)
+      ctx.strokeRect(190, navY, 140, 36)
+      ctx.fillStyle = '#88aaff'
+      ctx.font = '13px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('◀ 이전', 260, navY + 23)
+      this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
+    }
+
+    if (this._page < totalPages - 1) {
+      ctx.fillStyle = '#1a2a4a'
+      ctx.strokeStyle = '#4466aa'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(470, navY, 140, 36)
+      ctx.strokeRect(470, navY, 140, 36)
+      ctx.fillStyle = '#88aaff'
+      ctx.font = '13px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('다음 ▶', 540, navY + 23)
+      this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
     ctx.fillStyle = '#0d1a0d'
     ctx.strokeStyle = '#44aa44'
     ctx.lineWidth = 2
-    ctx.fillRect(300, 540, 200, 44)
-    ctx.strokeRect(300, 540, 200, 44)
+    ctx.fillRect(300, 492, 200, 44)
+    ctx.strokeRect(300, 492, 200, 44)
     ctx.fillStyle = '#88ff88'
     ctx.font = 'bold 16px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 돌아가기 ]', 400, 568)
+    ctx.fillText('[ 돌아가기 ]', 400, 520)
     ctx.textAlign = 'left'
   },
 
@@ -282,7 +327,18 @@ const MetaManager = {
         return
       }
     }
-    if (x >= 300 && x <= 500 && y >= 540 && y <= 584) {
+    if (this._prevRect && x >= this._prevRect.x && x <= this._prevRect.x + this._prevRect.w &&
+        y >= this._prevRect.y && y <= this._prevRect.y + this._prevRect.h) {
+      this._page = Math.max(0, this._page - 1)
+      return
+    }
+    if (this._nextRect && x >= this._nextRect.x && x <= this._nextRect.x + this._nextRect.w &&
+        y >= this._nextRect.y && y <= this._nextRect.y + this._nextRect.h) {
+      this._page = Math.min(Math.ceil(META_UPGRADES.length / 6) - 1, this._page + 1)
+      return
+    }
+    if (x >= 300 && x <= 500 && y >= 492 && y <= 536) {
+      this._page = 0
       GameState.screen = 'lobby'
     }
   },

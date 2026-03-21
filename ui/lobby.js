@@ -7,12 +7,12 @@ class Lobby {
     this._selected = localStorage.getItem('devSurvivor_char') || 'adam'
     // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
     this._cards = [
-      { key: 'adam',   x: 125, y: 248, w: 170, h: 140 },
-      { key: 'alex',   x: 315, y: 248, w: 170, h: 140 },
-      { key: 'amelia', x: 505, y: 248, w: 170, h: 140 },
+      { key: 'adam',   x: 125, y: 192, w: 170, h: 120 },
+      { key: 'alex',   x: 315, y: 192, w: 170, h: 120 },
+      { key: 'amelia', x: 505, y: 192, w: 170, h: 120 },
     ]
-    this.startBtnRect   = { x: 275, y: 406, w: 250, h: 46 }
-    this.upgradeBtnRect = { x: 300, y: 460, w: 200, h: 40 }
+    this.startBtnRect   = { x: 210, y: 324, w: 380, h: 60 }
+    this.upgradeBtnRect = { x: 255, y: 394, w: 290, h: 50 }
     this._bindClick()
   }
 
@@ -72,30 +72,29 @@ class Lobby {
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 48px monospace'
-    ctx.fillText('DEV', 400, 100)
+    ctx.font = 'bold 200px monospace'
+    ctx.fillText('DEV', 400, 62)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 48px monospace'
-    ctx.fillText('SURVIVAL', 400, 150)
+    ctx.fillText('SURVIVOR', 400, 116)
 
     // 부제
-    ctx.fillStyle = '#7788aa'
-    ctx.font = '14px monospace'
-    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 178)
+    ctx.fillStyle = '#ffcc55'
+    ctx.font = '22px monospace'
+    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 140)
 
     // 점수 / 포인트 (한 줄)
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
     ctx.font = '13px monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 202)
+    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
     ctx.fillStyle = '#88ffaa'
-    ctx.fillText(`출시 포인트: ${pts}`, 535, 202)
+    ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
     ctx.font = '12px monospace'
-    ctx.fillText('── 캐릭터 선택 ──', 400, 238)
+    ctx.fillText('── 캐릭터 선택 ──', 400, 181)
 
     // 캐릭터 카드
     this._drawCharCards(ctx)
@@ -104,13 +103,13 @@ class Lobby {
     const s = this.startBtnRect
     ctx.fillStyle = '#1e3a6e'
     ctx.strokeStyle = '#4488ff'
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2.5
     ctx.fillRect(s.x, s.y, s.w, s.h)
     ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 20px monospace'
+    ctx.font = 'bold 36px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + 30)
+    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
     // 업그레이드 버튼
     const u = this.upgradeBtnRect
@@ -120,21 +119,20 @@ class Lobby {
     ctx.fillRect(u.x, u.y, u.w, u.h)
     ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 15px monospace'
+    ctx.font = 'bold 26px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 26)
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + u.h / 2 + 8)
 
     // 조작 안내
-    ctx.fillStyle = '#aaccdd'
-    ctx.font = '12px monospace'
+    ctx.fillStyle = 'rgba(0,0,0,0.65)'
+    ctx.fillRect(0, 458, 800, 62)
+    ctx.fillStyle = '#aaddff'
+    ctx.font = '22px monospace'
     ctx.textAlign = 'center'
-    // 텍스트 배경
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, 503, 800, 40)
-    ctx.fillStyle = '#aaccdd'
-    ctx.fillText('WASD 이동  /  Q~R 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 519)
-    ctx.fillStyle = '#778899'
-    ctx.fillText('경험치를 쌓아 레벨업하고 스킬을 획득하세요', 400, 537)
+    ctx.fillText('WASD 이동  /  1~4 스킬 사용  /  레벨업: 1·2·3 키 또는 클릭', 400, 480)
+    ctx.fillStyle = '#88aacc'
+    ctx.font = '18px monospace'
+    ctx.fillText('경험치를 모아 레벨업하고 스킬을 획득하세요', 400, 503)
 
     ctx.textAlign = 'left'
   }
@@ -166,33 +164,49 @@ class Lobby {
 
       ctx.textAlign = 'center'
 
-      // 캐릭터 프리뷰 — idle 스프라이트 frame0, fit-width 크롭으로 portrait 효과
+      // 캐릭터 프리뷰 — idle 스프라이트 frame0, portrait 효과
       const portraitH = card.h - 28  // 이름/서브라벨 28px 확보
       const portraitY = card.y + 2
       const idleImg = spr?.idle
+
+      // 캐릭터별 배경색
+      const charBg = { adam: '#0e1f3a', alex: '#0d2234', amelia: '#1a1230' }
+      ctx.fillStyle = charBg[card.key] || '#111827'
+      ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
+
       if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg?.idle) {
         const fw = cfg.idle.fw
         const fh = cfg.idle.fh
-        // 카드 너비에 맞춰 스케일 → 세로는 clip
-        const scaleToW = (card.w - 4) / fw
-        const dispW    = card.w - 4
-        const dispH    = fh * scaleToW        // 비율 유지 시 전체 높이
-        const drawX    = card.x + 2
+        let dispW, dispH, drawX, drawY
+        if (fw <= 16) {
+          // 소형 픽셀 아트 스프라이트: 높이 기준 스케일, 중앙 정렬, 픽셀 완벽 렌더링
+          const scale = (portraitH - 4) / fh
+          dispH = portraitH - 4
+          dispW = fw * scale
+          drawX = card.x + (card.w - dispW) / 2
+          drawY = portraitY + 2
+        } else {
+          // 대형 스프라이트: 너비에 맞춰 스케일 → 세로 clip
+          const scaleToW = (card.w - 4) / fw
+          dispW = card.w - 4
+          dispH = fh * scaleToW
+          drawX = card.x + 2
+          drawY = portraitY
+        }
         ctx.save()
         ctx.beginPath()
         ctx.rect(card.x, card.y, card.w, portraitH)
         ctx.clip()
-        ctx.imageSmoothingEnabled = true
-        ctx.imageSmoothingQuality = 'high'
-        ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, portraitY, dispW, dispH)
+        ctx.imageSmoothingEnabled = fw > 16
+        ctx.imageSmoothingQuality = fw > 16 ? 'high' : 'low'
+        ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, drawY, dispW, dispH)
         ctx.imageSmoothingEnabled = false
         ctx.restore()
       } else {
         // 로딩 전 플레이스홀더
-        ctx.fillStyle = '#1a2240'
-        ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
         ctx.fillStyle = '#334466'
         ctx.font = '28px monospace'
+        ctx.textAlign = 'center'
         ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 

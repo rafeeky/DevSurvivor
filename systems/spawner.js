@@ -1,8 +1,16 @@
 // ============================================================
 // spawner.js — M3: 스폰 타임라인 확장 (GDD Part 4.4)
+// 신규 적 첫 등장 알림 포함
 // CartBot / PCBot / MirrorBot / AIBot 스폰 추가
 // ErrorBullet / HazardZone 업데이트 & 렌더링 처리
 // ============================================================
+
+const ENEMY_INTRO_DATA = {
+  'BoxBot':    { name: '박스봇',    desc: '기본 돌진형 • 직선으로 플레이어를 향해 돌진한다' },
+  'CartBot':   { name: '카트봇',    desc: '신속형 • 카트를 몰아 빠르게 기동, 방향 전환 잦음' },
+  'PCBot':     { name: 'PC봇',      desc: '원거리형 • 오류 투사체를 원거리에서 발사한다' },
+  'MirrorBot': { name: '미러봇',    desc: '복사형 • 플레이어의 움직임 패턴을 그대로 흉내낸다' },
+}
 
 const SPAWN_TIMELINE = [
   { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 2.5, maxEnemies: 5  },
@@ -17,6 +25,7 @@ class Spawner {
   constructor() {
     this.spawnTimer = 0
     this.aiBotSpawned = false
+    this._announcedTypes = new Set()
   }
 
   update(deltaTime) {
@@ -83,6 +92,15 @@ class Spawner {
       default:          enemy = new BoxBot(pos.x, pos.y)
     }
     GameState.enemies.push(enemy)
+
+    // 신규 적 유형 첫 등장 알림
+    if (!this._announcedTypes.has(type)) {
+      this._announcedTypes.add(type)
+      const info = ENEMY_INTRO_DATA[type]
+      if (info) {
+        GameState.enemyAnnouncement = { name: info.name, desc: info.desc, timer: 3.2, maxTimer: 3.2 }
+      }
+    }
   }
 
   _randomEdgePosition() {
