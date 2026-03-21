@@ -120,6 +120,16 @@ class HUD {
       }
     }
 
+    // 빈 슬롯 힌트 (초반 안내)
+    const allEmpty = !Game.skillManager?.slots?.some(Boolean)
+    if (allEmpty) {
+      ctx.fillStyle = '#556688'
+      ctx.font = '11px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('적을 처치해 경험치를 모으면 레벨업 시 스킬을 획득합니다', 250, 571)
+      ctx.textAlign = 'left'
+    }
+
     // 레벨 & 경험치 바
     ctx.fillStyle = '#aaa'
     ctx.font = '12px monospace'

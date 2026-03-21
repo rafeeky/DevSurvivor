@@ -140,9 +140,11 @@ window.Game = {
       if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
     }
 
-    // Spawner 리셋 (spawnTimer 초기화)
-    if (Game.enemySystem?.reset) Game.enemySystem.reset()
-    else if (Game.enemySystem) Game.enemySystem.spawnTimer = 0
+    // Spawner 리셋
+    if (Game.enemySystem) {
+      Game.enemySystem.spawnTimer = 0
+      Game.enemySystem.aiBotSpawned = false
+    }
 
     // LevelUpManager 리셋
     if (window._levelUpManager) {
@@ -234,8 +236,8 @@ function _loop(now) {
         if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
       }
 
-      if (gs.gameTime >= 180) { Game.gameOver(true); return }
-      if (!player.isAlive)    { Game.gameOver(false); return }
+      if (gs.gameTime >= 180)  Game.gameOver(true)
+      else if (!player.isAlive) Game.gameOver(false)
     }
   }
 

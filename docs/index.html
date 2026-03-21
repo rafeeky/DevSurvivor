@@ -2289,6 +2289,16 @@ class HUD {
       }
     }
 
+    // 빈 슬롯 힌트 (초반 안내)
+    const allEmpty = !Game.skillManager?.slots?.some(Boolean)
+    if (allEmpty) {
+      ctx.fillStyle = '#556688'
+      ctx.font = '11px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('적을 처치해 경험치를 모으면 레벨업 시 스킬을 획득합니다', 250, 571)
+      ctx.textAlign = 'left'
+    }
+
     // 레벨 & 경험치 바
     ctx.fillStyle = '#aaa'
     ctx.font = '12px monospace'
@@ -2906,9 +2916,11 @@ window.Game = {
       if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
     }
 
-    // Spawner 리셋 (spawnTimer 초기화)
-    if (Game.enemySystem?.reset) Game.enemySystem.reset()
-    else if (Game.enemySystem) Game.enemySystem.spawnTimer = 0
+    // Spawner 리셋
+    if (Game.enemySystem) {
+      Game.enemySystem.spawnTimer = 0
+      Game.enemySystem.aiBotSpawned = false
+    }
 
     // LevelUpManager 리셋
     if (window._levelUpManager) {
@@ -3000,8 +3012,8 @@ function _loop(now) {
         if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
       }
 
-      if (gs.gameTime >= 180) { Game.gameOver(true); return }
-      if (!player.isAlive)    { Game.gameOver(false); return }
+      if (gs.gameTime >= 180)  Game.gameOver(true)
+      else if (!player.isAlive) Game.gameOver(false)
     }
   }
 
