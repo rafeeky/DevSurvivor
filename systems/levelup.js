@@ -141,6 +141,7 @@ class LevelUpManager {
 
   _triggerLevelUp() {
     this.pendingLevelUp = true
+    this.flashStartTime = performance.now()
     this.choices = this._generateChoices()
     Game.pause()
   }
@@ -216,6 +217,18 @@ class LevelUpManager {
 
   render(ctx) {
     if (!this.pendingLevelUp) return
+
+    // 황금빛 광원 플래시 (0.4초)
+    const elapsed = (performance.now() - this.flashStartTime) / 1000
+    if (elapsed < 0.4) {
+      const flashAlpha = (1 - elapsed / 0.4) * 0.7
+      const grad = ctx.createRadialGradient(400, 300, 0, 400, 300, 400)
+      grad.addColorStop(0, `rgba(255, 215, 0, ${flashAlpha})`)
+      grad.addColorStop(0.5, `rgba(255, 160, 0, ${flashAlpha * 0.4})`)
+      grad.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, 800, 600)
+    }
 
     // 반투명 오버레이
     ctx.fillStyle = 'rgba(0,0,0,0.75)'
