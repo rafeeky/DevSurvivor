@@ -48,6 +48,7 @@ window.GameState = {
 // 키 입력
 // ─────────────────────────────────────────
 const inputKeys = {}
+window.inputKeys = inputKeys
 
 window.addEventListener('keydown', e => {
   inputKeys[e.code] = true
@@ -268,6 +269,8 @@ function _loop(now) {
     window._hud?.render(ctx, gs.gameTime)
     // 레벨업 오버레이 (paused 포함)
     window._levelUpManager?.render(ctx)
+    // 모바일 조이스틱
+    window._joystick?.render(ctx)
     // AIBot 등장 연출
     if (gs.aiBotIntro) {
       const alpha = 1 - gs.aiBotIntroTimer / 0.5
@@ -303,6 +306,7 @@ function _loop(now) {
   await tryImport('./ui/hud.js')
   await tryImport('./ui/lobby.js')
   await tryImport('./ui/result.js')
+  await tryImport('./ui/joystick.js')
 
   // 모든 모듈 로드 완료 → gameReady 이벤트 발송
   window.dispatchEvent(new Event('gameReady'))
