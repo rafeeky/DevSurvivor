@@ -270,6 +270,13 @@ class PCBot extends Enemy {
     this.preferredMax = 250
   }
 
+  onKilled() {
+    GameState.killCount++
+    GameState.pcBotKills = (GameState.pcBotKills || 0) + 1
+    GameState.score += this.scoreReward * 5
+    GameState.playerExp += Math.floor(this.expReward * (GameState.expMultiplier || 1))
+  }
+
   update(deltaTime, player) {
     if (!this.isAlive()) return
 
@@ -733,6 +740,7 @@ class ErrorBullet {
     const pRadius = player.collisionRadius || 15
     if (Math.sqrt(dx * dx + dy * dy) < this.radius + pRadius) {
       this.alive = false
+      player.takeDamage(12)
       if (player.applyBuff) player.applyBuff('speed', 0.7, 2)
     }
   }

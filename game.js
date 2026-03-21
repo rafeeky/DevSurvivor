@@ -263,8 +263,8 @@ function _loop(now) {
 
   } else {
     // playing or paused
-    // 적
-    for (const enemy of gs.enemies) enemy?.render?.(ctx)
+    // 적 + 투사체 + 방해 구역 (Spawner의 레이어 순서대로)
+    Game.enemySystem?.renderEnemies?.(ctx)
     // 스킬 이펙트
     Game.skillManager?.renderEffects?.(ctx, deltaTime)
     // 플레이어

@@ -17,6 +17,7 @@ function updateAndRenderEffects(ctx, deltaTime) {
     e.life -= deltaTime
     if (e.life <= 0) { _skillEffects.splice(i, 1); continue }
     const alpha = e.life / e.maxLife
+    ctx.save()
     ctx.globalAlpha = alpha
     if (e.type === 'circle') {
       ctx.beginPath()
@@ -36,8 +37,40 @@ function updateAndRenderEffects(ctx, deltaTime) {
       ctx.closePath()
       ctx.fillStyle = e.color
       ctx.fill()
+    } else if (e.type === 'beam') {
+      ctx.strokeStyle = e.color
+      ctx.lineWidth = e.width || 3
+      ctx.shadowColor = e.color
+      ctx.shadowBlur = 10
+      ctx.beginPath()
+      ctx.moveTo(e.x, e.y)
+      ctx.lineTo(e.x2, e.y2)
+      ctx.stroke()
+    } else if (e.type === 'burst') {
+      const elapsed = 1 - alpha
+      ctx.fillStyle = e.color
+      ctx.shadowColor = e.color
+      ctx.shadowBlur = 4
+      for (let j = 0; j < e.count; j++) {
+        const angle = (j / e.count) * Math.PI * 2
+        const r = e.radius * elapsed
+        const px = e.x + Math.cos(angle) * r
+        const py = e.y + Math.sin(angle) * r
+        ctx.beginPath()
+        ctx.arc(px, py, 3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    } else if (e.type === 'float') {
+      const floatY = e.y - (1 - alpha) * 36
+      ctx.fillStyle = e.color
+      ctx.font = e.font || 'bold 14px monospace'
+      ctx.textAlign = 'center'
+      ctx.shadowColor = e.color
+      ctx.shadowBlur = 6
+      ctx.fillText(e.text, e.x, floatY)
+      ctx.textAlign = 'left'
     }
-    ctx.globalAlpha = 1
+    ctx.restore()
   }
 }
 
@@ -78,7 +111,7 @@ class SkillManager {
       '우선순위정리': {
         name: '우선순위정리',
         type: 'active',
-        cooldown: 7,
+        cooldown: 6,
         level: 1,
         activate: (sm) => sm._prioritySort(),
       },
@@ -99,7 +132,7 @@ class SkillManager {
       '강아지': {
         name: '강아지쓰다듬기',
         type: 'active',
-        cooldown: 20,
+        cooldown: 15,
         level: 1,
         activate: (sm) => sm._petDog(),
       },
@@ -226,6 +259,8 @@ class SkillManager {
       }
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius, color: '#ffaa00', life: 0.4, maxLife: 0.4 })
+    addEffect({ type: 'burst', x: p.x, y: p.y, count: 14, radius: radius * 0.7, color: '#ffcc44', life: 0.45, maxLife: 0.45 })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: 'BUG FIX!', color: '#ffaa00', life: 0.6, maxLife: 0.6 })
   }
 
   // 디버그: 가장 가까운 적 1명(Lv3+: 2명)에게 피해 70
@@ -249,7 +284,9 @@ class SkillManager {
     for (let i = 0; i < Math.min(targetCount, alive.length); i++) {
       alive[i].takeDamage(damage)
       addEffect({ type: 'hit', x: alive[i].x, y: alive[i].y, radius: 14, color: '#44ffaa', life: 0.4, maxLife: 0.4 })
+      addEffect({ type: 'beam', x: p.x, y: p.y, x2: alive[i].x, y2: alive[i].y, color: '#44ffaa', width: 4, life: 0.2, maxLife: 0.2 })
     }
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: 'DEBUG', color: '#44ffaa', life: 0.5, maxLife: 0.5 })
   }
 
   // 우선순위 정리: 전방 부채꼴(120°) 160px, 피해 30, 넉백 100px, 쿨 7초
@@ -301,6 +338,8 @@ class SkillManager {
       if (this.cooldowns[i] > 0) this.cooldowns[i] *= 0.8
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
+    addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 16px monospace' })
   }
 
   // 피규어 청소하기: 받는 피해 -40% (4초), 주변 150px 적 넉백 120px, 쿨 12초
@@ -319,14 +358,18 @@ class SkillManager {
       }
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 150, color: '#aaddff', life: 0.5, maxLife: 0.5 })
+    addEffect({ type: 'burst', x: p.x, y: p.y, count: 12, radius: 140, color: '#aaddff', life: 0.5, maxLife: 0.5 })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: 'GUARD', color: '#aaddff', life: 0.7, maxLife: 0.7 })
   }
 
-  // 강아지 쓰다듬기: 최대 HP 25% 회복, 쿨 20초
+  // 강아지 쓰다듬기: 최대 HP 25% 회복, 쿨 15초 (20→15 밸런스 조정)
   _petDog() {
     const p = this.player
     const healAmt = Math.floor(p.maxHp * 0.25 * (GameState.healMultiplier || 1))
     p.heal(healAmt)
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
+    addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 18px monospace' })
   }
 
   // 낮잠자기: 이동 1.5초 정지 후 HP 50% 회복, 쿨 30초
@@ -335,6 +378,7 @@ class SkillManager {
     this.player.applyBuff('speed', 0, 1.5)
     this.napTimer = 1.5
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
+    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
   }
 }
 
