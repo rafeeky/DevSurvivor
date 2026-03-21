@@ -274,18 +274,17 @@ for (const { src, dst } of TOMMY_SPRITES) {
 }
 console.log(`✅ Tommy 스프라이트 변환 완료 (${convCount}/${TOMMY_SPRITES.length})`)
 
-// Alex 스프라이트 밝기 보정
-const ALEX_SRC = path.join(BASE, 'assets/characters')
-const ALEX_DST = path.join(BASE, 'assets/custom/player')
-const alexSprites = [
-  { src: `${ALEX_SRC}/Alex_idle_16x16.png`, dst: `${ALEX_DST}/alex_idle.png` },
-  { src: `${ALEX_SRC}/Alex_run_16x16.png`,  dst: `${ALEX_DST}/alex_run.png`  },
+// Alex(Geralt) 스프라이트 변환 (sprite-pack-3 RGB → assets/custom/player/ RGBA)
+const GERALT_SPRITES = [
+  { src: `${SP3}/5 - Geralt/Idle (32 x 32).png`,    dst: `${DST}/geralt_idle.png` },
+  { src: `${SP3}/5 - Geralt/Running (32 x 32).png`,  dst: `${DST}/geralt_run.png`  },
+  { src: `${SP3}/5 - Geralt/Hurt (32 x 32).png`,     dst: `${DST}/geralt_hit.png`  },
 ]
-let alexCount = 0
-for (const { src, dst } of alexSprites) {
-  try { brightenSprite(src, dst, 1.8); alexCount++ } catch (e) { console.warn('⚠️ Alex 변환 실패:', src, e.message) }
+let geraltCount = 0
+for (const { src, dst } of GERALT_SPRITES) {
+  try { convertRGBtoRGBA(src, dst); geraltCount++ } catch (e) { console.warn('⚠️ Geralt 변환 실패:', src, e.message) }
 }
-if (alexCount > 0) console.log(`✅ Alex 스프라이트 밝기 보정 완료 (${alexCount}/2)`)
+console.log(`✅ Geralt(Alex) 스프라이트 변환 완료 (${geraltCount}/${GERALT_SPRITES.length})`)
 
 // assets/ → docs/assets/ 동기화
 // (한글 경로 환경에서 fs.cpSync segfault 방지 → PowerShell 사용)
