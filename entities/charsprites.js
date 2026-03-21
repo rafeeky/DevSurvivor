@@ -17,7 +17,7 @@ window.CHAR_CONFIGS = {
     walk:   { src: 'assets/custom/player/tommy_walk.png',   fw: 32, fh: 32, frames: 8, fps: 10 },
     action: { src: 'assets/custom/player/tommy_action.png', fw: 32, fh: 32, frames: 1, fps: 8 },
     hit:    { src: 'assets/custom/player/tommy_hit.png',    fw: 32, fh: 32, frames: 1, fps: 8 },
-    scale: 2,
+    scale: 3,
     yAnchor: 0.75,
   },
   alex: {
@@ -29,7 +29,7 @@ window.CHAR_CONFIGS = {
     passiveDesc: '스킬 데미지 +20%  디버그 쿨다운 -0.5초',
     idle: { src: 'assets/custom/player/alex_idle.png', fw: 16, fh: 16, frames: 4, fps: 4 },
     walk: { src: 'assets/custom/player/alex_run.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
-    scale: 3,
+    scale: 4,
     yAnchor: 0.75,
   },
   amelia: {
@@ -42,7 +42,7 @@ window.CHAR_CONFIGS = {
     idle:   { src: 'assets/packs/julia/Julia-Idle.png',            fw: 32, fh: 32, frames: 4, fps: 6 },
     walk:   { src: 'assets/packs/julia/Julia.png',                 fw: 32, fh: 32, frames: 4, fps: 8 },
     action: { src: 'assets/packs/julia/Julia_Drinking_Coffee.png', fw: 32, fh: 32, frames: 3, fps: 8 },
-    scale: 2,
+    scale: 3,
     yAnchor: 0.75,
   },
 }
