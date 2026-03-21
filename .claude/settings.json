@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/pipeline/validate.js 2>/dev/null || true",
+            "timeout": 8,
+            "statusMessage": "🔍 파이프라인 검증 중..."
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "You are the pipeline self-reinforcement agent for the DevSurvivor game project.\n\nYour job: review the compaction summary above and extract NEW lessons for .claude/pipeline/lessons.md.\n\nSteps:\n1. Read .claude/pipeline/lessons.md to see existing lessons (avoid duplicates)\n2. From the compaction summary, identify:\n   - Bugs that were fixed (what pattern caused them?)\n   - Anti-patterns introduced then corrected\n   - Architecture decisions made\n   - Asset/path issues encountered\n3. For each NEW finding not already in lessons.md, append an entry:\n```\n## Lesson #NNN\n**Pattern**: one-line description\n**Root Cause**: why it happens\n**Fix**: how to prevent it\n**Grep**: `regex_or_(manual check)`\n**Detected**: YYYY-MM-DD (filename where found)\n```\n4. Keep lessons concise and actionable. Only add if genuinely new and reusable.\n5. If nothing new found, do nothing (don't write empty lessons).",
+            "timeout": 90,
+            "statusMessage": "🧠 파이프라인 자기강화 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

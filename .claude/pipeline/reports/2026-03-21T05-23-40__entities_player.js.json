@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-21T05:23:40.322Z",
+  "file": "entities/player.js",
+  "issues": [
+    {
+      "level": "warn",
+      "code": "CTX_BALANCE",
+      "msg": "ctx.save(2) ≠ ctx.restore(3) → 렌더 상태 누적 위험",
+      "file": "entities/player.js"
+    }
+  ]
+}
