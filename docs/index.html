@@ -2914,6 +2914,10 @@ window.Game = {
       window.dispatchEvent(new CustomEvent('playerCreated', { detail: { player: Game.player } }))
       // 메타 업그레이드 효과 적용
       if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
+      // 시작 스킬 없으면 디버그 무료 지급
+      if (Game.skillManager && !Game.skillManager.slots.some(Boolean)) {
+        Game.skillManager.assignSkill(0, '디버그')
+      }
     }
 
     // Spawner 리셋
