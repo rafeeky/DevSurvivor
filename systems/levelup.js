@@ -282,14 +282,18 @@ class LevelUpManager {
       const cx = startX + i * (cardW + 20)
       const cy = 200
 
-      // 카드 배경
-      ctx.fillStyle = '#1e2a4a'
-      ctx.strokeStyle = '#4466aa'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.roundRect(cx, cy, cardW, cardH, 8)
-      ctx.fill()
-      ctx.stroke()
+      // 카드 배경 — ui-pack-4 다크 패널 (9-slice)
+      if (window.drawUIPanel) {
+        drawUIPanel(ctx, cx, cy, cardW, cardH)
+      } else {
+        ctx.fillStyle = '#1e2a4a'
+        ctx.strokeStyle = '#4466aa'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.roundRect(cx, cy, cardW, cardH, 8)
+        ctx.fill()
+        ctx.stroke()
+      }
 
       // ── 상단 아이콘 박스 (카드 상단 중앙) ────────────────────────────
       const icon = _getLUIcon(c.skillId)
@@ -345,6 +349,19 @@ class LevelUpManager {
       }
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
+
+      // 카드 하단 화살표 버튼 힌트 (ui-pack-4 Arrows)
+      if (window.drawUIArrow) {
+        const arrowY = cy + cardH + 6
+        const arrowSize = 20
+        // 왼쪽 카드 → 왼쪽 화살표, 오른쪽 카드 → 오른쪽 화살표, 가운데는 양쪽
+        if (i === 0) drawUIArrow(ctx, 'right', 'purple', cx + cardW - arrowSize - 4, arrowY, arrowSize)
+        if (i === 1) {
+          drawUIArrow(ctx, 'left',  'purple', cx + 4,             arrowY, arrowSize)
+          drawUIArrow(ctx, 'right', 'purple', cx + cardW - arrowSize - 4, arrowY, arrowSize)
+        }
+        if (i === 2) drawUIArrow(ctx, 'left', 'purple', cx + 4, arrowY, arrowSize)
+      }
     }
 
     ctx.textAlign = 'left'

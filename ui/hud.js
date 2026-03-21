@@ -53,9 +53,13 @@ class HUD {
     // 바 외곽 테두리
     ctx.fillStyle = '#111'
     ctx.fillRect(10, 10, 184, 22)
-    // 바 배경
-    ctx.fillStyle = '#222'
-    ctx.fillRect(12, 12, 180, 18)
+    // 바 배경 — loadingbar 타일
+    if (window.drawUILoadingBar) {
+      drawUILoadingBar(ctx, 12, 12, 180, 18)
+    } else {
+      ctx.fillStyle = '#222'
+      ctx.fillRect(12, 12, 180, 18)
+    }
     // HP 채움 (글로우)
     ctx.save()
     ctx.shadowColor = hpColor

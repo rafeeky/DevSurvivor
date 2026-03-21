@@ -77,6 +77,13 @@ class Lobby {
       for (let y = 0; y < 600; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(800,y); ctx.stroke() }
     }
 
+    // CRT 모니터 데코 (좌/우 배치, 타이틀 높이에 맞춤)
+    if (window.drawUIMonitor) {
+      const mw = 104, mh = 85
+      drawUIMonitor(ctx, 14,  20, mw, mh)   // 좌측
+      drawUIMonitor(ctx, 682, 20, mw, mh)   // 우측
+    }
+
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'

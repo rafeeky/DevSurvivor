@@ -17,6 +17,7 @@ const SCRIPTS = [
   'systems/levelup.js',
   'systems/score.js',
   'systems/meta.js',
+  'ui/uiassets.js',
   'ui/hud.js',
   'ui/lobby.js',
   'ui/result.js',

@@ -1,0 +1,140 @@
+/**
+ * ui/uiassets.js — UI 에셋 로더 & 공통 드로우 헬퍼
+ *
+ * 채택 에셋 (assets/ui/):
+ *   panel.png       252×155  — 다크 패널 프레임 (9-slice)
+ *   monitor.png     312×255  — CRT 모니터 데코 (그대로 사용)
+ *   arrows.png      128×96   — 방향키 버튼 (32×32 × 4col × 3row)
+ *   loadingbar.png  8×12     — HP바 배경 세그먼트 (타일링)
+ *   bulb.png        32×8     — 상태 인디케이터 도트 (8×8 × 4col)
+ *   granteddenied.png 7200×145 — ACCESS 애니메이션 스트립
+ */
+
+;(function () {
+  const _srcs = {
+    panel:        'assets/ui/panel.png',
+    monitor:      'assets/ui/monitor.png',
+    arrows:       'assets/ui/arrows.png',
+    loadingbar:   'assets/ui/loadingbar.png',
+    bulb:         'assets/ui/bulb.png',
+    granteddenied:'assets/ui/granteddenied.png',
+  }
+
+  const _imgs = {}
+  for (const [key, src] of Object.entries(_srcs)) {
+    const img = new Image()
+    img.src = src
+    _imgs[key] = img
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIPanel(ctx, x, y, w, h)
+  //   panel.png (252×155) 9-slice 패널 렌더
+  //   corner = 14px — 픽셀아트 모서리 크기
+  // ─────────────────────────────────────────────────────────────
+  const _PW = 252, _PH = 155, _PC = 14   // panel natural size & corner
+
+  window.drawUIPanel = function (ctx, x, y, w, h) {
+    const img = _imgs.panel
+    if (!img?.complete || img.naturalWidth === 0) {
+      // 이미지 미로드 시 폴백
+      ctx.fillStyle = 'rgba(5,5,20,0.9)'
+      ctx.fillRect(x, y, w, h)
+      ctx.strokeStyle = '#443366'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(x, y, w, h)
+      return
+    }
+
+    const c  = _PC
+    const mw = _PW - 2 * c   // source middle width
+    const mh = _PH - 2 * c   // source middle height
+    const dw = w - 2 * c     // dest middle width
+    const dh = h - 2 * c     // dest middle height
+
+    ctx.imageSmoothingEnabled = false
+
+    // 모서리 4개
+    ctx.drawImage(img,      0,       0, c,  c,  x,         y,         c, c)
+    ctx.drawImage(img, _PW - c,      0, c,  c,  x + w - c, y,         c, c)
+    ctx.drawImage(img,      0, _PH - c, c,  c,  x,         y + h - c, c, c)
+    ctx.drawImage(img, _PW - c, _PH - c, c, c,  x + w - c, y + h - c, c, c)
+
+    // 상/하 엣지
+    if (dw > 0) {
+      ctx.drawImage(img,      c,       0, mw, c,  x + c, y,         dw, c)
+      ctx.drawImage(img,      c, _PH - c, mw, c,  x + c, y + h - c, dw, c)
+    }
+    // 좌/우 엣지
+    if (dh > 0) {
+      ctx.drawImage(img,      0,       c, c,  mh, x,         y + c, c, dh)
+      ctx.drawImage(img, _PW - c,      c, c,  mh, x + w - c, y + c, c, dh)
+    }
+    // 중앙
+    if (dw > 0 && dh > 0) {
+      ctx.drawImage(img, c, c, mw, mh, x + c, y + c, dw, dh)
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIArrow(ctx, dir, style, x, y, size)
+  //   arrows.png: 4col × 3row, 각 32×32
+  //   dir:   'right'|'down'|'left'|'up'
+  //   style: 'teal'|'green'|'purple'
+  // ─────────────────────────────────────────────────────────────
+  const _ARROW_COL = { right: 0, down: 1, left: 2, up: 3 }
+  const _ARROW_ROW = { teal: 0, green: 1, purple: 2 }
+
+  window.drawUIArrow = function (ctx, dir, style, x, y, size) {
+    const img = _imgs.arrows
+    if (!img?.complete || img.naturalWidth === 0) return
+    const col = _ARROW_COL[dir]  ?? 0
+    const row = _ARROW_ROW[style] ?? 2
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, col * 32, row * 32, 32, 32, x, y, size, size)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUILoadingBar(ctx, x, y, w, h)
+  //   loadingbar.png (8×12) 을 타일링해 HP바 배경으로 사용
+  // ─────────────────────────────────────────────────────────────
+  window.drawUILoadingBar = function (ctx, x, y, w, h) {
+    const img = _imgs.loadingbar
+    if (!img?.complete || img.naturalWidth === 0) return
+    ctx.imageSmoothingEnabled = false
+    const segW = 8
+    for (let ox = 0; ox < w; ox += segW) {
+      const sw = Math.min(segW, w - ox)
+      ctx.drawImage(img, 0, 0, sw, 12, x + ox, y, sw, h)
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIMonitor(ctx, x, y, w, h)
+  //   monitor.png (312×255) CRT 모니터 데코
+  // ─────────────────────────────────────────────────────────────
+  window.drawUIMonitor = function (ctx, x, y, w, h) {
+    const img = _imgs.monitor
+    if (!img?.complete || img.naturalWidth === 0) return
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, 0, 0, 312, 255, x, y, w, h)
+    ctx.imageSmoothingEnabled = false
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIBulb(ctx, index, x, y, size)
+  //   bulb.png (32×8): 8×8 × 4개 도트
+  //   index: 0~3
+  // ─────────────────────────────────────────────────────────────
+  window.drawUIBulb = function (ctx, index, x, y, size) {
+    const img = _imgs.bulb
+    if (!img?.complete || img.naturalWidth === 0) return
+    const i = Math.max(0, Math.min(3, index))
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
+  }
+
+  // 외부 참조용 이미지 맵 노출
+  window._UIImgs = _imgs
+})()
