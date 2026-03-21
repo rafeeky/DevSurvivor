@@ -123,6 +123,22 @@ const MetaManager = {
     }
   },
 
+  // ── 캐릭터 해금 ────────────────────────────────────────────────────────
+  isUnlocked(charKey) {
+    if (charKey !== 'vampir') return true  // adam and amelia always unlocked
+    return localStorage.getItem('devSurvivor_unlock_vampir') === '1'
+  },
+
+  unlockChar(charKey) {
+    localStorage.setItem(`devSurvivor_unlock_vampir`, '1')
+    GameState.unlockedChars = GameState.unlockedChars || {}
+    GameState.unlockedChars[charKey] = true
+  },
+
+  initUnlockedChars() {
+    GameState.unlockedChars = { adam: true, amelia: true, vampir: this.isUnlocked('vampir') }
+  },
+
   // ── 메타 업그레이드 아이콘 매핑 ───────────────────────────────────────
   _iconMap: {
     '조금 더 버티기':     'assets/custom/icons/skill_emergency_fix.png',
@@ -210,19 +226,26 @@ const MetaManager = {
       ctx.fillRect(bx, by, colW, rowH - 6)
       ctx.strokeRect(bx, by, colW, rowH - 6)
 
-      // 아이콘 (좌측)
+      // 아이콘 (좌측 — 56×56 박스로 확대)
       const icon = this._getIcon(upg.name)
-      const iconSize = 36
+      const iconBoxSize = 56
+      const iconBoxX = bx + 4
+      const iconBoxY = by + ((rowH - 6) - iconBoxSize) / 2  // 카드 높이 중앙 정렬
+      // 아이콘 배경
+      ctx.save()
+      ctx.fillStyle = 'rgba(15,25,60,0.9)'
+      ctx.strokeStyle = '#2a4a88'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize)
+      ctx.strokeRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize)
       if (icon?.complete && icon.naturalWidth > 0) {
-        ctx.save()
         ctx.imageSmoothingEnabled = true
-        ctx.globalAlpha = maxed ? 1 : canBuy ? 0.9 : 0.4
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 6, iconSize, iconSize)
-        ctx.globalAlpha = 1
-        ctx.restore()
+        ctx.globalAlpha = 1.0
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconBoxX + 2, iconBoxY + 2, iconBoxSize - 4, iconBoxSize - 4)
       }
+      ctx.restore()
 
-      const textX = bx + iconSize + 16
+      const textX = bx + 4 + iconBoxSize + 8
 
       // 이름
       ctx.fillStyle = '#ddeeff'
@@ -345,6 +368,9 @@ const MetaManager = {
 }
 
 window.MetaManager = MetaManager
+
+// 초기화 — unlockedChars 설정
+MetaManager.initUnlockedChars()
 
 window.addEventListener('click', (e) => {
   const canvas = document.getElementById('gameCanvas')

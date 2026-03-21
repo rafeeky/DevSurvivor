@@ -68,6 +68,12 @@ class DropManager {
     }
     window.GameState.goldInventory[type] = (window.GameState.goldInventory[type] || 0) + 1
 
+    // gold_4 는 영구 저장 (뱀파이어 해금 재화)
+    if (type === 4) {
+      const stored = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
+      localStorage.setItem('devSurvivor_gold4', stored + 1)
+    }
+
     // Floating pickup text
     if (window.Game?.addFloatingText) {
       window.Game.addFloatingText(item.x, item.y - 20, `+gold_${type}`, '#FFD700', 1.2)

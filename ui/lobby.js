@@ -4,13 +4,15 @@ _lobbyBgImg.src = 'assets/backgrounds/bg_title.png'
 
 class Lobby {
   constructor() {
-    this._selected = localStorage.getItem('devSurvivor_char') || 'adam'
+    let saved = localStorage.getItem('devSurvivor_char') || 'adam'
+    if (saved === 'alex') saved = 'adam'  // alex removed
+    this._selected = saved
     // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
     // 카드 높이 148px: 포트레이트 88 + 이름 16 + 역할배지 16 + 패시브 설명 16 + 여백
     this._cards = [
       { key: 'adam',   x: 125, y: 180, w: 170, h: 148 },
-      { key: 'alex',   x: 315, y: 180, w: 170, h: 148 },
-      { key: 'amelia', x: 505, y: 180, w: 170, h: 148 },
+      { key: 'amelia', x: 315, y: 180, w: 170, h: 148 },
+      { key: 'vampir', x: 505, y: 180, w: 170, h: 148 },
     ]
     this.startBtnRect   = { x: 210, y: 342, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 416, w: 220, h: 34 }
@@ -34,6 +36,7 @@ class Lobby {
 
       for (const card of this._cards) {
         if (x >= card.x && x <= card.x + card.w && y >= card.y && y <= card.y + card.h) {
+          if (!window.MetaManager?.isUnlocked(card.key)) return  // locked, ignore click
           this._select(card.key)
           return
         }
@@ -91,6 +94,15 @@ class Lobby {
     ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
     ctx.fillStyle = '#88ffaa'
     ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
+
+    // gold_4 보유량 표시 (뱀파이어 해금 재화)
+    const g4 = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
+    if (g4 > 0 || window.MetaManager?.isUnlocked('vampir')) {
+      ctx.fillStyle = '#aa44ff'
+      ctx.font = '12px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(`gold_4 × ${g4}  (뱀파이어 해금: gold_4 1개)`, 400, 175)
+    }
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
@@ -184,7 +196,7 @@ class Lobby {
       const idleImg = spr?.idle
 
       // 캐릭터별 배경색
-      const charBg = { adam: '#0e1f3a', alex: '#0e2a3f', amelia: '#1a1230' }
+      const charBg = { adam: '#0e1f3a', amelia: '#1a1230', vampir: '#1a0a2e' }
       ctx.fillStyle = charBg[card.key] || '#111827'
       ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
 
@@ -262,6 +274,20 @@ class Lobby {
       ctx.fillStyle = sel ? '#ccbbff' : '#556677'
       ctx.font = '9px "VT323", monospace'
       ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 4)
+
+      // 잠금 오버레이
+      if (!window.MetaManager?.isUnlocked(card.key)) {
+        ctx.save()
+        ctx.fillStyle = 'rgba(0,0,0,0.72)'
+        ctx.fillRect(card.x, card.y, card.w, card.h)
+        ctx.font = '32px "VT323", monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText('🔒', cx, card.y + card.h / 2 - 4)
+        ctx.fillStyle = '#aa44ff'
+        ctx.font = '11px "VT323", monospace'
+        ctx.fillText('gold×1', cx, card.y + card.h / 2 + 16)
+        ctx.restore()
+      }
     }
 
     ctx.textAlign = 'left'

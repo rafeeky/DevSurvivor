@@ -32,6 +32,7 @@ class HUD {
     this._drawTopBar(ctx, player, gameTime)
     this._drawBottomBar(ctx)
     this._drawDangerOverlay(ctx, gameTime)
+    this._drawUnlockNotification(ctx)
   }
 
   _drawTopBar(ctx, player, gameTime) {
@@ -213,6 +214,27 @@ class HUD {
     ctx.fillStyle = '#aaa'
     ctx.font = '11px "VT323", monospace'
     ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
+  }
+
+  _drawUnlockNotification(ctx) {
+    const notif = GameState.unlockNotification
+    if (!notif || notif.timer <= 0) return
+    notif.timer -= 1/60
+    const alpha = Math.min(1, notif.timer)
+    ctx.save()
+    ctx.globalAlpha = alpha
+    ctx.fillStyle = 'rgba(60,0,100,0.85)'
+    ctx.fillRect(200, 240, 400, 60)
+    ctx.strokeStyle = '#aa44ff'
+    ctx.lineWidth = 2
+    ctx.strokeRect(200, 240, 400, 60)
+    ctx.fillStyle = '#dd88ff'
+    ctx.font = 'bold 22px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('🔓 ' + notif.msg, 400, 278)
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
   }
 
   _drawDangerOverlay(ctx, gameTime) {

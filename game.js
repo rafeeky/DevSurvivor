@@ -304,6 +304,18 @@ function _loop(now) {
       Game.skillManager?.update(deltaTime)
       window.dropManager?.update(deltaTime, player)
 
+      // gold_4 픽업 → 뱀파이어 해금 체크
+      if (gs.lastPickedGold === 4) {
+        gs.lastPickedGold = null
+        if (window.MetaManager && !MetaManager.isUnlocked('vampir')) {
+          MetaManager.unlockChar('vampir')
+          gs.unlockedChars = gs.unlockedChars || {}
+          gs.unlockedChars.vampir = true
+          // 해금 알림 표시
+          gs.unlockNotification = { msg: '뱀파이어 개발자 해금!', timer: 3.0 }
+        }
+      }
+
       // 출시 진행률 업데이트
       window.ScoreSystem?.updateReleaseProgress(deltaTime)
 
