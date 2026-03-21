@@ -128,7 +128,7 @@
       "title": "타일맵 바닥 렌더링 교체 — tileset stripe → solid color",
       "assignee": "raf",
       "completedAt": "2026-03-22",
-      "commit": "TBD",
+      "commit": "999ce8a",
       "notes": "T.FLOOR=[0,1] 가로줄 무늬 타일 제거. FLOOR_COLORS solid fillRect로 교체. tileset 이미지 로더 제거. smoke-test PASS."
     }
   ],
