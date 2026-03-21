@@ -2452,8 +2452,12 @@ window._lobby = _lobby
   <script>
 class Result {
   constructor() {
-    this.restartBtnRect = { x: 210, y: 480, w: 160, h: 46 }
-    this.upgradeBtnRect = { x: 430, y: 480, w: 160, h: 46 }
+    this._winRestartRect  = { x: 200, y: 478, w: 170, h: 44 }
+    this._winUpgradeRect  = { x: 430, y: 478, w: 170, h: 44 }
+    this._loseRestartRect = { x: 200, y: 382, w: 170, h: 44 }
+    this._loseUpgradeRect = { x: 430, y: 382, w: 170, h: 44 }
+    this._resultStartTime = null
+    this._rateSaved = false
     this._bindClick()
   }
 
@@ -2463,17 +2467,21 @@ class Result {
       const canvas = document.getElementById('gameCanvas')
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()
-      const scaleX = 800 / rect.width
-      const scaleY = 600 / rect.height
-      const x = (e.clientX - rect.left) * scaleX
-      const y = (e.clientY - rect.top)  * scaleY
+      const x = (e.clientX - rect.left) * (800 / rect.width)
+      const y = (e.clientY - rect.top)  * (600 / rect.height)
 
-      const r = this.restartBtnRect
+      const elapsed = this._resultStartTime
+        ? (performance.now() - this._resultStartTime) / 1000 : 0
+
+      const win = GameState._lastWin
+      if (!win && elapsed < 1.2) return  // 연출 중 버튼 무효
+
+      const r = win ? this._winRestartRect  : this._loseRestartRect
+      const u = win ? this._winUpgradeRect  : this._loseUpgradeRect
+
       if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
-        Game.restart()
-        return
+        Game.restart(); return
       }
-      const u = this.upgradeBtnRect
       if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
         GameState.screen = 'upgrade'
       }
@@ -2481,94 +2489,305 @@ class Result {
   }
 
   render(ctx) {
-    if (GameState.screen !== 'result') return
+    if (GameState.screen !== 'result') {
+      this._resultStartTime = null
+      this._rateSaved = false
+      return
+    }
+    if (!this._resultStartTime) this._resultStartTime = performance.now()
+    const elapsed = (performance.now() - this._resultStartTime) / 1000
 
-    const win = GameState._lastWin
+    if (GameState._lastWin) this._renderWin(ctx)
+    else this._renderLose(ctx, elapsed)
+  }
 
-    // 배경
-    ctx.fillStyle = win ? '#0a1a0a' : '#0d0d0d'
+  // ── Dev Win ─────────────────────────────────────────────────────────────
+
+  _renderWin(ctx) {
+    ctx.fillStyle = '#030d03'
     ctx.fillRect(0, 0, 800, 600)
 
-    // 테두리
-    ctx.strokeStyle = win ? '#33cc66' : '#cc3333'
-    ctx.lineWidth = 4
-    ctx.strokeRect(4, 4, 792, 592)
+    const glow = ctx.createRadialGradient(400, 300, 0, 400, 300, 380)
+    glow.addColorStop(0, 'rgba(255,215,0,0.13)')
+    glow.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = glow
+    ctx.fillRect(0, 0, 800, 600)
 
-    // 타이틀
     ctx.textAlign = 'center'
-    ctx.font = 'bold 64px monospace'
-    ctx.fillStyle = win ? '#66ff88' : '#ff6666'
-    ctx.fillText(win ? 'Dev Win!' : 'AI Win!', 400, 120)
+    ctx.fillStyle = '#FFD700'
+    ctx.font = 'bold 56px monospace'
+    ctx.fillText('배포 성공!', 400, 94)
 
-    // 부제
-    ctx.font = '17px monospace'
-    ctx.fillStyle = '#888'
-    ctx.fillText(win ? '오늘은 내가 버텼다.' : 'AI가 더 잘했다.', 400, 150)
+    ctx.fillStyle = '#88ff88'
+    ctx.font = '14px monospace'
+    ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
 
-    // 통계 박스
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'
-    ctx.fillRect(200, 170, 400, 200)
-    ctx.strokeStyle = '#334'
-    ctx.lineWidth = 1
-    ctx.strokeRect(200, 170, 400, 200)
+    // 스탯 박스
+    ctx.fillStyle = 'rgba(0,18,0,0.88)'
+    ctx.fillRect(188, 148, 424, 218)
+    ctx.strokeStyle = '#44aa44'
+    ctx.lineWidth = 2
+    ctx.strokeRect(188, 148, 424, 218)
 
-    const t    = GameState.gameTime
+    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
+    const t = GameState.gameTime
     const mins = Math.floor(t / 60)
     const secs = Math.floor(t % 60)
 
-    ctx.fillStyle = '#ccddff'
-    ctx.font = '15px monospace'
+    ctx.font = '13px monospace'
+    ctx.fillStyle = '#aaddcc'
     ctx.textAlign = 'left'
-    const statsX = 230
-    ctx.fillText('최종 점수',   statsX, 200)
-    ctx.fillText('생존 시간',   statsX, 226)
-    ctx.fillText('처치 수',     statsX, 252)
-    ctx.fillText('출시 진행률', statsX, 278)
-    ctx.fillText('도달 레벨',   statsX, 304)
+    const sx = 222
+    const rows = [
+      ['최종 직급', rankName],
+      ['생존 시간', `${mins}:${secs.toString().padStart(2,'0')}`],
+      ['처치 수',   `${GameState.killCount}마리`],
+      ['출시 진행률', `${Math.floor(GameState.releaseProgress)}%`],
+      ['최고 점수', GameState.score.toLocaleString()],
+    ]
+    rows.forEach(([label, val], i) => {
+      const ry = 186 + i * 34
+      ctx.fillStyle = '#aaddcc'
+      ctx.textAlign = 'left'
+      ctx.fillText(label, sx, ry)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 13px monospace'
+      ctx.textAlign = 'right'
+      ctx.fillText(val, 578, ry)
+      ctx.font = '13px monospace'
+    })
 
-    ctx.textAlign = 'right'
-    ctx.fillStyle = '#ffffff'
-    const statsRX = 570
-    ctx.fillText(GameState.score.toLocaleString(),          statsRX, 200)
-    ctx.fillText(`${mins}:${secs.toString().padStart(2,'0')}`, statsRX, 226)
-    ctx.fillText(`${GameState.killCount}마리`,              statsRX, 252)
-    ctx.fillText(`${Math.floor(GameState.releaseProgress)}%`, statsRX, 278)
-    ctx.fillText(`Lv.${GameState.playerLevel}`,             statsRX, 304)
-
-    // 획득 출시 포인트
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 18px monospace'
-    ctx.fillText(`출시 포인트 +${earned} 획득!`, 400, 400)
+    ctx.font = 'bold 17px monospace'
+    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 405)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
-    ctx.font = '13px monospace'
-    ctx.fillText(`(누적: ${total}pt)`, 400, 420)
+    ctx.font = '12px monospace'
+    ctx.fillText(`(누적: ${total}pt)`, 400, 427)
 
-    // 다시 하기 버튼
-    const r = this.restartBtnRect
-    ctx.fillStyle = '#1e2a4a'
-    ctx.strokeStyle = '#4488ff'
-    ctx.lineWidth = 2
-    ctx.fillRect(r.x, r.y, r.w, r.h)
-    ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 15px monospace'
-    ctx.fillText('[ 다시 하기 ]', r.x + r.w / 2, r.y + 29)
+    const r = this._winRestartRect, u = this._winUpgradeRect
+    ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
+    ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px monospace'
+    ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
 
-    // 업그레이드 버튼
-    const u = this.upgradeBtnRect
-    ctx.fillStyle = '#0d1a0d'
-    ctx.strokeStyle = '#44aa44'
-    ctx.lineWidth = 2
-    ctx.fillRect(u.x, u.y, u.w, u.h)
-    ctx.strokeRect(u.x, u.y, u.w, u.h)
+    ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
+    ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 15px monospace'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 29)
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 
     ctx.textAlign = 'left'
+  }
+
+  // ── AI Win (드라마틱 연출) ───────────────────────────────────────────────
+
+  _renderLose(ctx, elapsed) {
+    // 1. 암전 배경
+    ctx.fillStyle = '#050508'
+    ctx.fillRect(0, 0, 800, 600)
+
+    // 2. 스포트라이트 콘
+    const spotAlpha = Math.min(1, elapsed / 0.7)
+    ctx.save()
+    ctx.globalAlpha = spotAlpha
+    ctx.beginPath()
+    ctx.moveTo(400, 10)
+    ctx.lineTo(90, 600)
+    ctx.lineTo(710, 600)
+    ctx.closePath()
+    ctx.clip()
+    const sg = ctx.createLinearGradient(400, 10, 400, 600)
+    sg.addColorStop(0,   'rgba(255,240,160,0.0)')
+    sg.addColorStop(0.2, 'rgba(255,230,140,0.38)')
+    sg.addColorStop(1,   'rgba(255,210,100,0.72)')
+    ctx.fillStyle = sg
+    ctx.fillRect(0, 0, 800, 600)
+    ctx.restore()
+
+    // 3. "AI 승리" 대형 텍스트
+    const titleAlpha = Math.min(1, Math.max(0, (elapsed - 0.15) / 0.55))
+    ctx.save()
+    ctx.globalAlpha = titleAlpha
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 128px monospace'
+    ctx.fillStyle = '#6b0000'
+    ctx.fillText('AI', 400, 172)
+    ctx.font = 'bold 82px monospace'
+    ctx.fillStyle = '#b81010'
+    ctx.fillText('승  리', 400, 266)
+    ctx.restore()
+
+    // 4. 쓰러진 캐릭터
+    const charAlpha = Math.min(1, Math.max(0, (elapsed - 0.4) / 0.5))
+    this._drawCollapsedPlayer(ctx, 400, 440, charAlpha)
+
+    // 5. 결과 패널 (1.2초 이후 페이드인)
+    const panelAlpha = Math.min(1, Math.max(0, (elapsed - 1.2) / 0.5))
+    if (panelAlpha > 0) this._drawLosePanel(ctx, panelAlpha)
+  }
+
+  _drawCollapsedPlayer(ctx, cx, cy, alpha) {
+    if (alpha <= 0) return
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // 다리 (가로로 뻗음)
+    ctx.fillStyle = '#2255cc'
+    ctx.fillRect(cx, cy - 5, 34, 10)
+    // 신발
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(cx + 32, cy - 6, 10, 6)
+    ctx.fillRect(cx + 32, cy + 3, 10, 6)
+    // 몸통
+    ctx.fillStyle = '#4488ff'
+    ctx.fillRect(cx - 24, cy - 9, 27, 18)
+    // 팔 (늘어진)
+    ctx.fillRect(cx - 32, cy + 3, 12, 7)
+    // 머리 (바닥에 붙음)
+    ctx.fillStyle = '#66aaff'
+    ctx.beginPath()
+    ctx.arc(cx - 30, cy - 2, 12, 0, Math.PI * 2)
+    ctx.fill()
+    // 눈물
+    ctx.fillStyle = '#88ccff'
+    ctx.beginPath(); ctx.arc(cx - 20, cy + 13, 3, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(cx - 10, cy + 16, 2, 0, Math.PI * 2); ctx.fill()
+    // 느낌표
+    ctx.fillStyle = '#ffdd44'
+    ctx.font = 'bold 18px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('!', cx + 8,  cy - 22)
+    ctx.fillText('!', cx + 22, cy - 36)
+
+    ctx.restore()
+  }
+
+  _drawLosePanel(ctx, alpha) {
+    const causes = [
+      'BoxBot의 공격을 막지 못했습니다.',
+      '야근 누적으로 체력이 바닥났습니다.',
+      '스프린트 마감 압박을 버티지 못했습니다.',
+      '버그보다 수정이 느렸습니다.',
+      '기술 부채가 한꺼번에 터졌습니다.',
+    ]
+    const comments = [
+      '"다음엔 더 잘할 수 있을 거야... 아마도."',
+      '"야근 수당은 없습니다. 물론이죠."',
+      '"AI는 쉬지 않는다. 당신도 쉬지 마."',
+      '"포기하지 마세요. 다만 기대치를 낮추세요."',
+      '"이 경험도 경력이 됩니다. 아마도."',
+    ]
+    const cause   = causes[GameState.killCount   % causes.length]
+    const comment = comments[GameState.killCount % comments.length]
+
+    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
+    const t = GameState.gameTime
+    const mins = Math.floor(t / 60)
+    const secs = Math.floor(t % 60)
+    const earned = GameState.lastEarnedPoints || 0
+
+    const prevRate = parseInt(localStorage.getItem('devSurvivor_survivalRate') || '30')
+    const gain = Math.max(1, Math.floor(t / 60))
+    const newRate = Math.min(95, prevRate + gain)
+    if (!this._rateSaved) {
+      localStorage.setItem('devSurvivor_survivalRate', String(newRate))
+      this._rateSaved = true
+    }
+    const total = window.MetaManager ? MetaManager.loadPoints() : 0
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // 반투명 오버레이
+    ctx.fillStyle = 'rgba(0,0,0,0.62)'
+    ctx.fillRect(0, 0, 800, 600)
+
+    // 카드
+    const px = 104, py = 88, pw = 592, ph = 268
+    ctx.fillStyle = '#f0ece0'
+    ctx.fillRect(px, py, pw, ph)
+    ctx.strokeStyle = '#881111'
+    ctx.lineWidth = 3
+    ctx.strokeRect(px, py, pw, ph)
+
+    // 헤더
+    ctx.fillStyle = '#881111'
+    ctx.fillRect(px, py, pw, 40)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 19px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
+
+    // 원인
+    ctx.fillStyle = '#444'
+    ctx.font = '13px monospace'
+    ctx.fillText(cause, 400, py + 62)
+
+    // 구분선 1
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(px+24, py+74); ctx.lineTo(px+pw-24, py+74); ctx.stroke()
+
+    // 스탯 (2열)
+    const statRows = [
+      ['최종 직급', rankName],
+      ['생존 시간', `${mins}:${secs.toString().padStart(2,'0')}`],
+      ['처치 수',   `${GameState.killCount}마리`],
+    ]
+    const statRows2 = [
+      ['출시 포인트', `+${earned} 🪙`],
+      ['생존 확률', `${prevRate}% → ${newRate}%`],
+    ]
+    const c1l = px + 28, c1r = px + 278
+    const c2l = px + 318, c2r = px + pw - 20
+    statRows.forEach(([lbl, val], i) => {
+      const ry = py + 100 + i * 26
+      ctx.fillStyle = '#666'; ctx.font = '12px monospace'; ctx.textAlign = 'left'
+      ctx.fillText(lbl, c1l, ry)
+      ctx.fillStyle = '#111'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'right'
+      ctx.fillText(val, c1r, ry)
+    })
+    statRows2.forEach(([lbl, val], i) => {
+      const ry = py + 100 + i * 26
+      ctx.fillStyle = '#666'; ctx.font = '12px monospace'; ctx.textAlign = 'left'
+      ctx.fillText(lbl, c2l, ry)
+      ctx.fillStyle = i === 1 ? '#1a44cc' : '#111'
+      ctx.font = 'bold 12px monospace'; ctx.textAlign = 'right'
+      ctx.fillText(val, c2r, ry)
+    })
+
+    // 구분선 2
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(px+24, py+178); ctx.lineTo(px+pw-24, py+178); ctx.stroke()
+
+    // 포인트 요약
+    ctx.fillStyle = '#333'; ctx.font = '12px monospace'; ctx.textAlign = 'center'
+    ctx.fillText(`출시 포인트 +${earned} 획득  (누적: ${total}pt)`, 400, py + 200)
+
+    // 블랙코미디 멘트
+    ctx.fillStyle = '#888'; ctx.font = '11px monospace'
+    ctx.fillText(comment, 400, py + 222)
+
+    // 구분선 3
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(px+24, py+234); ctx.lineTo(px+pw-24, py+234); ctx.stroke()
+
+    // 버튼
+    const r = this._loseRestartRect, u = this._loseUpgradeRect
+    ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
+    ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center'
+    ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
+
+    ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
+    ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+    ctx.fillStyle = '#88ff88'
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
+
+    ctx.restore()
   }
 }
 
