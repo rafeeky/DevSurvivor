@@ -47,6 +47,9 @@ window.GameState = {
   selectedCharacter: localStorage.getItem('devSurvivor_char') || 'adam',
 }
 
+// 메타 매니저 초기화 (GameState 정의 직후)
+if (window.MetaManager) MetaManager.initUnlockedChars()
+
 // ─────────────────────────────────────────
 // 키 입력
 // ─────────────────────────────────────────

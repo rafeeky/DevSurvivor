@@ -291,6 +291,18 @@ console.log(`✅ Geralt(Alex) 스프라이트 변환 완료 (${geraltCount}/${GE
 // (변환 불필요: 파일이 assets/player/ 에 이미 존재)
 console.log('✅ Twiggy(Amelia) 스프라이트: assets/player/Twiggy_idle.png / Twiggy_run.png 직접 사용')
 
+// Vampir 스프라이트 변환 (player-vampir RGBA → assets/custom/player/)
+const VAMPIR_PACK = path.join(BASE, 'assets/packs/player-vampir/PNG/Vampires1/Without_shadow')
+const VAMPIR_SPRITES = [
+  { src: `${VAMPIR_PACK}/Vampires1_Idle_without_shadow.png`, dst: `${DST}/vampir_idle.png` },
+  { src: `${VAMPIR_PACK}/Vampires1_Run_without_shadow.png`,  dst: `${DST}/vampir_run.png`  },
+]
+let vampirCount = 0
+for (const { src, dst } of VAMPIR_SPRITES) {
+  try { convertRGBtoRGBA(src, dst); vampirCount++ } catch (e) { console.warn('⚠️ Vampir 변환 실패:', src, e.message) }
+}
+console.log(`✅ Vampir 스프라이트 변환 완료 (${vampirCount}/${VAMPIR_SPRITES.length})`)
+
 // 적 스프라이트 RGBA 변환 (sprite-pack-3 RGB → assets/enemies/ RGBA)
 const ENEMY_DST = path.join(BASE, 'assets/enemies')
 const ENEMY_CONVERT = [

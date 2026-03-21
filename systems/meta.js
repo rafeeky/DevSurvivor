@@ -369,8 +369,7 @@ const MetaManager = {
 
 window.MetaManager = MetaManager
 
-// 초기화 — unlockedChars 설정
-MetaManager.initUnlockedChars()
+// 초기화는 game.js에서 GameState 정의 후 호출
 
 window.addEventListener('click', (e) => {
   const canvas = document.getElementById('gameCanvas')

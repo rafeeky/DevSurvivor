@@ -253,7 +253,18 @@ class Player {
         const dw = cfg.renderW || Math.round(anim.fw * scale)
         const dh = cfg.renderH || Math.round(anim.fh * scale)
         const anchor = cfg.yAnchor ?? 0.75
-        const sx = this._animFrame * anim.fw
+        let sx, sy
+        if (anim.cols) {
+          // Grid spritesheet
+          const col = this._animFrame % anim.cols
+          const row = Math.floor(this._animFrame / anim.cols)
+          sx = col * anim.fw
+          sy = row * anim.fh
+        } else {
+          // Horizontal strip (default)
+          sx = this._animFrame * anim.fw
+          sy = 0
+        }
         const rx = Math.round(x - dw / 2)
         const ry = Math.round(y - dh * anchor)
         const smooth = cfg.renderW != null  // 고해상도 스프라이트는 스무딩 ON
@@ -263,10 +274,10 @@ class Player {
           ctx.save()
           ctx.translate(rx + dw, ry)
           ctx.scale(-1, 1)
-          ctx.drawImage(img, sx, 0, anim.fw, anim.fh, 0, 0, dw, dh)
+          ctx.drawImage(img, sx, sy, anim.fw, anim.fh, 0, 0, dw, dh)
           ctx.restore()
         } else {
-          ctx.drawImage(img, sx, 0, anim.fw, anim.fh, rx, ry, dw, dh)
+          ctx.drawImage(img, sx, sy, anim.fw, anim.fh, rx, ry, dw, dh)
         }
         ctx.imageSmoothingEnabled = false
         ctx.restore()

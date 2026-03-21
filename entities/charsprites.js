@@ -45,6 +45,16 @@ window.CHAR_CONFIGS = {
     scale: 3,
     yAnchor: 0.75,
   },
+  vampir: {
+    idle: { src: 'assets/custom/player/vampir_idle.png', fw: 64, fh: 64, frames: 6, fps: 5, cols: 4 },
+    walk: { src: 'assets/custom/player/vampir_run.png',  fw: 64, fh: 64, frames: 8, fps: 10, cols: 8 },
+    scale: 1.5,
+    yAnchor: 0.85,
+    label: '뱀파이어 개발자',
+    roleType: '처리형',
+    roleColor: '#aa44ff',
+    sublabel: '숙련된 디버깅',
+  },
 }
 
 // 이미지 사전 로드
