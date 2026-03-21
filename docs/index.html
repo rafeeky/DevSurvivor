@@ -1747,7 +1747,7 @@ window.TilemapSystem = (() => {
   const TSIZE = TILE * SCALE  // 32px
 
   const WORLD_COLS = window.WORLD_W / TSIZE  // 75
-  const WORLD_ROWS = window.WORLD_H / TSIZE  // 56
+  const WORLD_ROWS = Math.floor(window.WORLD_H / TSIZE)  // 56
 
   // ─── 타일셋 좌표 상수 (col, row) ──────────────────────────
   const T = {
@@ -1860,32 +1860,7 @@ window.TilemapSystem = (() => {
   let _loaded = false
   _img.onload = () => { _loaded = true }
 
-  // ─── 오프스크린 캔버스 (전체 월드 한 번 렌더 → blit) ──
-  let _offscreen = null
-  let _baked = false
   const _worldMap = _buildWorldMap()
-
-  function _bake() {
-    if (!_loaded) return
-    _offscreen = document.createElement('canvas')
-    _offscreen.width  = window.WORLD_W
-    _offscreen.height = window.WORLD_H
-    const offCtx = _offscreen.getContext('2d')
-    offCtx.imageSmoothingEnabled = false
-
-    for (let row = 0; row < WORLD_ROWS; row++) {
-      for (let col = 0; col < WORLD_COLS; col++) {
-        const code = _worldMap[row]?.[col] ?? 'F'
-        const [tc, tr] = TILE_LOOKUP[code] ?? T.FLOOR
-        offCtx.drawImage(
-          _img,
-          tc * TILE, tr * TILE, TILE, TILE,
-          col * TSIZE, row * TSIZE, TSIZE, TSIZE
-        )
-      }
-    }
-    _baked = true
-  }
 
   // ─── 오피스 프랍 (시각 장식 레이어) ───────────────────
   // { img, x, y } — 월드 픽셀 좌표, SCALE(2×) 적용해 렌더
@@ -2010,17 +1985,31 @@ window.TilemapSystem = (() => {
     // camX, camY: 뷰포트 카메라 위치 (월드 좌표)
     render(ctx, camX, camY) {
       const cx = camX || 0, cy = camY || 0
-      if (!_baked) {
-        if (_loaded) _bake()
-        else {
-          ctx.fillStyle = '#1a1a2a'
-          ctx.fillRect(0, 0, 800, 600)
-          return
+
+      if (!_loaded) {
+        ctx.fillStyle = '#1a1a2a'
+        ctx.fillRect(0, 0, 800, 600)
+        return
+      }
+
+      // 뷰포트에 보이는 타일 범위만 계산
+      ctx.imageSmoothingEnabled = false
+      const startCol = Math.max(0, Math.floor(cx / TSIZE))
+      const startRow = Math.max(0, Math.floor(cy / TSIZE))
+      const endCol   = Math.min(WORLD_COLS - 1, Math.ceil((cx + 800) / TSIZE))
+      const endRow   = Math.min(WORLD_ROWS - 1, Math.ceil((cy + 600) / TSIZE))
+
+      for (let row = startRow; row <= endRow; row++) {
+        for (let col = startCol; col <= endCol; col++) {
+          const code = _worldMap[row]?.[col] ?? 'F'
+          const [tc, tr] = TILE_LOOKUP[code] ?? T.FLOOR
+          ctx.drawImage(
+            _img,
+            tc * TILE, tr * TILE, TILE, TILE,
+            col * TSIZE - cx, row * TSIZE - cy, TSIZE, TSIZE
+          )
         }
       }
-      // 월드 오프스크린에서 뷰포트 영역만 blit
-      ctx.imageSmoothingEnabled = false
-      ctx.drawImage(_offscreen, cx, cy, 800, 600, 0, 0, 800, 600)
 
       // ── 오피스 프랍 렌더 (타일 위, 적/플레이어 아래) ──
       for (const p of _props) {
