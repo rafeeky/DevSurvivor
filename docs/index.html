@@ -2300,9 +2300,11 @@ class HUD {
     }
 
     // 레벨 & 경험치 바
-    ctx.fillStyle = '#aaa'
-    ctx.font = '12px monospace'
-    ctx.fillText(`Lv.${GameState.playerLevel}`, 462, 568)
+    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
+    ctx.fillStyle = '#ccaaff'
+    ctx.font = 'bold 12px monospace'
+    ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
 
     const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
     const lvl = GameState.playerLevel
