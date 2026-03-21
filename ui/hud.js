@@ -66,13 +66,13 @@ class HUD {
     ctx.lineWidth = 1
     ctx.strokeRect(12, 12, 180, 18)
     ctx.fillStyle = '#fff'
-    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.font = '11px "VT323", monospace'
     ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 26)
 
     // 보호막 아이콘
     if (player.shields > 0) {
       ctx.fillStyle = '#44aaff'
-      ctx.font = '12px "Pixelify Sans", sans-serif'
+      ctx.font = '12px "VT323", monospace'
       ctx.fillText(`🛡 ${player.shields}`, 200, 24)
     }
 
@@ -82,7 +82,7 @@ class HUD {
     const secs = Math.floor(remaining % 60)
     const timeStr = `${mins}:${secs.toString().padStart(2,'0')}`
     ctx.fillStyle = remaining <= 30 ? '#ff4444' : '#ffffff'
-    ctx.font = 'bold 22px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 22px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(timeStr, 400, 30)
     ctx.textAlign = 'left'
@@ -93,12 +93,12 @@ class HUD {
     ctx.fillStyle = '#44ffaa'
     ctx.fillRect(520, 12, 140 * (GameState.releaseProgress / 100), 10)
     ctx.fillStyle = '#aaa'
-    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.font = '11px "VT323", monospace'
     ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 522, 34)
 
     // 점수
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.textAlign = 'right'
     ctx.fillText(`${GameState.score.toLocaleString()}`, 788, 24)
     ctx.textAlign = 'left'
@@ -146,13 +146,13 @@ class HUD {
 
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
-        ctx.font = '11px "Pixelify Sans", sans-serif'
+        ctx.font = '11px "VT323", monospace'
         ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {
           ctx.fillStyle = '#ff8844'
-          ctx.font = 'bold 13px "Pixelify Sans", sans-serif'
+          ctx.font = 'bold 13px "VT323", monospace'
           ctx.textAlign = 'center'
           ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 68, sy + 36)
           ctx.textAlign = 'left'
@@ -165,7 +165,7 @@ class HUD {
           ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
         } else {
           ctx.fillStyle = '#44ff88'
-          ctx.font = '10px "Pixelify Sans", sans-serif'
+          ctx.font = '10px "VT323", monospace'
           ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
@@ -174,7 +174,7 @@ class HUD {
       ctx.fillStyle = 'rgba(0,0,0,0.65)'
       ctx.fillRect(sx + 2, sy + 2, 14, 13)
       ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
-      ctx.font = 'bold 10px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 10px "VT323", monospace'
       ctx.fillText(keys[i], sx + 4, sy + 13)
     }
 
@@ -182,7 +182,7 @@ class HUD {
     const allEmpty = !Game.skillManager?.slots?.some(Boolean)
     if (allEmpty) {
       ctx.fillStyle = '#556688'
-      ctx.font = '11px "Pixelify Sans", sans-serif'
+      ctx.font = '11px "VT323", monospace'
       ctx.textAlign = 'center'
       ctx.fillText('적을 처치해 경험치를 모으면 레벨업 시 스킬을 획득합니다', 250, 571)
       ctx.textAlign = 'left'
@@ -192,7 +192,7 @@ class HUD {
     const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     ctx.fillStyle = '#ccaaff'
-    ctx.font = 'bold 12px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 12px "VT323", monospace'
     ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
 
     const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
@@ -211,7 +211,7 @@ class HUD {
 
     // 처치 수
     ctx.fillStyle = '#aaa'
-    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.font = '11px "VT323", monospace'
     ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
   }
 

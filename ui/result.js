@@ -77,7 +77,7 @@ class Result {
     ctx.fillText('배포 성공!', 400, 94)
     ctx.shadowBlur = 0
     ctx.fillStyle = '#88ff88'
-    ctx.font = '14px "Pixelify Sans", sans-serif'
+    ctx.font = '14px "VT323", monospace'
     ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
     ctx.restore()
 
@@ -99,7 +99,7 @@ class Result {
     const secs = Math.floor(t % 60)
     const prevRate = parseInt(localStorage.getItem('devSurvivor_survivalRate') || '30')
 
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.fillStyle = '#aaddcc'
     ctx.textAlign = 'left'
     const sx = 222
@@ -115,10 +115,10 @@ class Result {
       const ry = 186 + i * 32
       ctx.fillStyle = '#aaddcc'
       ctx.textAlign = 'left'
-      ctx.font = '13px "Pixelify Sans", sans-serif'
+      ctx.font = '13px "VT323", monospace'
       ctx.fillText(label, sx, ry)
       ctx.fillStyle = i === 5 ? '#88ddff' : '#ffffff'
-      ctx.font = 'bold 13px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 13px "VT323", monospace'
       ctx.textAlign = 'right'
       ctx.fillText(val, 578, ry)
     })
@@ -132,17 +132,17 @@ class Result {
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 17px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 17px "VT323", monospace'
     ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 432)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
-    ctx.font = '12px "Pixelify Sans", sans-serif'
+    ctx.font = '12px "VT323", monospace'
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
     const r = this._winRestartRect, u = this._winUpgradeRect
     ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
     ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
 
     ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
@@ -248,7 +248,7 @@ class Result {
     // 느낌표
     ctx.globalAlpha = alpha
     ctx.fillStyle = '#ffdd44'
-    ctx.font = 'bold 18px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 18px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('!', cx + 30, cy - 20)
     ctx.fillText('!', cx + 46, cy - 36)
@@ -309,13 +309,13 @@ class Result {
     ctx.fillStyle = '#881111'
     ctx.fillRect(px, py, pw, 40)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 19px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 19px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
 
     // 원인
     ctx.fillStyle = '#444'
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.fillText(cause, 400, py + 62)
 
     // 구분선 1
@@ -336,17 +336,17 @@ class Result {
     const c2l = px + 318, c2r = px + pw - 20
     statRows.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c1l, ry)
-      ctx.fillStyle = '#111'; ctx.font = 'bold 12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'right'
+      ctx.fillStyle = '#111'; ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c1r, ry)
     })
     statRows2.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c2l, ry)
       ctx.fillStyle = i === 1 ? '#1a44cc' : '#111'
-      ctx.font = 'bold 12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'right'
+      ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c2r, ry)
     })
 
@@ -355,11 +355,11 @@ class Result {
     ctx.beginPath(); ctx.moveTo(px+24, py+178); ctx.lineTo(px+pw-24, py+178); ctx.stroke()
 
     // 포인트 요약
-    ctx.fillStyle = '#333'; ctx.font = '12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#333'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText(`출시 포인트 +${earned} 획득  (누적: ${total}pt)`, 400, py + 200)
 
     // 블랙코미디 멘트
-    ctx.fillStyle = '#888'; ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.fillStyle = '#888'; ctx.font = '11px "VT323", monospace'
     ctx.fillText(comment, 400, py + 222)
 
     // 구분선 3
@@ -370,7 +370,7 @@ class Result {
     const r = this._loseRestartRect, u = this._loseUpgradeRect
     ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
     ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "Pixelify Sans", sans-serif'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
 
     ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2

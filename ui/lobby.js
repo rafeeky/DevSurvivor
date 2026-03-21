@@ -80,21 +80,21 @@ class Lobby {
 
     // 부제
     ctx.fillStyle = '#ffcc55'
-    ctx.font = '22px "Pixelify Sans", sans-serif'
+    ctx.font = '22px "VT323", monospace'
     ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 140)
 
     // 점수 / 포인트 (한 줄)
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
     ctx.fillStyle = '#88ffaa'
     ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
-    ctx.font = '12px "Pixelify Sans", sans-serif'
+    ctx.font = '12px "VT323", monospace'
     ctx.fillText('── 캐릭터 선택 ──', 400, 181)
 
     // 캐릭터 카드
@@ -112,7 +112,7 @@ class Lobby {
     ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.restore()
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 36px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 36px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
@@ -124,7 +124,7 @@ class Lobby {
     ctx.fillRect(u.x, u.y, u.w, u.h)
     ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#66aa66'
-    ctx.font = '18px "Pixelify Sans", sans-serif'
+    ctx.font = '18px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('업그레이드', u.x + u.w / 2, u.y + u.h / 2 + 6)
 
@@ -132,7 +132,7 @@ class Lobby {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'
     ctx.fillRect(0, 468, 800, 32)
     ctx.fillStyle = '#7799bb'
-    ctx.font = '16px "Pixelify Sans", sans-serif'
+    ctx.font = '16px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('이동: WASD  /  스킬: 1~4  /  레벨업 시 스킬 선택', 400, 488)
 
@@ -171,7 +171,7 @@ class Lobby {
       // 선택 표시 (우상단 ▶)
       if (sel) {
         ctx.fillStyle = '#4488ff'
-        ctx.font = '9px "Pixelify Sans", sans-serif'
+        ctx.font = '9px "VT323", monospace'
         ctx.textAlign = 'right'
         ctx.fillText('▶', card.x + card.w - 5, card.y + 12)
       }
@@ -231,14 +231,14 @@ class Lobby {
       } else {
         // 로딩 전 플레이스홀더
         ctx.fillStyle = '#334466'
-        ctx.font = '28px "Pixelify Sans", sans-serif'
+        ctx.font = '28px "VT323", monospace'
         ctx.textAlign = 'center'
         ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
-      ctx.font = 'bold 11px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 11px "VT323", monospace'
       ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 40)
 
       // 역할 타입 배지
@@ -254,13 +254,13 @@ class Lobby {
         ctx.fillRect(badgeX, badgeY, badgeW, badgeH)
         ctx.strokeRect(badgeX, badgeY, badgeW, badgeH)
         ctx.fillStyle = roleColor
-        ctx.font = 'bold 9px "Pixelify Sans", sans-serif'
+        ctx.font = 'bold 9px "VT323", monospace'
         ctx.fillText(roleType, cx, badgeY + 10)
       }
 
       // 패시브명
       ctx.fillStyle = sel ? '#ccbbff' : '#556677'
-      ctx.font = '9px "Pixelify Sans", sans-serif'
+      ctx.font = '9px "VT323", monospace'
       ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 4)
     }
 
