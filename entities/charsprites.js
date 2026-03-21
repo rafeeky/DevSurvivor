@@ -10,6 +10,7 @@ window.CHAR_CONFIGS = {
     idle: { src: 'assets/characters/Adam_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
     walk: { src: 'assets/characters/Adam_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
+    portrait: 'assets/custom/player/player_m.png',
   },
   alex: {
     label: '알렉스',
@@ -17,6 +18,7 @@ window.CHAR_CONFIGS = {
     idle: { src: 'assets/characters/Alex_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
     walk: { src: 'assets/characters/Alex_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
+    portrait: 'assets/custom/player/player_m.png',
   },
   amelia: {
     label: '아멜리아',
@@ -24,6 +26,7 @@ window.CHAR_CONFIGS = {
     idle: { src: 'assets/characters/Amelia_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
     walk: { src: 'assets/characters/Amelia_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
+    portrait: 'assets/custom/player/player_f.png',
   },
 }
 
@@ -35,6 +38,8 @@ window.CHAR_SPRITES = {}
     idle.src = cfg.idle.src
     const walk = new Image()
     walk.src = cfg.walk.src
-    window.CHAR_SPRITES[key] = { idle, walk }
+    const portrait = new Image()
+    portrait.src = cfg.portrait
+    window.CHAR_SPRITES[key] = { idle, walk, portrait }
   }
 })()
