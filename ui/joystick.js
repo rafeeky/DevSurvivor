@@ -3,11 +3,12 @@
 
 const JOYSTICK_RADIUS = 60
 const KNOB_RADIUS = 24
+// 다이아몬드 배치: 엄지 자연스러운 위치 (중심 710,480, 간격 64px)
 const SKILL_BUTTONS = [
-  { slot: 0, label: 'Q', x: 680, y: 460 },
-  { slot: 1, label: 'W', x: 740, y: 420 },
-  { slot: 2, label: 'E', x: 740, y: 490 },
-  { slot: 3, label: 'R', x: 680, y: 530 },
+  { slot: 0, label: 'Q', x: 648, y: 480 },  // 왼쪽
+  { slot: 1, label: 'W', x: 710, y: 416 },  // 위
+  { slot: 2, label: 'E', x: 772, y: 480 },  // 오른쪽
+  { slot: 3, label: 'R', x: 710, y: 544 },  // 아래
 ]
 const BTN_RADIUS = 28
 
@@ -69,7 +70,7 @@ class VirtualJoystick {
         const angle = Math.atan2(dy, dx)
         this.knobX = this.baseX + Math.cos(angle) * clamped
         this.knobY = this.baseY + Math.sin(angle) * clamped
-        this._updateKeys(dx, dy, dist)
+        this._updateKeys(dx, dy)
       }
     }, { passive: false })
 
@@ -114,9 +115,9 @@ class VirtualJoystick {
     return -1
   }
 
-  _updateKeys(dx, dy, dist) {
+  _updateKeys(dx, dy) {
     if (!window.inputKeys) return
-    const dead = 10
+    const dead = 12
     inputKeys['KeyW'] = dy < -dead
     inputKeys['KeyS'] = dy > dead
     inputKeys['KeyA'] = dx < -dead
@@ -182,12 +183,23 @@ class VirtualJoystick {
         ctx.fill()
       }
 
-      // 라벨
-      ctx.fillStyle = skill ? '#ffffff' : '#555'
-      ctx.font = `bold 14px monospace`
+      // 라벨: 스킬 없으면 Q/W/E/R, 있으면 키 + 스킬 이름 약칭
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(btn.label, btn.x, btn.y)
+      if (skill) {
+        // 키 레이블 (위쪽 작게)
+        ctx.fillStyle = '#aaccff'
+        ctx.font = 'bold 10px monospace'
+        ctx.fillText(btn.label, btn.x, btn.y - 9)
+        // 스킬 이름 앞 3자 (아래쪽)
+        ctx.fillStyle = cd > 0 ? '#778899' : '#ffffff'
+        ctx.font = 'bold 11px monospace'
+        ctx.fillText(skill.slice(0, 3), btn.x, btn.y + 7)
+      } else {
+        ctx.fillStyle = '#555'
+        ctx.font = 'bold 14px monospace'
+        ctx.fillText(btn.label, btn.x, btn.y)
+      }
     }
 
     ctx.textBaseline = 'alphabetic'
