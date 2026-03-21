@@ -2258,7 +2258,7 @@ if (window.Game) {
 // ============================================================
 
 // Gold item render size
-const GOLD_ICON_SIZE = 22
+const GOLD_ICON_SIZE = 44
 
 // Preload gold images (explicit paths so asset validator can resolve them)
 const _goldImgs = {}
@@ -2282,7 +2282,7 @@ class DropManager {
   }
 
   spawnDrop(x, y, type) {
-    this.items.push({ x, y, type, life: 8, maxLife: 8, pickupRadius: 24 })
+    this.items.push({ x, y, type, life: 8, maxLife: 8, pickupRadius: 28, bobTime: 0 })
   }
 
   getDropTypeForEnemy(enemyClass) {
@@ -2305,6 +2305,8 @@ class DropManager {
         this.items.splice(i, 1)
         continue
       }
+
+      item.bobTime = (item.bobTime || 0) + deltaTime
 
       // Pickup collision check
       const dx = player.x - item.x
@@ -2344,23 +2346,24 @@ class DropManager {
       const img = _goldImgs[item.type]
       // Fade out in last 2 seconds
       const alpha = item.life < 2 ? item.life / 2 : 1
+      const bob = Math.sin((item.bobTime || 0) * Math.PI * 2.5) * 4  // ±4px, 2.5 Hz
+      const drawY = item.y - GOLD_ICON_SIZE / 2 + bob
       ctx.save()
       ctx.globalAlpha = alpha
       if (img?.complete && img.naturalWidth > 0) {
-        ctx.drawImage(
-          img,
-          item.x - GOLD_ICON_SIZE / 2,
-          item.y - GOLD_ICON_SIZE / 2,
-          GOLD_ICON_SIZE,
-          GOLD_ICON_SIZE
-        )
+        ctx.shadowColor = '#FFD700'
+        ctx.shadowBlur = 8
+        ctx.drawImage(img, item.x - GOLD_ICON_SIZE / 2, drawY, GOLD_ICON_SIZE, GOLD_ICON_SIZE)
+        ctx.shadowBlur = 0
       } else {
+        ctx.shadowColor = '#FFD700'
+        ctx.shadowBlur = 8
         ctx.fillStyle = '#FFD700'
         ctx.beginPath()
-        ctx.arc(item.x, item.y, 8, 0, Math.PI * 2)
+        ctx.arc(item.x, item.y + bob, 8, 0, Math.PI * 2)
         ctx.fill()
+        ctx.shadowBlur = 0
       }
-      ctx.globalAlpha = 1
       ctx.restore()
     }
   }
@@ -3227,6 +3230,7 @@ class HUD {
     this._drawTopBar(ctx, player, gameTime)
     this._drawBottomBar(ctx)
     this._drawDangerOverlay(ctx, gameTime)
+    this._drawSpeechBubble(ctx)
     this._drawUnlockNotification(ctx)
   }
 
@@ -3411,6 +3415,61 @@ class HUD {
     ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
   }
 
+  _drawSpeechBubble(ctx) {
+    const bubble = GameState.speechBubble
+    if (!bubble || bubble.timer <= 0) return
+    bubble.timer -= 1 / 60
+    const player = Game.player
+    if (!player) return
+
+    const alpha = bubble.timer < 1.0 ? bubble.timer : 1.0
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Measure text
+    ctx.font = '15px "VT323", monospace'
+    const tw = ctx.measureText(bubble.text).width
+    const bw = tw + 20
+    const bh = 28
+    // Screen-space position: convert world coords via Camera offset
+    const sx = player.x - (window.Camera?.x || 0)
+    const sy = player.y - (window.Camera?.y || 0)
+    const bx = sx - bw / 2
+    const by = sy - 80
+
+    // Bubble background (rounded rect + tail)
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'
+    ctx.strokeStyle = '#334466'
+    ctx.lineWidth = 1.5
+    const r = 6
+    ctx.beginPath()
+    ctx.moveTo(bx + r, by)
+    ctx.lineTo(bx + bw - r, by)
+    ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r)
+    ctx.lineTo(bx + bw, by + bh - r)
+    ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh)
+    ctx.lineTo(bx + bw / 2 + 8, by + bh)
+    ctx.lineTo(bx + bw / 2, by + bh + 8)
+    ctx.lineTo(bx + bw / 2 - 8, by + bh)
+    ctx.lineTo(bx + r, by + bh)
+    ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r)
+    ctx.lineTo(bx, by + r)
+    ctx.quadraticCurveTo(bx, by, bx + r, by)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    // Text
+    ctx.fillStyle = '#112244'
+    ctx.font = '15px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(bubble.text, bx + bw / 2, by + bh - 8)
+
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
+  }
+
   _drawUnlockNotification(ctx) {
     const notif = GameState.unlockNotification
     if (!notif || notif.timer <= 0) return
@@ -3467,6 +3526,7 @@ class Lobby {
     ]
     this.startBtnRect   = { x: 210, y: 342, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 416, w: 220, h: 34 }
+    this._lockPopup = null  // { timer: 3.0 }
     this._bindClick()
   }
 
@@ -3487,7 +3547,10 @@ class Lobby {
 
       for (const card of this._cards) {
         if (x >= card.x && x <= card.x + card.w && y >= card.y && y <= card.y + card.h) {
-          if (!window.MetaManager?.isUnlocked(card.key)) return  // locked, ignore click
+          if (!window.MetaManager?.isUnlocked(card.key)) {
+            this._lockPopup = { timer: 3.0 }
+            return
+          }
           this._select(card.key)
           return
         }
@@ -3599,7 +3662,38 @@ class Lobby {
     ctx.textAlign = 'center'
     ctx.fillText('이동: WASD  /  스킬: 1~4  /  레벨업 시 스킬 선택', 400, 488)
 
+    this._drawLockPopup(ctx)
     ctx.textAlign = 'left'
+  }
+
+  _drawLockPopup(ctx) {
+    if (!this._lockPopup || this._lockPopup.timer <= 0) return
+    this._lockPopup.timer -= 1/60
+    const alpha = Math.min(1, this._lockPopup.timer * 2)
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Background panel (centered, above cards)
+    const pw = 360, ph = 54
+    const px = (800 - pw) / 2
+    const py = 340
+
+    ctx.fillStyle = 'rgba(20,5,40,0.92)'
+    ctx.fillRect(px, py, pw, ph)
+    ctx.strokeStyle = '#aa44ff'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(px, py, pw, ph)
+
+    // Icon + text
+    ctx.fillStyle = '#dd99ff'
+    ctx.font = '16px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('🔒 보스를 처치하고 골드 다이아를 얻어 해금할 수 있습니다.', 400, py + 34)
+
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
   }
 
   _drawCharCards(ctx) {
@@ -4583,6 +4677,26 @@ window.Game = {
       if (Game.skillManager && !Game.skillManager.slots.some(Boolean)) {
         Game.skillManager.assignSkill(0, '디버그')
       }
+    }
+
+    // 시작 말풍선
+    const _BUBBLE_LINES = [
+      { text: '열심히 해서 정규직이 될 거야!',   w: 1.3 },
+      { text: '오늘도 화이팅!',                   w: 1.0 },
+      { text: 'AI가 무섭게 발전하고 있어...',     w: 1.3 },
+      { text: '출근 완료. 오늘은 별 일 없겠지?', w: 1.0 },
+      { text: '일이 너무 많아서 큰일이야.',       w: 1.0 },
+      { text: '하이하이~ ^_^',                    w: 1.0 },
+      { text: '커피 수혈이 필요해...',            w: 1.0 },
+      { text: '어제 야근했더니 피곤하네.',        w: 1.3 },
+      { text: '오늘은 정시 퇴근할 수 있겠지?',   w: 1.3 },
+      { text: '멋진 개발자가 될 거야!',           w: 1.0 },
+    ]
+    {
+      const total = _BUBBLE_LINES.reduce((s, l) => s + l.w, 0)
+      let r = Math.random() * total
+      const picked = _BUBBLE_LINES.find(l => { r -= l.w; return r <= 0 }) || _BUBBLE_LINES[0]
+      GameState.speechBubble = { text: picked.text, timer: 4.0, maxTimer: 4.0 }
     }
 
     // 골드 드롭 리셋
