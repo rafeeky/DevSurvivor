@@ -8,15 +8,14 @@ class Lobby {
     if (saved === 'alex') saved = 'adam'  // alex removed
     this._selected = saved
     // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
-    // 카드 높이 148px: 포트레이트 88 + 이름 16 + 역할배지 16 + 패시브 설명 16 + 여백
+    // 카드 높이 168px: 포트레이트 108 + 이름 16 + 역할배지 16 + 패시브 설명 16 + 여백 12
     this._cards = [
-      { key: 'adam',   x: 125, y: 180, w: 170, h: 148 },
-      { key: 'amelia', x: 315, y: 180, w: 170, h: 148 },
-      { key: 'vampir', x: 505, y: 180, w: 170, h: 148 },
+      { key: 'adam',   x: 125, y: 180, w: 170, h: 168 },
+      { key: 'amelia', x: 315, y: 180, w: 170, h: 168 },
+      { key: 'vampir', x: 505, y: 180, w: 170, h: 168 },
     ]
-    this.startBtnRect   = { x: 210, y: 342, w: 380, h: 60 }
-    this.upgradeBtnRect = { x: 290, y: 416, w: 220, h: 34 }
-    this._lockPopup = null  // { timer: 3.0 }
+    this.startBtnRect   = { x: 210, y: 362, w: 380, h: 60 }
+    this.upgradeBtnRect = { x: 290, y: 436, w: 220, h: 34 }
     this._bindClick()
   }
 
@@ -37,10 +36,7 @@ class Lobby {
 
       for (const card of this._cards) {
         if (x >= card.x && x <= card.x + card.w && y >= card.y && y <= card.y + card.h) {
-          if (!window.MetaManager?.isUnlocked(card.key)) {
-            this._lockPopup = { timer: 3.0 }
-            return
-          }
+          if (!window.MetaManager?.isUnlocked(card.key)) return
           this._select(card.key)
           return
         }
@@ -124,82 +120,48 @@ class Lobby {
     // 캐릭터 카드
     this._drawCharCards(ctx)
 
-    // 시작 버튼 (메인 CTA — UI 패널 + 글로우)
+    // 시작 버튼 (메인 CTA — gradient rect)
     const s = this.startBtnRect
     ctx.save()
     ctx.shadowColor = '#4488ff'
-    ctx.shadowBlur = 18
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, s.x, s.y, s.w, s.h)
-    } else {
-      ctx.fillStyle = '#1a3060'
-      ctx.strokeStyle = '#66aaff'
-      ctx.lineWidth = 2.5
-      ctx.fillRect(s.x, s.y, s.w, s.h)
-      ctx.strokeRect(s.x, s.y, s.w, s.h)
-    }
+    ctx.shadowBlur = 14
+    const sGrad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h)
+    sGrad.addColorStop(0, '#1e4a90')
+    sGrad.addColorStop(1, '#0d2450')
+    ctx.fillStyle = sGrad
+    ctx.strokeStyle = '#66aaff'
+    ctx.lineWidth = 2
+    ctx.fillRect(s.x, s.y, s.w, s.h)
+    ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.restore()
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 36px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
-    // 업그레이드 버튼 (보조)
+    // 업그레이드 버튼 (보조 — gradient rect)
     const u = this.upgradeBtnRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
-    } else {
-      ctx.fillStyle = 'rgba(10,20,10,0.7)'
-      ctx.strokeStyle = '#336633'
-      ctx.lineWidth = 1
-      ctx.fillRect(u.x, u.y, u.w, u.h)
-      ctx.strokeRect(u.x, u.y, u.w, u.h)
-    }
-    ctx.fillStyle = '#66aa66'
+    const uGrad = ctx.createLinearGradient(u.x, u.y, u.x, u.y + u.h)
+    uGrad.addColorStop(0, '#1a3a1a')
+    uGrad.addColorStop(1, '#0a1e0a')
+    ctx.fillStyle = uGrad
+    ctx.strokeStyle = '#55aa55'
+    ctx.lineWidth = 1.5
+    ctx.fillRect(u.x, u.y, u.w, u.h)
+    ctx.strokeRect(u.x, u.y, u.w, u.h)
+    ctx.fillStyle = '#77cc77'
     ctx.font = '18px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('업그레이드', u.x + u.w / 2, u.y + u.h / 2 + 6)
 
     // 조작 안내 (1줄로 축소)
     ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, 468, 800, 32)
+    ctx.fillRect(0, 488, 800, 32)
     ctx.fillStyle = '#7799bb'
     ctx.font = '16px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('이동: WASD  /  스킬: 1~4  /  레벨업 시 스킬 선택', 400, 488)
-
-    this._drawLockPopup(ctx)
+    ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 508)
     ctx.textAlign = 'left'
-  }
-
-  _drawLockPopup(ctx) {
-    if (!this._lockPopup || this._lockPopup.timer <= 0) return
-    this._lockPopup.timer -= 1/60
-    const alpha = Math.min(1, this._lockPopup.timer * 2)
-
-    ctx.save()
-    ctx.globalAlpha = alpha
-
-    // Background panel (centered, above cards)
-    const pw = 360, ph = 54
-    const px = (800 - pw) / 2
-    const py = 340
-
-    ctx.fillStyle = 'rgba(20,5,40,0.92)'
-    ctx.fillRect(px, py, pw, ph)
-    ctx.strokeStyle = '#aa44ff'
-    ctx.lineWidth = 1.5
-    ctx.strokeRect(px, py, pw, ph)
-
-    // Icon + text
-    ctx.fillStyle = '#dd99ff'
-    ctx.font = '16px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('🔒 보스를 처치하고 골드 다이아를 얻어 해금할 수 있습니다.', 400, py + 34)
-
-    ctx.textAlign = 'left'
-    ctx.globalAlpha = 1
-    ctx.restore()
   }
 
   _drawCharCards(ctx) {
@@ -329,20 +291,33 @@ class Lobby {
       // 잠금 오버레이
       if (!window.MetaManager?.isUnlocked(card.key)) {
         ctx.save()
-        ctx.fillStyle = 'rgba(0,0,0,0.78)'
+        ctx.fillStyle = 'rgba(0,0,0,0.82)'
         ctx.fillRect(card.x, card.y, card.w, card.h)
-        ctx.font = '36px "VT323", monospace'
         ctx.textAlign = 'center'
-        ctx.fillText('🔒', cx, card.y + card.h / 2 - 16)
+        // 캐릭터 이름 (상단 강조)
+        ctx.fillStyle = '#ee88ff'
+        ctx.font = 'bold 20px "VT323", monospace'
+        ctx.fillText(cfg?.label || card.key, cx, card.y + 24)
+        // 구분선
+        ctx.strokeStyle = '#663388'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(card.x + 10, card.y + 30)
+        ctx.lineTo(card.x + card.w - 10, card.y + 30)
+        ctx.stroke()
+        // 잠금 아이콘
+        ctx.font = '30px "VT323", monospace'
+        ctx.fillText('🔒', cx, card.y + 64)
+        // 해금 안내
         ctx.fillStyle = '#cc88ff'
-        ctx.font = 'bold 14px "VT323", monospace'
-        ctx.fillText('보스 처치 후', cx, card.y + card.h / 2 + 8)
-        ctx.fillStyle = '#FFD700'
         ctx.font = 'bold 13px "VT323", monospace'
-        ctx.fillText('골드 다이아 × 1 획득', cx, card.y + card.h / 2 + 26)
+        ctx.fillText('보스 처치 후', cx, card.y + 90)
+        ctx.fillStyle = '#FFD700'
+        ctx.font = 'bold 12px "VT323", monospace'
+        ctx.fillText('골드 다이아 × 1 획득', cx, card.y + 108)
         ctx.fillStyle = '#aa88ff'
         ctx.font = '11px "VT323", monospace'
-        ctx.fillText('→ 자동 해금됩니다', cx, card.y + card.h / 2 + 42)
+        ctx.fillText('→ 자동 해금됩니다', cx, card.y + 124)
         ctx.restore()
       }
     }

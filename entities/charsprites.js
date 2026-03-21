@@ -35,7 +35,7 @@ window.CHAR_CONFIGS = {
   },
   amelia: {
     label: '개발자 (여)',
-    sublabel: '끈까지 버티기',
+    sublabel: '오래 버티기',
     roleType: '생존형',
     roleColor: '#cc88ff',
     passive: '끝까지 버티기',

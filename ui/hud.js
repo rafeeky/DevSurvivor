@@ -135,7 +135,7 @@ class HUD {
     ctx.fillRect(0, 548, 800, 52)
 
     // 스킬 슬롯 4개 (Q/W/E/R)
-    const keys = ['1','2','3','4']
+    const keys = ['Q','W','E','R']
     for (let i = 0; i < 4; i++) {
       const sx = 12 + i * 112
       const sy = 553
