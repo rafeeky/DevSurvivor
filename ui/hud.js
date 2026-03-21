@@ -21,6 +21,8 @@ function _getSkillIcon(name) {
   }
   return _skillIconCache[name]
 }
+// 전역 노출 — levelup.js 등 다른 모듈에서 사용
+window.getSkillIcon = _getSkillIcon
 
 class HUD {
   render(ctx, gameTime) {

@@ -86,5 +86,20 @@ const outPath = path.join(BASE, 'docs', 'index.html')
 fs.mkdirSync(path.join(BASE, 'docs'), { recursive: true })
 fs.writeFileSync(outPath, html, 'utf8')
 
+// assets/ → docs/assets/ 동기화
+// (한글 경로 환경에서 fs.cpSync segfault 방지 → PowerShell 사용)
+const { execSync } = require('child_process')
+try {
+  const src = path.join(BASE, 'assets')
+  const dst = path.join(BASE, 'docs', 'assets')
+  execSync(
+    `powershell -Command "Copy-Item -Path '${src}' -Destination '${dst}' -Recurse -Force"`,
+    { stdio: 'pipe' }
+  )
+  console.log('✅ assets/ → docs/assets/ 복사 완료')
+} catch (e) {
+  console.warn('⚠️ assets 복사 실패 (수동으로 docs/assets/ 복사 필요):', e.message)
+}
+
 const size = (fs.statSync(outPath).size / 1024).toFixed(1)
 console.log(`✅ 번들 완료: docs/index.html (${size} KB)`)

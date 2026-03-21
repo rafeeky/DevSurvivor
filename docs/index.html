@@ -166,6 +166,7 @@ class Player {
     this._animTimer  = 0
     this._animFrame  = 0
     this._isMoving   = false
+    this._facingLeft = false  // 좌향 미러링
   }
 
   // ── Computed properties ──
@@ -209,6 +210,8 @@ class Player {
     }
 
     this._isMoving = (dx !== 0 || dy !== 0)
+    if (dx < 0) this._facingLeft = true
+    else if (dx > 0) this._facingLeft = false
     this.x += dx * this.speed * deltaTime
     this.y += dy * this.speed * deltaTime
 
@@ -341,9 +344,18 @@ class Player {
         const dw = anim.fw * cfg.scale
         const dh = anim.fh * cfg.scale
         const sx = this._animFrame * anim.fw
+        const rx = Math.round(x - dw / 2)
+        const ry = Math.round(y - dh * 0.75)
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(img, sx, 0, anim.fw, anim.fh,
-          Math.round(x - dw / 2), Math.round(y - dh * 0.75), dw, dh)
+        if (this._facingLeft) {
+          ctx.save()
+          ctx.translate(rx + dw, ry)
+          ctx.scale(-1, 1)
+          ctx.drawImage(img, sx, 0, anim.fw, anim.fh, 0, 0, dw, dh)
+          ctx.restore()
+        } else {
+          ctx.drawImage(img, sx, 0, anim.fw, anim.fh, rx, ry, dw, dh)
+        }
         ctx.imageSmoothingEnabled = true
         ctx.restore()
         this._drawHPBar(ctx, x, y)
@@ -1936,6 +1948,34 @@ if (window.Game) {
 // Haon — Player Skill & Progression Designer
 // 경험치/레벨업 시스템 (M1~M2 스코프)
 
+// skillId → 아이콘 파일 매핑
+const _LU_ICON_BY_ID = {
+  '긴급수정':    'assets/custom/icons/skill_emergency_fix.png',
+  '디버그':      'assets/custom/icons/skill_debug.png',
+  '우선순위정리':'assets/custom/icons/skill_priority_sort.png',
+  '커피':        'assets/custom/icons/skill_coffee.png',
+  '피규어청소':  'assets/custom/icons/skill_figure_clean.png',
+  '강아지':      'assets/custom/icons/skill_pet_dog.png',
+  '낮잠':        'assets/custom/icons/skill_nap.png',
+  '자동저장':    'assets/custom/icons/skill_autosave.png',
+}
+const _luIconCache = {}
+function _getLUIcon(skillId) {
+  if (!skillId) return null
+  // hud.js가 먼저 로드되면 공유 캐시 사용, 아니면 자체 로드
+  if (window.getSkillIcon) {
+    // hud _SKILL_ICON_MAP 키는 스킬 표시명 기준 — skillId로 직접 매핑
+    const src = _LU_ICON_BY_ID[skillId]
+    if (!src) return null
+    if (!_luIconCache[skillId]) {
+      const img = new Image(); img.src = src
+      _luIconCache[skillId] = img
+    }
+    return _luIconCache[skillId]
+  }
+  return null
+}
+
 // ---------------------------------------------------------------------------
 // ctx.roundRect 폴리필 (구형 브라우저 대비)
 // ---------------------------------------------------------------------------
@@ -2180,13 +2220,13 @@ class LevelUpManager {
 
     // 카드 3개
     this.choiceRects = []
-    const cardW = 200, cardH = 130
+    const cardW = 200, cardH = 160
     const startX = 400 - (cardW * 1.5 + 20)
 
     for (let i = 0; i < this.choices.length; i++) {
       const c = this.choices[i]
       const cx = startX + i * (cardW + 20)
-      const cy = 220
+      const cy = 205
 
       // 카드 배경
       ctx.fillStyle = '#1e2a4a'
@@ -2197,22 +2237,45 @@ class LevelUpManager {
       ctx.fill()
       ctx.stroke()
 
-      // 번호
+      // 스킬 아이콘 (있으면 상단 중앙 44×44)
+      const icon = _getLUIcon(c.skillId)
+      const iconSize = 44
+      const iconX = cx + cardW / 2 - iconSize / 2
+      const iconY = cy + 10
+      if (icon?.complete && icon.naturalWidth > 0) {
+        ctx.save()
+        ctx.imageSmoothingEnabled = true
+        // 아이콘 배경 원
+        ctx.fillStyle = 'rgba(68,102,170,0.35)'
+        ctx.beginPath()
+        ctx.arc(cx + cardW / 2, iconY + iconSize / 2, iconSize / 2 + 4, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX, iconY, iconSize, iconSize)
+        ctx.restore()
+      } else if (c.skillId) {
+        // 로딩 중 원 플레이스홀더
+        ctx.fillStyle = 'rgba(68,102,170,0.2)'
+        ctx.beginPath()
+        ctx.arc(cx + cardW / 2, iconY + iconSize / 2, iconSize / 2 + 4, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // 번호 레이블
       ctx.fillStyle = '#FFD700'
-      ctx.font = 'bold 18px monospace'
+      ctx.font = 'bold 14px monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 26)
+      ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 68)
 
       // 이름
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 15px monospace'
-      ctx.fillText(c.label, cx + cardW / 2, cy + 52)
+      ctx.font = 'bold 14px monospace'
+      ctx.fillText(c.label, cx + cardW / 2, cy + 90)
 
       // 설명 (줄바꿈 처리)
       ctx.fillStyle = '#aaccff'
-      ctx.font = '12px monospace'
+      ctx.font = '11px monospace'
       const maxW = cardW - 16
-      this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 74, maxW, 18, true)
+      this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 110, maxW, 16, true)
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
     }
@@ -2596,6 +2659,8 @@ function _getSkillIcon(name) {
   }
   return _skillIconCache[name]
 }
+// 전역 노출 — levelup.js 등 다른 모듈에서 사용
+window.getSkillIcon = _getSkillIcon
 
 class HUD {
   render(ctx, gameTime) {
@@ -2790,12 +2855,12 @@ class Lobby {
     this._selected = localStorage.getItem('devSurvivor_char') || 'adam'
     // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
     this._cards = [
-      { key: 'adam',   x: 125, y: 256, w: 170, h: 88 },
-      { key: 'alex',   x: 315, y: 256, w: 170, h: 88 },
-      { key: 'amelia', x: 505, y: 256, w: 170, h: 88 },
+      { key: 'adam',   x: 125, y: 248, w: 170, h: 130 },
+      { key: 'alex',   x: 315, y: 248, w: 170, h: 130 },
+      { key: 'amelia', x: 505, y: 248, w: 170, h: 130 },
     ]
-    this.startBtnRect   = { x: 275, y: 360, w: 250, h: 46 }
-    this.upgradeBtnRect = { x: 300, y: 414, w: 200, h: 40 }
+    this.startBtnRect   = { x: 275, y: 396, w: 250, h: 46 }
+    this.upgradeBtnRect = { x: 300, y: 450, w: 200, h: 40 }
     this._bindClick()
   }
 
@@ -2902,8 +2967,8 @@ class Lobby {
     // 조작 안내
     ctx.fillStyle = '#556677'
     ctx.font = '12px monospace'
-    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 470)
-    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 488)
+    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 506)
+    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 524)
 
     ctx.textAlign = 'left'
   }
@@ -2935,32 +3000,35 @@ class Lobby {
 
       ctx.textAlign = 'center'
 
-      // 스프라이트 프리뷰 (48×48, frame 0)
-      const px = Math.round(cx - 24)
-      const py = card.y + 8
+      // 스프라이트 프리뷰 (64×64, 4x scale, frame 0)
+      const PREV = 64
+      const px = Math.round(cx - PREV / 2)
+      const py = card.y + 10
       const idleImg = spr?.idle
       if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg) {
+        // 2행 시트이면 row1(sy=fh)을 사용해 정면 앵글 시도
+        const sy = idleImg.naturalHeight > cfg.idle.fh ? cfg.idle.fh : 0
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(idleImg, 0, 0, cfg.idle.fw, cfg.idle.fh, px, py, 48, 48)
+        ctx.drawImage(idleImg, 0, sy, cfg.idle.fw, cfg.idle.fh, px, py, PREV, PREV)
         ctx.imageSmoothingEnabled = true
       } else {
         // 로딩 전 플레이스홀더
         ctx.fillStyle = '#1a2240'
-        ctx.fillRect(px, py, 48, 48)
+        ctx.fillRect(px, py, PREV, PREV)
         ctx.fillStyle = '#334466'
-        ctx.font = '22px monospace'
-        ctx.fillText('?', cx, py + 32)
+        ctx.font = '28px monospace'
+        ctx.fillText('?', cx, py + 42)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
       ctx.font = `bold 12px monospace`
-      ctx.fillText(cfg?.label || card.key, cx, card.y + 68)
+      ctx.fillText(cfg?.label || card.key, cx, card.y + 92)
 
       // 서브라벨
       ctx.fillStyle = sel ? '#88aaff' : '#556677'
       ctx.font = '10px monospace'
-      ctx.fillText(cfg?.sublabel || '', cx, card.y + 82)
+      ctx.fillText(cfg?.sublabel || '', cx, card.y + 108)
     }
 
     ctx.textAlign = 'left'

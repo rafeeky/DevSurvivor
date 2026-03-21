@@ -2,6 +2,34 @@
 // Haon — Player Skill & Progression Designer
 // 경험치/레벨업 시스템 (M1~M2 스코프)
 
+// skillId → 아이콘 파일 매핑
+const _LU_ICON_BY_ID = {
+  '긴급수정':    'assets/custom/icons/skill_emergency_fix.png',
+  '디버그':      'assets/custom/icons/skill_debug.png',
+  '우선순위정리':'assets/custom/icons/skill_priority_sort.png',
+  '커피':        'assets/custom/icons/skill_coffee.png',
+  '피규어청소':  'assets/custom/icons/skill_figure_clean.png',
+  '강아지':      'assets/custom/icons/skill_pet_dog.png',
+  '낮잠':        'assets/custom/icons/skill_nap.png',
+  '자동저장':    'assets/custom/icons/skill_autosave.png',
+}
+const _luIconCache = {}
+function _getLUIcon(skillId) {
+  if (!skillId) return null
+  // hud.js가 먼저 로드되면 공유 캐시 사용, 아니면 자체 로드
+  if (window.getSkillIcon) {
+    // hud _SKILL_ICON_MAP 키는 스킬 표시명 기준 — skillId로 직접 매핑
+    const src = _LU_ICON_BY_ID[skillId]
+    if (!src) return null
+    if (!_luIconCache[skillId]) {
+      const img = new Image(); img.src = src
+      _luIconCache[skillId] = img
+    }
+    return _luIconCache[skillId]
+  }
+  return null
+}
+
 // ---------------------------------------------------------------------------
 // ctx.roundRect 폴리필 (구형 브라우저 대비)
 // ---------------------------------------------------------------------------
@@ -246,13 +274,13 @@ class LevelUpManager {
 
     // 카드 3개
     this.choiceRects = []
-    const cardW = 200, cardH = 130
+    const cardW = 200, cardH = 160
     const startX = 400 - (cardW * 1.5 + 20)
 
     for (let i = 0; i < this.choices.length; i++) {
       const c = this.choices[i]
       const cx = startX + i * (cardW + 20)
-      const cy = 220
+      const cy = 205
 
       // 카드 배경
       ctx.fillStyle = '#1e2a4a'
@@ -263,22 +291,45 @@ class LevelUpManager {
       ctx.fill()
       ctx.stroke()
 
-      // 번호
+      // 스킬 아이콘 (있으면 상단 중앙 44×44)
+      const icon = _getLUIcon(c.skillId)
+      const iconSize = 44
+      const iconX = cx + cardW / 2 - iconSize / 2
+      const iconY = cy + 10
+      if (icon?.complete && icon.naturalWidth > 0) {
+        ctx.save()
+        ctx.imageSmoothingEnabled = true
+        // 아이콘 배경 원
+        ctx.fillStyle = 'rgba(68,102,170,0.35)'
+        ctx.beginPath()
+        ctx.arc(cx + cardW / 2, iconY + iconSize / 2, iconSize / 2 + 4, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX, iconY, iconSize, iconSize)
+        ctx.restore()
+      } else if (c.skillId) {
+        // 로딩 중 원 플레이스홀더
+        ctx.fillStyle = 'rgba(68,102,170,0.2)'
+        ctx.beginPath()
+        ctx.arc(cx + cardW / 2, iconY + iconSize / 2, iconSize / 2 + 4, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // 번호 레이블
       ctx.fillStyle = '#FFD700'
-      ctx.font = 'bold 18px monospace'
+      ctx.font = 'bold 14px monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 26)
+      ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 68)
 
       // 이름
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 15px monospace'
-      ctx.fillText(c.label, cx + cardW / 2, cy + 52)
+      ctx.font = 'bold 14px monospace'
+      ctx.fillText(c.label, cx + cardW / 2, cy + 90)
 
       // 설명 (줄바꿈 처리)
       ctx.fillStyle = '#aaccff'
-      ctx.font = '12px monospace'
+      ctx.font = '11px monospace'
       const maxW = cardW - 16
-      this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 74, maxW, 18, true)
+      this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 110, maxW, 16, true)
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
     }

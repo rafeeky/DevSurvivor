@@ -41,6 +41,7 @@ class Player {
     this._animTimer  = 0
     this._animFrame  = 0
     this._isMoving   = false
+    this._facingLeft = false  // 좌향 미러링
   }
 
   // ── Computed properties ──
@@ -84,6 +85,8 @@ class Player {
     }
 
     this._isMoving = (dx !== 0 || dy !== 0)
+    if (dx < 0) this._facingLeft = true
+    else if (dx > 0) this._facingLeft = false
     this.x += dx * this.speed * deltaTime
     this.y += dy * this.speed * deltaTime
 
@@ -216,9 +219,18 @@ class Player {
         const dw = anim.fw * cfg.scale
         const dh = anim.fh * cfg.scale
         const sx = this._animFrame * anim.fw
+        const rx = Math.round(x - dw / 2)
+        const ry = Math.round(y - dh * 0.75)
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(img, sx, 0, anim.fw, anim.fh,
-          Math.round(x - dw / 2), Math.round(y - dh * 0.75), dw, dh)
+        if (this._facingLeft) {
+          ctx.save()
+          ctx.translate(rx + dw, ry)
+          ctx.scale(-1, 1)
+          ctx.drawImage(img, sx, 0, anim.fw, anim.fh, 0, 0, dw, dh)
+          ctx.restore()
+        } else {
+          ctx.drawImage(img, sx, 0, anim.fw, anim.fh, rx, ry, dw, dh)
+        }
         ctx.imageSmoothingEnabled = true
         ctx.restore()
         this._drawHPBar(ctx, x, y)

@@ -3,12 +3,12 @@ class Lobby {
     this._selected = localStorage.getItem('devSurvivor_char') || 'adam'
     // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
     this._cards = [
-      { key: 'adam',   x: 125, y: 256, w: 170, h: 88 },
-      { key: 'alex',   x: 315, y: 256, w: 170, h: 88 },
-      { key: 'amelia', x: 505, y: 256, w: 170, h: 88 },
+      { key: 'adam',   x: 125, y: 248, w: 170, h: 130 },
+      { key: 'alex',   x: 315, y: 248, w: 170, h: 130 },
+      { key: 'amelia', x: 505, y: 248, w: 170, h: 130 },
     ]
-    this.startBtnRect   = { x: 275, y: 360, w: 250, h: 46 }
-    this.upgradeBtnRect = { x: 300, y: 414, w: 200, h: 40 }
+    this.startBtnRect   = { x: 275, y: 396, w: 250, h: 46 }
+    this.upgradeBtnRect = { x: 300, y: 450, w: 200, h: 40 }
     this._bindClick()
   }
 
@@ -115,8 +115,8 @@ class Lobby {
     // 조작 안내
     ctx.fillStyle = '#556677'
     ctx.font = '12px monospace'
-    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 470)
-    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 488)
+    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 506)
+    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 524)
 
     ctx.textAlign = 'left'
   }
@@ -148,32 +148,35 @@ class Lobby {
 
       ctx.textAlign = 'center'
 
-      // 스프라이트 프리뷰 (48×48, frame 0)
-      const px = Math.round(cx - 24)
-      const py = card.y + 8
+      // 스프라이트 프리뷰 (64×64, 4x scale, frame 0)
+      const PREV = 64
+      const px = Math.round(cx - PREV / 2)
+      const py = card.y + 10
       const idleImg = spr?.idle
       if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg) {
+        // 2행 시트이면 row1(sy=fh)을 사용해 정면 앵글 시도
+        const sy = idleImg.naturalHeight > cfg.idle.fh ? cfg.idle.fh : 0
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(idleImg, 0, 0, cfg.idle.fw, cfg.idle.fh, px, py, 48, 48)
+        ctx.drawImage(idleImg, 0, sy, cfg.idle.fw, cfg.idle.fh, px, py, PREV, PREV)
         ctx.imageSmoothingEnabled = true
       } else {
         // 로딩 전 플레이스홀더
         ctx.fillStyle = '#1a2240'
-        ctx.fillRect(px, py, 48, 48)
+        ctx.fillRect(px, py, PREV, PREV)
         ctx.fillStyle = '#334466'
-        ctx.font = '22px monospace'
-        ctx.fillText('?', cx, py + 32)
+        ctx.font = '28px monospace'
+        ctx.fillText('?', cx, py + 42)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
       ctx.font = `bold 12px monospace`
-      ctx.fillText(cfg?.label || card.key, cx, card.y + 68)
+      ctx.fillText(cfg?.label || card.key, cx, card.y + 92)
 
       // 서브라벨
       ctx.fillStyle = sel ? '#88aaff' : '#556677'
       ctx.font = '10px monospace'
-      ctx.fillText(cfg?.sublabel || '', cx, card.y + 82)
+      ctx.fillText(cfg?.sublabel || '', cx, card.y + 108)
     }
 
     ctx.textAlign = 'left'
