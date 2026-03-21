@@ -130,10 +130,25 @@
       "completedAt": "2026-03-22",
       "commit": "999ce8a",
       "notes": "T.FLOOR=[0,1] 가로줄 무늬 타일 제거. FLOOR_COLORS solid fillRect로 교체. tileset 이미지 로더 제거. smoke-test PASS."
+    },
+    {
+      "id": "T017",
+      "title": "Alex 스프라이트 빌드타임 밝기 보정",
+      "assignee": "raf",
+      "completedAt": "2026-03-22",
+      "commit": "4343a6e",
+      "notes": "brightenSprite() 추가, Alex idle/run 1.8× 밝기 보정. assets/custom/player/alex_*.png 생성. charsprites.js 경로 업데이트. smoke-test PASS."
+    },
+    {
+      "id": "T018",
+      "title": "Alex 로비 카드 배경 대비 개선",
+      "assignee": "mason",
+      "completedAt": "2026-03-22",
+      "commit": "2930741",
+      "notes": "charBg.alex #0d2234→#0e2a3f. fw≤16 분기 내 원형 그라디언트 후광 삽입. smoke-test PASS."
     }
   ],
-  "tasks": [
-  ],
+  "tasks": [],
   "blocked": [],
   "decisions_needed": [],
   "decisions_resolved": [
