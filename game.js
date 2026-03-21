@@ -227,6 +227,10 @@ window.Game = {
       }
     }
 
+    // 골드 드롭 리셋
+    window.dropManager?.reset()
+    GameState.goldInventory = { 1: 0, 2: 0, 3: 0, 4: 0 }
+
     // Spawner 리셋
     if (Game.enemySystem) {
       Game.enemySystem.spawnTimer = 0
@@ -298,6 +302,7 @@ function _loop(now) {
       updateCamera(player)
       Game.enemySystem?.update(deltaTime)
       Game.skillManager?.update(deltaTime)
+      window.dropManager?.update(deltaTime, player)
 
       // 출시 진행률 업데이트
       window.ScoreSystem?.updateReleaseProgress(deltaTime)
@@ -362,6 +367,8 @@ function _loop(now) {
 
     // 적 + 투사체 + 방해 구역
     Game.enemySystem?.renderEnemies?.(ctx)
+    // 골드 드롭 아이템 (플레이어 아래 레이어)
+    window.dropManager?.render(ctx)
     // 스킬 이펙트
     Game.skillManager?.renderEffects?.(ctx, deltaTime)
     // 플레이어

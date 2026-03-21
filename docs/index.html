@@ -105,18 +105,18 @@ window.CHAR_SPRITES = {}
 /**
  * entities/enemysprites.js — 적 스프라이트 설정 & 이미지 로더
  * v0.7 확정 매핑:
- *   BoxBot   (1st) = assets/custom/enemies/boxbot.png  (RGBA 단일 프레임)
+ *   BoxBot   (1st) = assets/custom/enemies/boxbot_idle.png  (3-frame idle)
  *   CartBot  (2nd) = Gum Bot   (sprite-pack-3/1)
  *   PCBot    (3rd) = Robot J5  (sprite-pack-3/3)
  *   MirrorBot(4th) = Geralt    (sprite-pack-3/5)
- *   AIBot    (5th) = Tommy     (sprite-pack-3/4) + 붉은 외곽선 (enemies.js)
+ *   AIBot    (5th) = player clone + 붉은 외곽선 (enemies.js)
  */
 
 window.ENEMY_SPRITE_CONFIGS = {
   BoxBot: {
-    idle: { src: 'assets/custom/enemies/boxbot.png', fw: 1024, fh: 1024, frames: 1, fps: 1 },
-    walk: { src: 'assets/custom/enemies/boxbot.png', fw: 1024, fh: 1024, frames: 1, fps: 1 },
-    scale: 0.08,
+    idle: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 512, fh: 1024, frames: 3, fps: 4 },
+    walk: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 512, fh: 1024, frames: 3, fps: 6 },
+    scale: 0.09,
   },
   CartBot: {
     idle: { src: 'assets/enemies/GumBot_idle.png', fw: 32, fh: 32, frames: 4, fps: 4 },
@@ -602,6 +602,10 @@ class Enemy {
     GameState.basicKills++
     GameState.score += this.scoreReward * 5
     GameState.playerExp += Math.floor(this.expReward * (GameState.expMultiplier || 1))
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   update(deltaTime, player) { /* 서브클래스에서 구현 */ }
@@ -784,6 +788,10 @@ class PCBot extends Enemy {
     GameState.pcBotKills = (GameState.pcBotKills || 0) + 1
     GameState.score += this.scoreReward * 5
     GameState.playerExp += Math.floor(this.expReward * (GameState.expMultiplier || 1))
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   update(deltaTime, player) {
@@ -969,6 +977,10 @@ class MirrorBot extends Enemy {
     GameState.mirrorBotKills = (GameState.mirrorBotKills || 0) + 1
     GameState.score += this.scoreReward * 5
     GameState.playerExp += this.expReward
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   render(ctx) {
@@ -1048,6 +1060,10 @@ class AIBot extends Enemy {
 
     // 등장 이벤트
     GameState.aiBotReached = true
+
+    // 플레이어 클론 애니메이션 상태
+    this._mirrorFrame = 0
+    this._mirrorTimer = 0
   }
 
   update(deltaTime, player) {
@@ -1124,102 +1140,86 @@ class AIBot extends Enemy {
     GameState.aiBotKilled = true
     GameState.score += this.scoreReward * 5
     GameState.playerExp += this.expReward
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   render(ctx) {
     if (!this.isAlive()) return
-    // D003 A안: 붉은 외곽선 (shadowColor)
+
+    const charKey = window.GameState?.selectedCharacter || 'adam'
+    const spr = window.CHAR_SPRITES?.[charKey]
+    const cfg = window.CHAR_CONFIGS?.[charKey]
+    const moving = (this.vx !== 0 || this.vy !== 0)
+    const animCfg = cfg ? (moving ? cfg.walk : cfg.idle) : null
+    const img = spr ? (moving ? spr.walk : spr.idle) : null
+
+    // advance animation
+    if (animCfg) {
+      this._mirrorTimer += 1/60
+      const frameDur = 1 / (animCfg.fps || 8)
+      while (this._mirrorTimer >= frameDur) {
+        this._mirrorTimer -= frameDur
+        this._mirrorFrame = (this._mirrorFrame + 1) % (animCfg.frames || 1)
+      }
+    }
+
+    const scale = cfg?.scale || 3
+    const fw = animCfg?.fw || 32
+    const fh = animCfg?.fh || 32
+    const dw = Math.round(fw * scale)
+    const dh = Math.round(fh * scale)
+    const rx = Math.round(this.x - dw / 2)
+    const ry = Math.round(this.y - dh * (cfg?.yAnchor || 0.8))
+
+    if (img?.complete && img.naturalWidth > 0) {
+      // 1. Black aura (radial gradient behind sprite)
+      ctx.save()
+      const auraCX = this.x
+      const auraCY = this.y - dh * 0.4
+      const auraR = dw * 1.1
+      const grd = ctx.createRadialGradient(auraCX, auraCY, 0, auraCX, auraCY, auraR)
+      grd.addColorStop(0, 'rgba(0,0,0,0.55)')
+      grd.addColorStop(0.5, 'rgba(0,0,0,0.25)')
+      grd.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = grd
+      ctx.fillRect(auraCX - auraR, auraCY - auraR, auraR * 2, auraR * 2)
+      ctx.restore()
+
+      // 2. Sprite with red outline
+      ctx.save()
+      ctx.shadowColor = '#ff2222'
+      ctx.shadowBlur = 16
+      ctx.imageSmoothingEnabled = fw > 16
+      const sx = this._mirrorFrame * fw
+      // flip if moving left
+      if (this.vx < 0) {
+        ctx.translate(rx + dw, ry)
+        ctx.scale(-1, 1)
+        ctx.drawImage(img, sx, 0, fw, fh, 0, 0, dw, dh)
+      } else {
+        ctx.drawImage(img, sx, 0, fw, fh, rx, ry, dw, dh)
+      }
+      ctx.imageSmoothingEnabled = false
+      ctx.restore()
+
+      // HP bar
+      _drawHpBar(ctx, this, dw)
+      return
+    }
+
+    // fallback: red circle with outline
     ctx.save()
     ctx.shadowColor = '#ff2222'
-    ctx.shadowBlur = 14
-    const didSprite = this._renderSprite(ctx)
-    ctx.restore()
-    if (didSprite) { _drawHpBar(ctx, this, 50); return }
-    const x = this.x, y = this.y
-    const halfHp = this.hp <= this.maxHp * 0.5
-    const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'
-    const t = Date.now()
-
-    ctx.save()
-    ctx.shadowColor = eyeColor
-    ctx.shadowBlur = halfHp ? 30 : 20
-
-    // 맥동 광환 (바깥)
-    const pulse = 0.7 + 0.3 * Math.sin(t / 300)
-    ctx.globalAlpha = 0.18 * pulse
-    ctx.strokeStyle = eyeColor
-    ctx.lineWidth = halfHp ? 5 : 3
-    ctx.beginPath(); ctx.arc(x, y - 5, 42, 0, Math.PI * 2); ctx.stroke()
-    ctx.globalAlpha = 0.10 * pulse
-    ctx.beginPath(); ctx.arc(x, y - 5, 54, 0, Math.PI * 2); ctx.stroke()
-    ctx.globalAlpha = 1
-
-    // 다리
-    ctx.fillStyle = '#111'
-    ctx.fillRect(x - 14, y + 15, 11, 20)
-    ctx.fillRect(x + 3, y + 15, 11, 20)
-    // 발
-    ctx.fillStyle = '#1a1a1a'
-    ctx.fillRect(x - 16, y + 31, 14, 5)
-    ctx.fillRect(x + 2, y + 31, 14, 5)
-
-    // 팔
-    ctx.fillStyle = '#111'
-    ctx.fillRect(x - 24, y - 12, 10, 26)
-    ctx.fillRect(x + 14, y - 12, 10, 26)
-    // 손 (클로)
-    ctx.fillRect(x - 26, y + 10, 5, 8)
-    ctx.fillRect(x - 22, y + 12, 5, 8)
-    ctx.fillRect(x + 21, y + 10, 5, 8)
-    ctx.fillRect(x + 17, y + 12, 5, 8)
-
-    // 몸통
-    ctx.fillStyle = '#0d0d0d'
-    ctx.fillRect(x - 15, y - 13, 30, 29)
-    // 코어 (가슴)
-    ctx.fillStyle = halfHp ? '#FF3C3C' : '#00FFFF'
-    ctx.shadowBlur = 20
-    ctx.beginPath(); ctx.arc(x, y + 2, 6, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#ffffff'
-    ctx.beginPath(); ctx.arc(x, y + 2, 2.5, 0, Math.PI * 2); ctx.fill()
-
-    // 머리
-    ctx.shadowBlur = 0
-    ctx.fillStyle = '#111'
-    ctx.beginPath(); ctx.arc(x, y - 26, 14, 0, Math.PI * 2); ctx.fill()
-
-    // 눈
-    ctx.fillStyle = eyeColor
-    ctx.shadowColor = eyeColor
     ctx.shadowBlur = 16
-    ctx.fillRect(x - 9, y - 30, 6, 5)
-    ctx.fillRect(x + 3, y - 30, 6, 5)
-
-    // HP 50% → 이마 금 균열
-    if (halfHp) {
-      ctx.strokeStyle = '#FF6644'
-      ctx.lineWidth = 1.5
-      ctx.shadowBlur = 6
-      ctx.beginPath()
-      ctx.moveTo(x - 2, y - 37)
-      ctx.lineTo(x + 1, y - 30)
-      ctx.lineTo(x - 1, y - 24)
-      ctx.stroke()
-    }
-
+    ctx.fillStyle = '#cc0000'
+    ctx.beginPath()
+    ctx.arc(this.x, this.y, 22, 0, Math.PI * 2)
+    ctx.fill()
     ctx.restore()
-
-    // HP 바
-    if (this.hp < this.maxHp) {
-      const barW = 54
-      ctx.fillStyle = '#222'
-      ctx.fillRect(x - barW / 2, y - 52, barW, 6)
-      ctx.fillStyle = halfHp ? '#FF3C3C' : '#00CCFF'
-      ctx.fillRect(x - barW / 2, y - 52, barW * (this.hp / this.maxHp), 6)
-      ctx.strokeStyle = '#444'
-      ctx.lineWidth = 1
-      ctx.strokeRect(x - barW / 2, y - 52, barW, 6)
-    }
+    _drawHpBar(ctx, this, 44)
   }
 }
 
@@ -2077,10 +2077,11 @@ window.TilemapSystem = (() => {
 // ============================================================
 
 const ENEMY_INTRO_DATA = {
-  'BoxBot':    { name: '박스봇',    desc: '기본 돌진형 • 직선으로 플레이어를 향해 돌진한다' },
-  'CartBot':   { name: '카트봇',    desc: '신속형 • 카트를 몰아 빠르게 기동, 방향 전환 잦음' },
-  'PCBot':     { name: 'PC봇',      desc: '원거리형 • 오류 투사체를 원거리에서 발사한다' },
-  'MirrorBot': { name: '미러봇',    desc: '복사형 • 플레이어의 움직임 패턴을 그대로 흉내낸다' },
+  'BoxBot':    { name: '박스봇',    desc: '돌진형 • 판지 갑옷을 두른 기초 드론, 직선 돌진' },
+  'CartBot':   { name: '버블봇',    desc: '신속형 • 끈적한 거품으로 경로를 막으며 빠르게 기동' },
+  'PCBot':     { name: '고철봇',    desc: '원거리형 • 낡은 회로에서 오류 투사체를 발사' },
+  'MirrorBot': { name: '전사봇',    desc: '복제형 • 무기를 들고 공격적으로 근접 추격' },
+  'AIBot':     { name: 'Mirror Bot', desc: '최종형 AI • 개발자의 모습을 복사해 혼란을 일으킨다' },
 }
 
 const SPAWN_TIMELINE = [
@@ -2221,6 +2222,126 @@ if (window.Game) {
     Game.registerEnemySystem(_spawnerInstance)
   })
 }
+
+  </script>
+
+  <!-- systems/drops.js -->
+  <script>
+// ============================================================
+// drops.js — Gold Drop System (T033)
+// Mason (systems agent)
+// ============================================================
+
+// Gold item render size
+const GOLD_ICON_SIZE = 22
+
+// Preload gold images (explicit paths so asset validator can resolve them)
+const _goldImgs = {}
+;(function () {
+  const paths = {
+    1: 'assets/icon/gold_1.png',
+    2: 'assets/icon/gold_2.png',
+    3: 'assets/icon/gold_3.png',
+    4: 'assets/icon/gold_4.png',
+  }
+  for (const [k, src] of Object.entries(paths)) {
+    const img = new Image()
+    img.src = src
+    _goldImgs[k] = img
+  }
+})()
+
+class DropManager {
+  constructor() {
+    this.items = [] // { x, y, type, life, maxLife, pickupRadius }
+  }
+
+  spawnDrop(x, y, type) {
+    this.items.push({ x, y, type, life: 8, maxLife: 8, pickupRadius: 24 })
+  }
+
+  getDropTypeForEnemy(enemyClass) {
+    const t = window.GameState?.gameTime || 0
+    // AIBot (Mirror Bot boss) always drops gold_4
+    if (enemyClass === 'AIBot') return 4
+    // MirrorBot (전사봇) drops gold_3
+    if (enemyClass === 'MirrorBot') return 3
+    // Time-based for others
+    if (t < 60) return 1
+    return 2
+  }
+
+  update(deltaTime, player) {
+    if (!player) return
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i]
+      item.life -= deltaTime
+      if (item.life <= 0) {
+        this.items.splice(i, 1)
+        continue
+      }
+
+      // Pickup collision check
+      const dx = player.x - item.x
+      const dy = player.y - item.y
+      if (Math.sqrt(dx * dx + dy * dy) < item.pickupRadius) {
+        this._pickup(item, i)
+      }
+    }
+  }
+
+  _pickup(item, idx) {
+    const type = item.type
+    if (!window.GameState.goldInventory) {
+      window.GameState.goldInventory = { 1: 0, 2: 0, 3: 0, 4: 0 }
+    }
+    window.GameState.goldInventory[type] = (window.GameState.goldInventory[type] || 0) + 1
+
+    // Floating pickup text
+    if (window.Game?.addFloatingText) {
+      window.Game.addFloatingText(item.x, item.y - 20, `+gold_${type}`, '#FFD700', 1.2)
+    }
+
+    // Pickup event for unlock system
+    window.GameState.lastPickedGold = type
+
+    this.items.splice(idx, 1)
+  }
+
+  render(ctx) {
+    for (const item of this.items) {
+      const img = _goldImgs[item.type]
+      // Fade out in last 2 seconds
+      const alpha = item.life < 2 ? item.life / 2 : 1
+      ctx.save()
+      ctx.globalAlpha = alpha
+      if (img?.complete && img.naturalWidth > 0) {
+        ctx.drawImage(
+          img,
+          item.x - GOLD_ICON_SIZE / 2,
+          item.y - GOLD_ICON_SIZE / 2,
+          GOLD_ICON_SIZE,
+          GOLD_ICON_SIZE
+        )
+      } else {
+        ctx.fillStyle = '#FFD700'
+        ctx.beginPath()
+        ctx.arc(item.x, item.y, 8, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+      ctx.restore()
+    }
+  }
+
+  reset() {
+    this.items = []
+  }
+}
+
+window.DropManager = DropManager
+const _dropManager = new DropManager()
+window.dropManager = _dropManager
 
   </script>
 
@@ -2826,16 +2947,16 @@ const MetaManager = {
     // 헤더
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 26px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 26px "VT323", monospace'
     ctx.fillText('업그레이드', 400, 34)
     ctx.fillStyle = '#FFD700'
-    ctx.font = '15px "Pixelify Sans", sans-serif'
+    ctx.font = '15px "VT323", monospace'
     ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
 
     // 페이지 표시
     const totalPages = Math.ceil(META_UPGRADES.length / 6)
     ctx.fillStyle = '#778899'
-    ctx.font = '12px "Pixelify Sans", sans-serif'
+    ctx.font = '12px "VT323", monospace'
     ctx.fillText(`${this._page + 1} / ${totalPages} 페이지`, 400, 72)
 
     // 아이템 그리드 (2열 × 3행, 페이지당 6개)
@@ -2866,23 +2987,30 @@ const MetaManager = {
       ctx.fillRect(bx, by, colW, rowH - 6)
       ctx.strokeRect(bx, by, colW, rowH - 6)
 
-      // 아이콘 (좌측)
+      // 아이콘 (좌측 — 56×56 박스로 확대)
       const icon = this._getIcon(upg.name)
-      const iconSize = 36
+      const iconBoxSize = 56
+      const iconBoxX = bx + 4
+      const iconBoxY = by + ((rowH - 6) - iconBoxSize) / 2  // 카드 높이 중앙 정렬
+      // 아이콘 배경
+      ctx.save()
+      ctx.fillStyle = 'rgba(15,25,60,0.9)'
+      ctx.strokeStyle = '#2a4a88'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize)
+      ctx.strokeRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize)
       if (icon?.complete && icon.naturalWidth > 0) {
-        ctx.save()
         ctx.imageSmoothingEnabled = true
-        ctx.globalAlpha = maxed ? 1 : canBuy ? 0.9 : 0.4
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, bx + 6, by + 6, iconSize, iconSize)
-        ctx.globalAlpha = 1
-        ctx.restore()
+        ctx.globalAlpha = 1.0
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconBoxX + 2, iconBoxY + 2, iconBoxSize - 4, iconBoxSize - 4)
       }
+      ctx.restore()
 
-      const textX = bx + iconSize + 16
+      const textX = bx + 4 + iconBoxSize + 8
 
       // 이름
       ctx.fillStyle = '#ddeeff'
-      ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 14px "VT323", monospace'
       ctx.textAlign = 'left'
       ctx.fillText(upg.name, textX, by + 24)
 
@@ -2890,20 +3018,20 @@ const MetaManager = {
       let stars = ''
       for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
       ctx.fillStyle = '#FFD700'
-      ctx.font = '14px "Pixelify Sans", sans-serif'
+      ctx.font = '14px "VT323", monospace'
       ctx.textAlign = 'right'
       ctx.fillText(stars, bx + colW - 8, by + 24)
 
       // 효과 설명
       ctx.fillStyle = '#aabbcc'
-      ctx.font = '13px "Pixelify Sans", sans-serif'
+      ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'left'
       ctx.fillText(lv > 0 ? `${upg.desc} (${lv}단계)` : upg.desc, textX, by + 50)
 
       // 구매 버튼 또는 MAX
       if (maxed) {
         ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
+        ctx.font = 'bold 14px "VT323", monospace'
         ctx.textAlign = 'right'
         ctx.fillText('MAX', bx + colW - 8, by + 90)
         this._buyRects.push(null)
@@ -2916,7 +3044,7 @@ const MetaManager = {
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '13px "Pixelify Sans", sans-serif'
+        ctx.font = '13px "VT323", monospace'
         ctx.textAlign = 'center'
         if (canBuy) {
           ctx.fillStyle = '#ffffff'
@@ -2942,7 +3070,7 @@ const MetaManager = {
       ctx.fillRect(190, navY, 140, 36)
       ctx.strokeRect(190, navY, 140, 36)
       ctx.fillStyle = '#88aaff'
-      ctx.font = '13px "Pixelify Sans", sans-serif'
+      ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
       ctx.fillText('◀ 이전', 260, navY + 23)
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
@@ -2955,7 +3083,7 @@ const MetaManager = {
       ctx.fillRect(470, navY, 140, 36)
       ctx.strokeRect(470, navY, 140, 36)
       ctx.fillStyle = '#88aaff'
-      ctx.font = '13px "Pixelify Sans", sans-serif'
+      ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
       ctx.fillText('다음 ▶', 540, navY + 23)
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
@@ -2968,7 +3096,7 @@ const MetaManager = {
     ctx.fillRect(300, 492, 200, 44)
     ctx.strokeRect(300, 492, 200, 44)
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 16px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 16px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 돌아가기 ]', 400, 520)
     ctx.textAlign = 'left'
@@ -3084,13 +3212,13 @@ class HUD {
     ctx.lineWidth = 1
     ctx.strokeRect(12, 12, 180, 18)
     ctx.fillStyle = '#fff'
-    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.font = '11px "VT323", monospace'
     ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 26)
 
     // 보호막 아이콘
     if (player.shields > 0) {
       ctx.fillStyle = '#44aaff'
-      ctx.font = '12px "Pixelify Sans", sans-serif'
+      ctx.font = '12px "VT323", monospace'
       ctx.fillText(`🛡 ${player.shields}`, 200, 24)
     }
 
@@ -3100,7 +3228,7 @@ class HUD {
     const secs = Math.floor(remaining % 60)
     const timeStr = `${mins}:${secs.toString().padStart(2,'0')}`
     ctx.fillStyle = remaining <= 30 ? '#ff4444' : '#ffffff'
-    ctx.font = 'bold 22px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 22px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(timeStr, 400, 30)
     ctx.textAlign = 'left'
@@ -3111,12 +3239,12 @@ class HUD {
     ctx.fillStyle = '#44ffaa'
     ctx.fillRect(520, 12, 140 * (GameState.releaseProgress / 100), 10)
     ctx.fillStyle = '#aaa'
-    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.font = '11px "VT323", monospace'
     ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 522, 34)
 
     // 점수
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.textAlign = 'right'
     ctx.fillText(`${GameState.score.toLocaleString()}`, 788, 24)
     ctx.textAlign = 'left'
@@ -3164,13 +3292,13 @@ class HUD {
 
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
-        ctx.font = '11px "Pixelify Sans", sans-serif'
+        ctx.font = '11px "VT323", monospace'
         ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {
           ctx.fillStyle = '#ff8844'
-          ctx.font = 'bold 13px "Pixelify Sans", sans-serif'
+          ctx.font = 'bold 13px "VT323", monospace'
           ctx.textAlign = 'center'
           ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 68, sy + 36)
           ctx.textAlign = 'left'
@@ -3183,7 +3311,7 @@ class HUD {
           ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
         } else {
           ctx.fillStyle = '#44ff88'
-          ctx.font = '10px "Pixelify Sans", sans-serif'
+          ctx.font = '10px "VT323", monospace'
           ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
@@ -3192,7 +3320,7 @@ class HUD {
       ctx.fillStyle = 'rgba(0,0,0,0.65)'
       ctx.fillRect(sx + 2, sy + 2, 14, 13)
       ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
-      ctx.font = 'bold 10px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 10px "VT323", monospace'
       ctx.fillText(keys[i], sx + 4, sy + 13)
     }
 
@@ -3200,7 +3328,7 @@ class HUD {
     const allEmpty = !Game.skillManager?.slots?.some(Boolean)
     if (allEmpty) {
       ctx.fillStyle = '#556688'
-      ctx.font = '11px "Pixelify Sans", sans-serif'
+      ctx.font = '11px "VT323", monospace'
       ctx.textAlign = 'center'
       ctx.fillText('적을 처치해 경험치를 모으면 레벨업 시 스킬을 획득합니다', 250, 571)
       ctx.textAlign = 'left'
@@ -3210,7 +3338,7 @@ class HUD {
     const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     ctx.fillStyle = '#ccaaff'
-    ctx.font = 'bold 12px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 12px "VT323", monospace'
     ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
 
     const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
@@ -3229,7 +3357,7 @@ class HUD {
 
     // 처치 수
     ctx.fillStyle = '#aaa'
-    ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.font = '11px "VT323", monospace'
     ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
   }
 
@@ -3332,21 +3460,21 @@ class Lobby {
 
     // 부제
     ctx.fillStyle = '#ffcc55'
-    ctx.font = '22px "Pixelify Sans", sans-serif'
+    ctx.font = '22px "VT323", monospace'
     ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 140)
 
     // 점수 / 포인트 (한 줄)
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
     ctx.fillStyle = '#88ffaa'
     ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
-    ctx.font = '12px "Pixelify Sans", sans-serif'
+    ctx.font = '12px "VT323", monospace'
     ctx.fillText('── 캐릭터 선택 ──', 400, 181)
 
     // 캐릭터 카드
@@ -3364,7 +3492,7 @@ class Lobby {
     ctx.strokeRect(s.x, s.y, s.w, s.h)
     ctx.restore()
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 36px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 36px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
@@ -3376,7 +3504,7 @@ class Lobby {
     ctx.fillRect(u.x, u.y, u.w, u.h)
     ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#66aa66'
-    ctx.font = '18px "Pixelify Sans", sans-serif'
+    ctx.font = '18px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('업그레이드', u.x + u.w / 2, u.y + u.h / 2 + 6)
 
@@ -3384,7 +3512,7 @@ class Lobby {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'
     ctx.fillRect(0, 468, 800, 32)
     ctx.fillStyle = '#7799bb'
-    ctx.font = '16px "Pixelify Sans", sans-serif'
+    ctx.font = '16px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('이동: WASD  /  스킬: 1~4  /  레벨업 시 스킬 선택', 400, 488)
 
@@ -3423,7 +3551,7 @@ class Lobby {
       // 선택 표시 (우상단 ▶)
       if (sel) {
         ctx.fillStyle = '#4488ff'
-        ctx.font = '9px "Pixelify Sans", sans-serif'
+        ctx.font = '9px "VT323", monospace'
         ctx.textAlign = 'right'
         ctx.fillText('▶', card.x + card.w - 5, card.y + 12)
       }
@@ -3483,14 +3611,14 @@ class Lobby {
       } else {
         // 로딩 전 플레이스홀더
         ctx.fillStyle = '#334466'
-        ctx.font = '28px "Pixelify Sans", sans-serif'
+        ctx.font = '28px "VT323", monospace'
         ctx.textAlign = 'center'
         ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
-      ctx.font = 'bold 11px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 11px "VT323", monospace'
       ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 40)
 
       // 역할 타입 배지
@@ -3506,13 +3634,13 @@ class Lobby {
         ctx.fillRect(badgeX, badgeY, badgeW, badgeH)
         ctx.strokeRect(badgeX, badgeY, badgeW, badgeH)
         ctx.fillStyle = roleColor
-        ctx.font = 'bold 9px "Pixelify Sans", sans-serif'
+        ctx.font = 'bold 9px "VT323", monospace'
         ctx.fillText(roleType, cx, badgeY + 10)
       }
 
       // 패시브명
       ctx.fillStyle = sel ? '#ccbbff' : '#556677'
-      ctx.font = '9px "Pixelify Sans", sans-serif'
+      ctx.font = '9px "VT323", monospace'
       ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 4)
     }
 
@@ -3607,7 +3735,7 @@ class Result {
     ctx.fillText('배포 성공!', 400, 94)
     ctx.shadowBlur = 0
     ctx.fillStyle = '#88ff88'
-    ctx.font = '14px "Pixelify Sans", sans-serif'
+    ctx.font = '14px "VT323", monospace'
     ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
     ctx.restore()
 
@@ -3629,7 +3757,7 @@ class Result {
     const secs = Math.floor(t % 60)
     const prevRate = parseInt(localStorage.getItem('devSurvivor_survivalRate') || '30')
 
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.fillStyle = '#aaddcc'
     ctx.textAlign = 'left'
     const sx = 222
@@ -3645,10 +3773,10 @@ class Result {
       const ry = 186 + i * 32
       ctx.fillStyle = '#aaddcc'
       ctx.textAlign = 'left'
-      ctx.font = '13px "Pixelify Sans", sans-serif'
+      ctx.font = '13px "VT323", monospace'
       ctx.fillText(label, sx, ry)
       ctx.fillStyle = i === 5 ? '#88ddff' : '#ffffff'
-      ctx.font = 'bold 13px "Pixelify Sans", sans-serif'
+      ctx.font = 'bold 13px "VT323", monospace'
       ctx.textAlign = 'right'
       ctx.fillText(val, 578, ry)
     })
@@ -3662,17 +3790,17 @@ class Result {
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 17px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 17px "VT323", monospace'
     ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 432)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
-    ctx.font = '12px "Pixelify Sans", sans-serif'
+    ctx.font = '12px "VT323", monospace'
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
     const r = this._winRestartRect, u = this._winUpgradeRect
     ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
     ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "Pixelify Sans", sans-serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
 
     ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
@@ -3778,7 +3906,7 @@ class Result {
     // 느낌표
     ctx.globalAlpha = alpha
     ctx.fillStyle = '#ffdd44'
-    ctx.font = 'bold 18px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 18px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('!', cx + 30, cy - 20)
     ctx.fillText('!', cx + 46, cy - 36)
@@ -3839,13 +3967,13 @@ class Result {
     ctx.fillStyle = '#881111'
     ctx.fillRect(px, py, pw, 40)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 19px "Pixelify Sans", sans-serif'
+    ctx.font = 'bold 19px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
 
     // 원인
     ctx.fillStyle = '#444'
-    ctx.font = '13px "Pixelify Sans", sans-serif'
+    ctx.font = '13px "VT323", monospace'
     ctx.fillText(cause, 400, py + 62)
 
     // 구분선 1
@@ -3866,17 +3994,17 @@ class Result {
     const c2l = px + 318, c2r = px + pw - 20
     statRows.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c1l, ry)
-      ctx.fillStyle = '#111'; ctx.font = 'bold 12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'right'
+      ctx.fillStyle = '#111'; ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c1r, ry)
     })
     statRows2.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c2l, ry)
       ctx.fillStyle = i === 1 ? '#1a44cc' : '#111'
-      ctx.font = 'bold 12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'right'
+      ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c2r, ry)
     })
 
@@ -3885,11 +4013,11 @@ class Result {
     ctx.beginPath(); ctx.moveTo(px+24, py+178); ctx.lineTo(px+pw-24, py+178); ctx.stroke()
 
     // 포인트 요약
-    ctx.fillStyle = '#333'; ctx.font = '12px "Pixelify Sans", sans-serif'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#333'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText(`출시 포인트 +${earned} 획득  (누적: ${total}pt)`, 400, py + 200)
 
     // 블랙코미디 멘트
-    ctx.fillStyle = '#888'; ctx.font = '11px "Pixelify Sans", sans-serif'
+    ctx.fillStyle = '#888'; ctx.font = '11px "VT323", monospace'
     ctx.fillText(comment, 400, py + 222)
 
     // 구분선 3
@@ -3900,7 +4028,7 @@ class Result {
     const r = this._loseRestartRect, u = this._loseUpgradeRect
     ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
     ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "Pixelify Sans", sans-serif'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
 
     ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
@@ -4357,6 +4485,10 @@ window.Game = {
       }
     }
 
+    // 골드 드롭 리셋
+    window.dropManager?.reset()
+    GameState.goldInventory = { 1: 0, 2: 0, 3: 0, 4: 0 }
+
     // Spawner 리셋
     if (Game.enemySystem) {
       Game.enemySystem.spawnTimer = 0
@@ -4428,6 +4560,7 @@ function _loop(now) {
       updateCamera(player)
       Game.enemySystem?.update(deltaTime)
       Game.skillManager?.update(deltaTime)
+      window.dropManager?.update(deltaTime, player)
 
       // 출시 진행률 업데이트
       window.ScoreSystem?.updateReleaseProgress(deltaTime)
@@ -4492,6 +4625,8 @@ function _loop(now) {
 
     // 적 + 투사체 + 방해 구역
     Game.enemySystem?.renderEnemies?.(ctx)
+    // 골드 드롭 아이템 (플레이어 아래 레이어)
+    window.dropManager?.render(ctx)
     // 스킬 이펙트
     Game.skillManager?.renderEffects?.(ctx, deltaTime)
     // 플레이어

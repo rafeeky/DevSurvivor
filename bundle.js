@@ -13,6 +13,7 @@ const SCRIPTS = [
   'entities/skills.js',
   'systems/tilemap.js',
   'systems/spawner.js',
+  'systems/drops.js',
   'systems/levelup.js',
   'systems/score.js',
   'systems/meta.js',

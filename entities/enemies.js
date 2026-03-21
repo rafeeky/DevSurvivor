@@ -93,6 +93,10 @@ class Enemy {
     GameState.basicKills++
     GameState.score += this.scoreReward * 5
     GameState.playerExp += Math.floor(this.expReward * (GameState.expMultiplier || 1))
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   update(deltaTime, player) { /* 서브클래스에서 구현 */ }
@@ -275,6 +279,10 @@ class PCBot extends Enemy {
     GameState.pcBotKills = (GameState.pcBotKills || 0) + 1
     GameState.score += this.scoreReward * 5
     GameState.playerExp += Math.floor(this.expReward * (GameState.expMultiplier || 1))
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   update(deltaTime, player) {
@@ -460,6 +468,10 @@ class MirrorBot extends Enemy {
     GameState.mirrorBotKills = (GameState.mirrorBotKills || 0) + 1
     GameState.score += this.scoreReward * 5
     GameState.playerExp += this.expReward
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   render(ctx) {
@@ -619,6 +631,10 @@ class AIBot extends Enemy {
     GameState.aiBotKilled = true
     GameState.score += this.scoreReward * 5
     GameState.playerExp += this.expReward
+    if (window.dropManager) {
+      const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
+      window.dropManager.spawnDrop(this.x, this.y, dropType)
+    }
   }
 
   render(ctx) {
