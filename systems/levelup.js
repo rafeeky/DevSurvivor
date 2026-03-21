@@ -264,23 +264,23 @@ class LevelUpManager {
 
     // 제목
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 32px monospace'
+    ctx.font = 'bold 36px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(`Level Up!  Lv ${GameState.playerLevel - 1} → ${GameState.playerLevel}`, 400, 160)
 
-    ctx.font = '16px monospace'
+    ctx.font = '18px "VT323", monospace'
     ctx.fillStyle = '#aaaaaa'
     ctx.fillText('클릭하거나 1 / 2 / 3 키로 선택하세요', 400, 190)
 
     // 카드 3개
     this.choiceRects = []
-    const cardW = 200, cardH = 160
+    const cardW = 220, cardH = 270
     const startX = 400 - (cardW * 1.5 + 20)
 
     for (let i = 0; i < this.choices.length; i++) {
       const c = this.choices[i]
       const cx = startX + i * (cardW + 20)
-      const cy = 205
+      const cy = 200
 
       // 카드 배경
       ctx.fillStyle = '#1e2a4a'
@@ -291,49 +291,58 @@ class LevelUpManager {
       ctx.fill()
       ctx.stroke()
 
-      // ── 좌측 아이콘 박스 (꽉 채우기) ─────────────────────────────────
+      // ── 상단 아이콘 박스 (카드 상단 중앙) ────────────────────────────
       const icon = _getLUIcon(c.skillId)
-      const boxSize = 60
-      const boxX = cx + 8
-      const boxY = cy + (cardH - boxSize) / 2  // 세로 중앙 정렬
+      const iconSize = 80
+      const iconX = cx + (cardW - iconSize) / 2
+      const iconY = cy + 22
       // 박스 배경
-      ctx.fillStyle = 'rgba(15,25,60,0.95)'
-      ctx.fillRect(boxX, boxY, boxSize, boxSize)
+      ctx.fillStyle = 'rgba(10,20,55,0.9)'
+      ctx.fillRect(iconX, iconY, iconSize, iconSize)
       ctx.strokeStyle = c.skillId ? '#4488cc' : '#2a3a55'
       ctx.lineWidth = 1.5
-      ctx.strokeRect(boxX, boxY, boxSize, boxSize)
+      ctx.strokeRect(iconX, iconY, iconSize, iconSize)
       if (icon?.complete && icon.naturalWidth > 0) {
-        ctx.save()
         ctx.imageSmoothingEnabled = true
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, boxX + 3, boxY + 3, boxSize - 6, boxSize - 6)
-        ctx.restore()
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
+        ctx.imageSmoothingEnabled = false
       } else if (c.skillId) {
         // 로딩 중 플레이스홀더
         ctx.fillStyle = 'rgba(68,102,170,0.25)'
-        ctx.fillRect(boxX + 3, boxY + 3, boxSize - 6, boxSize - 6)
+        ctx.fillRect(iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
       }
 
       // 번호 레이블 (좌상단)
-      ctx.fillStyle = '#FFD700'
-      ctx.font = 'bold 12px monospace'
-      ctx.textAlign = 'left'
-      ctx.fillText(`[${i + 1}]`, cx + 6, cy + 16)
-
-      // ── 우측 텍스트 영역 ───────────────────────────────────────────
-      const textX = cx + boxSize + 16
-      const textW = cardW - boxSize - 22
-
-      // 이름
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 12px monospace'
-      ctx.textAlign = 'left'
-      ctx.fillText(c.label, textX, cy + 36)
-
-      // 설명 (줄바꿈 처리)
       ctx.fillStyle = '#aaccff'
-      ctx.font = '10px monospace'
-      const maxW = textW
-      this._wrapText(ctx, c.desc, textX, cy + 56, maxW, 15, false)
+      ctx.font = 'bold 15px "VT323", monospace'
+      ctx.textAlign = 'left'
+      ctx.fillText(`[${i + 1}]`, cx + 8, cy + 18)
+
+      // 스킬 이름 (아이콘 아래 중앙)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 18px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(c.label, cx + cardW / 2, cy + 118)
+
+      // 구분선
+      ctx.strokeStyle = 'rgba(80,120,200,0.4)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(cx + 10, cy + 128)
+      ctx.lineTo(cx + cardW - 10, cy + 128)
+      ctx.stroke()
+
+      // 설명 (슬래시 또는 불릿 기준 줄바꿈)
+      ctx.fillStyle = '#aabbdd'
+      ctx.font = '13px "VT323", monospace'
+      ctx.textAlign = 'left'
+      const descParts = c.desc.split(/\s*\/\s*|\s*•\s*/).filter(Boolean)
+      let lineY = cy + 148
+      for (const part of descParts) {
+        if (lineY > cy + cardH - 12) break  // 카드 영역 초과 방지
+        ctx.fillText(part.trim(), cx + 12, lineY)
+        lineY += 20
+      }
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
     }
@@ -341,21 +350,6 @@ class LevelUpManager {
     ctx.textAlign = 'left'
   }
 
-  _wrapText(ctx, text, cx, y, maxWidth, lineHeight, centered) {
-    const words = text.split(' ')
-    let line = ''
-    for (const word of words) {
-      const test = line + word + ' '
-      if (ctx.measureText(test).width > maxWidth && line !== '') {
-        ctx.fillText(line.trim(), cx, y)
-        line = word + ' '
-        y += lineHeight
-      } else {
-        line = test
-      }
-    }
-    if (line) ctx.fillText(line.trim(), cx, y)
-  }
 }
 
 // ---------------------------------------------------------------------------
