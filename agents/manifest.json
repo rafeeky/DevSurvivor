@@ -146,6 +146,22 @@
       "completedAt": "2026-03-22",
       "commit": "2930741",
       "notes": "charBg.alex #0d2234→#0e2a3f. fw≤16 분기 내 원형 그라디언트 후광 삽입. smoke-test PASS."
+    },
+    {
+      "id": "T019",
+      "title": "로비 포트레이트 fw>16 높이 기준 스케일 수정",
+      "assignee": "mason",
+      "completedAt": "2026-03-22",
+      "commit": "0407107",
+      "notes": "scaleToW→scaleToH (88/32=2.75×), 수평 중앙 정렬. Adam/Amelia 전신 표시. smoke-test PASS."
+    },
+    {
+      "id": "T020",
+      "title": "인게임 캐릭터 스프라이트 scale 상향",
+      "assignee": "raf",
+      "completedAt": "2026-03-22",
+      "commit": "aeec31f",
+      "notes": "adam/amelia scale 2→3, alex scale 3→4. smoke-test PASS."
     }
   ],
   "tasks": [],
