@@ -11,7 +11,7 @@ const META_UPGRADES = [
   { name: '실수 줄이기',        desc: '받는 피해 -5%',         costs: [20, 35, 50], maxLevel: 3 },
   { name: '준비된 하루',        desc: '시작 시 보호막 1 충전',  costs: [25],         maxLevel: 1 },
   { name: '손이 빨라짐',        desc: '모든 쿨다운 -0.3초',    costs: [20, 35, 55], maxLevel: 3 },
-  { name: '성과 더 받기',       desc: '출시 포인트 획득 +15%', costs: [25, 40],     maxLevel: 2 },
+  { name: '인센티브',           desc: '출시 포인트 획득 +15%', costs: [25, 40],     maxLevel: 2 },
   { name: '시작부터 하나 더',   desc: '시작 시 기본 스킬 지급', costs: [30],         maxLevel: 1 },
 ]
 
@@ -52,7 +52,7 @@ const MetaManager = {
     if (s.aiBotKilled)              pts += 30  // AI봇 처치
     if (s.releaseProgress >= 100)   pts += 10  // 출시 진행률 100%
 
-    // 성과 더 받기 메타 보너스
+    // 인센티브 메타 보너스
     const levels = this.loadUpgrades()
     if (levels[8] > 0) pts = Math.floor(pts * (1 + 0.15 * levels[8]))
     return pts
@@ -112,7 +112,7 @@ const MetaManager = {
       }
     }
 
-    // 8. 성과 더 받기: calculateReleasePoints()에서 처리
+    // 8. 인센티브: calculateReleasePoints()에서 처리
 
     // 9. 시작부터 하나 더: 랜덤 기본 스킬 1개 지급
     if (lv[9] > 0 && skillManager) {
@@ -149,7 +149,7 @@ const MetaManager = {
     '실수 줄이기':        'assets/custom/icons/skill_figure_clean.png',
     '준비된 하루':        'assets/custom/icons/skill_autosave.png',
     '손이 빨라짐':        'assets/custom/icons/skill_emergency_fix.png',
-    '성과 더 받기':       'assets/custom/icons/skill_priority_sort.png',
+    '인센티브':       'assets/custom/icons/skill_priority_sort.png',
     '시작부터 하나 더':   'assets/custom/icons/skill_nap.png',
   },
   _iconCache: {},
