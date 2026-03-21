@@ -190,6 +190,7 @@ class CartBot extends Enemy {
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0) return
 
     const dx = player.x - this.x
     const dy = player.y - this.y
@@ -210,6 +211,11 @@ class CartBot extends Enemy {
       if (dist > 0) {
         this.dashDx = dx / dist
         this.dashDy = dy / dist
+      } else {
+        // dist=0: 임의 방향으로 돌진 (NaN 방지)
+        const angle = Math.random() * Math.PI * 2
+        this.dashDx = Math.cos(angle)
+        this.dashDy = Math.sin(angle)
       }
     }
 
@@ -227,6 +233,11 @@ class CartBot extends Enemy {
         this.y += (dy / dist) * this.speed * deltaTime
         this._facingLeft = dx < 0
       }
+    }
+    // NaN 위치 전파 방지
+    if (isNaN(this.x) || isNaN(this.y)) {
+      this.x = player.x + 100
+      this.y = player.y
     }
     this._updateAnim(deltaTime, true)
   }
@@ -471,6 +482,7 @@ class MirrorBot extends Enemy {
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0) return
 
     const dx = player.x - this.x
     const dy = player.y - this.y
@@ -488,7 +500,15 @@ class MirrorBot extends Enemy {
         this.slashCycleTimer = 0
         this.slashPhase = 'slash1'
         this.slashTimer = 0
-        if (dist > 0) { this.slashDx = dx / dist; this.slashDy = dy / dist }
+        if (dist > 0) {
+          this.slashDx = dx / dist
+          this.slashDy = dy / dist
+        } else {
+          // dist=0: 임의 방향 (NaN 방지)
+          const angle = Math.random() * Math.PI * 2
+          this.slashDx = Math.cos(angle)
+          this.slashDy = Math.sin(angle)
+        }
       }
 
     } else if (this.slashPhase === 'slash1') {
@@ -509,10 +529,11 @@ class MirrorBot extends Enemy {
       if (this.slashTimer >= 0.22) {
         this.slashPhase = 'slash2'
         this.slashTimer = 0
-        // 두 번째 베기 방향 갱신
+        // 두 번째 베기 방향 갱신 (dist=0 || 1 로 NaN 방지)
         const dx2 = player.x - this.x, dy2 = player.y - this.y
         const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1
-        this.slashDx = dx2 / d2; this.slashDy = dy2 / d2
+        this.slashDx = dx2 / d2
+        this.slashDy = dy2 / d2
       }
 
     } else if (this.slashPhase === 'slash2') {
@@ -537,11 +558,22 @@ class MirrorBot extends Enemy {
         this.slashPhase = 'approach'
         this.slashTimer = 0
       }
+    } else {
+      // 알 수 없는 상태 복구
+      this.slashPhase = 'approach'
+      this.slashTimer = 0
     }
 
     if (this._slashEffect) {
       this._slashEffect.life -= deltaTime
       if (this._slashEffect.life <= 0) this._slashEffect = null
+    }
+
+    // NaN 위치 전파 방지
+    if (isNaN(this.x) || isNaN(this.y)) {
+      this.x = player.x + 80
+      this.y = player.y
+      this.slashPhase = 'approach'
     }
 
     this._facingLeft = (player.x - this.x) < 0

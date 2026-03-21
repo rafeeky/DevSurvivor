@@ -14,7 +14,7 @@ const ENEMY_INTRO_DATA = {
 }
 
 const SPAWN_TIMELINE = [
-  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 2.5, maxEnemies: 5  },
+  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 1.2, maxEnemies: 10 },
   { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.0, maxEnemies: 8  },
   { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 1.8, maxEnemies: 10 },
   { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.5, maxEnemies: 12 },

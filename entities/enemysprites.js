@@ -22,7 +22,7 @@ window.ENEMY_SPRITE_CONFIGS = {
   PCBot: {
     idle: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 4 },
     walk: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 8 },
-    scale: 0.09,
+    scale: 0.18,
   },
   MirrorBot: {
     idle: { src: 'assets/enemies/Geralt_idle.png', fw: 32, fh: 32, frames: 2, fps: 4 },
