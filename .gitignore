@@ -13,3 +13,7 @@ Thumbs.db
 # Build output
 dist/
 build/
+
+# docs 배포 폴더 — 아카이브/팩 원본은 제외 (용량 절약)
+docs/assets/_archive/
+docs/assets/packs/

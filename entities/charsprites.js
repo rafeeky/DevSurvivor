@@ -1,19 +1,20 @@
 /**
  * entities/charsprites.js — 플레이어 캐릭터 스프라이트 설정 & 이미지 로더
- * player_m / player_f 커스텀 스프라이트 (384×768px 프레임, 4프레임 수평 배치)
- * alex는 Modern Tiles 스프라이트 유지 (차별화)
+ * adam:   Tommy (sprite-pack-3, 빌드타임 RGB→RGBA 변환본)
+ * amelia: Julia 오피스 캐릭터 (RGBA, 32x32)
+ * alex:   Modern Tiles Alex 16x16 유지
  */
 
 window.CHAR_CONFIGS = {
   adam: {
     label: '아담',
     sublabel: '남 • 개발자',
-    idle:   { src: 'assets/custom/player/player_m_idle.png',   fw: 384, fh: 768, frames: 4, fps: 6 },
-    walk:   { src: 'assets/custom/player/player_m_walk.png',   fw: 384, fh: 768, frames: 4, fps: 8 },
-    action: { src: 'assets/custom/player/player_m_action.png', fw: 384, fh: 768, frames: 4, fps: 8 },
-    hit:    { src: 'assets/custom/player/player_m_hit.png',    fw: 384, fh: 768, frames: 4, fps: 10 },
-    renderW: 48, renderH: 80,
-    yAnchor: 0.92,
+    idle:   { src: 'assets/custom/player/tommy_idle.png',   fw: 32, fh: 32, frames: 4, fps: 5 },
+    walk:   { src: 'assets/custom/player/tommy_walk.png',   fw: 32, fh: 32, frames: 8, fps: 10 },
+    action: { src: 'assets/custom/player/tommy_action.png', fw: 32, fh: 32, frames: 1, fps: 8 },
+    hit:    { src: 'assets/custom/player/tommy_hit.png',    fw: 32, fh: 32, frames: 1, fps: 8 },
+    scale: 2,
+    yAnchor: 0.75,
   },
   alex: {
     label: '알렉스',
@@ -26,12 +27,11 @@ window.CHAR_CONFIGS = {
   amelia: {
     label: '아멜리아',
     sublabel: '여 • 개발자',
-    idle:   { src: 'assets/custom/player/player_f_idle.png',   fw: 384, fh: 768, frames: 4, fps: 6 },
-    walk:   { src: 'assets/custom/player/player_f_walk.png',   fw: 384, fh: 768, frames: 4, fps: 8 },
-    action: { src: 'assets/custom/player/player_f_action.png', fw: 384, fh: 768, frames: 4, fps: 8 },
-    hit:    { src: 'assets/custom/player/player_f_hit.png',    fw: 384, fh: 768, frames: 4, fps: 10 },
-    renderW: 48, renderH: 80,
-    yAnchor: 0.92,
+    idle:   { src: 'assets/packs/julia/Julia-Idle.png',            fw: 32, fh: 32, frames: 4, fps: 6 },
+    walk:   { src: 'assets/packs/julia/Julia.png',                 fw: 32, fh: 32, frames: 4, fps: 8 },
+    action: { src: 'assets/packs/julia/Julia_Drinking_Coffee.png', fw: 32, fh: 32, frames: 3, fps: 8 },
+    scale: 2,
+    yAnchor: 0.75,
   },
 }
 
