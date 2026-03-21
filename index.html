@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dev Survivor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    #gameCanvas {
+      display: block;
+      border: 2px solid #2a2a5e;
+      box-shadow: 0 0 40px rgba(68, 136, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <!--
+    로드 순서 (game.js가 ES Module로 아래 파일들을 import):
+      entities/player.js
+      entities/enemies.js
+      entities/skills.js
+      systems/spawner.js
+      systems/levelup.js
+      systems/score.js
+      ui/hud.js
+      ui/lobby.js
+      ui/result.js
+      game.js  ← 진입점
+  -->
+  <script type="module" src="game.js"></script>
+</body>
+</html>
