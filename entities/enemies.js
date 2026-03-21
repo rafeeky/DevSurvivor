@@ -59,8 +59,8 @@ class Enemy {
     const img  = this._isMoving ? spr.walk : spr.idle
     if (!img?.complete || img.naturalWidth === 0) return false
 
-    const dw = anim.fw * cfg.scale
-    const dh = anim.fh * cfg.scale
+    const dw = Math.round(anim.fw * cfg.scale)
+    const dh = Math.round(anim.fh * cfg.scale)
     const sx = this._animFrame * anim.fw
     const px = Math.round(this.x - dw / 2)
     const py = Math.round(this.y - dh * 0.75)
@@ -70,9 +70,13 @@ class Enemy {
       ctx.scale(-1, 1)
       ctx.translate(-2 * this.x, 0)
     }
-    ctx.imageSmoothingEnabled = false
+    ctx.beginPath()
+    ctx.rect(px, py, dw, dh)
+    ctx.clip()
+    const needsSmoothing = anim.fw > 64
+    ctx.imageSmoothingEnabled = needsSmoothing
+    if (needsSmoothing) ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(img, sx, 0, anim.fw, anim.fh, px, py, dw, dh)
-    ctx.imageSmoothingEnabled = true
     ctx.restore()
     return true
   }

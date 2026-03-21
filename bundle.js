@@ -308,16 +308,16 @@ const ENEMY_DST = path.join(BASE, 'assets/enemies')
 const ENEMY_CONVERT = [
   { src: `${SP3}/1 - Gum Bot/Idle (32 x 32).png`,     dst: `${ENEMY_DST}/GumBot_idle.png` },
   { src: `${SP3}/1 - Gum Bot/Walking (32 x 32).png`,  dst: `${ENEMY_DST}/GumBot_walk.png` },
-  { src: `${SP3}/3 - Robot J5/Idle (32 x 32).png`,    dst: `${ENEMY_DST}/RobotJ5_idle.png` },
-  { src: `${SP3}/3 - Robot J5/Running (32 x 32).png`, dst: `${ENEMY_DST}/RobotJ5_walk.png` },
+  { src: `${SP3}/3 - Robot J5/Idle (32 x 32).png`,    dst: `${ENEMY_DST}/RobotJ5_idle.png`, tolerance: 15 },
+  { src: `${SP3}/3 - Robot J5/Running (32 x 32).png`, dst: `${ENEMY_DST}/RobotJ5_walk.png`, tolerance: 15 },
   { src: `${SP3}/5 - Geralt/Idle (32 x 32).png`,      dst: `${ENEMY_DST}/Geralt_idle.png` },
   { src: `${SP3}/5 - Geralt/Running (32 x 32).png`,   dst: `${ENEMY_DST}/Geralt_run.png`  },
   { src: `${SP3}/4 - Tommy/Idle_Poses (32 x 32).png`, dst: `${ENEMY_DST}/Tommy_idle.png`  },
   { src: `${SP3}/4 - Tommy/Running (32 x 32).png`,    dst: `${ENEMY_DST}/Tommy_run.png`   },
 ]
 let enemyConvCount = 0
-for (const { src, dst } of ENEMY_CONVERT) {
-  try { convertRGBtoRGBA(src, dst); enemyConvCount++ } catch (e) { console.warn('⚠️ 적 스프라이트 변환 실패:', src, e.message) }
+for (const { src, dst, tolerance } of ENEMY_CONVERT) {
+  try { convertRGBtoRGBA(src, dst, tolerance); enemyConvCount++ } catch (e) { console.warn('⚠️ 적 스프라이트 변환 실패:', src, e.message) }
 }
 console.log(`✅ 적 스프라이트 RGBA 변환 완료 (${enemyConvCount}/${ENEMY_CONVERT.length})`)
 
