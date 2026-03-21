@@ -171,7 +171,7 @@ class Lobby {
       const idleImg = spr?.idle
 
       // 캐릭터별 배경색
-      const charBg = { adam: '#0e1f3a', alex: '#0d2234', amelia: '#1a1230' }
+      const charBg = { adam: '#0e1f3a', alex: '#0e2a3f', amelia: '#1a1230' }
       ctx.fillStyle = charBg[card.key] || '#111827'
       ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
 
@@ -198,6 +198,18 @@ class Lobby {
         ctx.beginPath()
         ctx.rect(card.x, card.y, card.w, portraitH)
         ctx.clip()
+        if (fw <= 16) {
+          // 소형 스프라이트 후광 (16x16 픽셀아트 캐릭터 가시성 향상)
+          const glowCX = drawX + dispW / 2
+          const glowCY = drawY + dispH / 2
+          const glowR  = dispW * 0.6
+          const grd = ctx.createRadialGradient(glowCX, glowCY, 0, glowCX, glowCY, glowR)
+          grd.addColorStop(0,   'rgba(180,210,255,0.18)')
+          grd.addColorStop(0.5, 'rgba(120,170,255,0.08)')
+          grd.addColorStop(1,   'rgba(0,0,0,0)')
+          ctx.fillStyle = grd
+          ctx.fillRect(drawX, drawY, dispW, dispH)
+        }
         ctx.imageSmoothingEnabled = fw > 16
         ctx.imageSmoothingQuality = fw > 16 ? 'high' : 'low'
         ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, drawY, dispW, dispH)
