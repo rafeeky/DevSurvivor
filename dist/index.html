@@ -1,0 +1,3073 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dev Survivor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    #gameCanvas {
+      display: block;
+      border: 2px solid #2a2a5e;
+      box-shadow: 0 0 40px rgba(68, 136, 255, 0.3);
+    }
+</style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <!-- entities/player.js -->
+  <script>
+/**
+ * entities/player.js — Player 클래스 (GDD Part 3.1)
+ * window.Player 로 전역 노출
+ */
+
+class Player {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+    this.width = 24
+    this.height = 36
+    this.collisionRadius = 14
+
+    // 스탯 (GDD Part 3.1)
+    this.maxHp = 100
+    this.hp = 100
+    this.baseSpeed = 220
+    this._speedMultiplier = 1
+    this._damageMultiplier = 1  // 받는 피해 배율 (1 = 100%)
+
+    // 무적
+    this.invincibleTimer = 0
+    this.invincibleDuration = 0.4
+
+    // 보호막
+    this.shields = 0
+
+    // 버프 목록
+    this.buffs = []  // { type, value, duration, remaining }
+    this._baseSpeedMult = 1  // 패시브 스킬에 의한 영구 속도 배율
+    this._baseDmgMult   = 1  // 메타 업그레이드에 의한 영구 피해 배율
+
+    // 이동 방향 기억 (스킬용)
+    this.lastDirX = 0
+    this.lastDirY = 1
+
+    // 깜빡임 (피격 시)
+    this.flashTimer = 0
+  }
+
+  // ── Computed properties ──
+
+  get speed() {
+    return this.baseSpeed * this._speedMultiplier
+  }
+
+  get isAlive() {
+    return this.hp > 0
+  }
+
+  // ── 매 프레임 업데이트 ──
+
+  update(deltaTime, keys) {
+    // 버프 타이머 처리
+    this.buffs = this.buffs.filter(b => {
+      b.remaining -= deltaTime
+      return b.remaining > 0
+    })
+    this._recalcBuffs()
+
+    // 무적 타이머
+    if (this.invincibleTimer > 0) this.invincibleTimer -= deltaTime
+
+    // 깜빡임
+    if (this.flashTimer > 0) this.flashTimer -= deltaTime
+
+    // 이동
+    let dx = 0, dy = 0
+    if (keys['KeyW'] || keys['ArrowUp'])    dy -= 1
+    if (keys['KeyS'] || keys['ArrowDown'])  dy += 1
+    if (keys['KeyA'] || keys['ArrowLeft'])  dx -= 1
+    if (keys['KeyD'] || keys['ArrowRight']) dx += 1
+
+    if (dx !== 0 || dy !== 0) {
+      const len = Math.sqrt(dx * dx + dy * dy)
+      dx /= len; dy /= len
+      this.lastDirX = dx
+      this.lastDirY = dy
+    }
+
+    this.x += dx * this.speed * deltaTime
+    this.y += dy * this.speed * deltaTime
+
+    // 캔버스 경계 클램프
+    this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
+    this.y = Math.max(this.collisionRadius, Math.min(600 - this.collisionRadius, this.y))
+
+    // GameState 동기화
+    if (window.GameState) {
+      GameState.playerDanger = this.hp / this.maxHp < 0.3
+    }
+  }
+
+  // ── 피해 처리 ──
+
+  takeDamage(amount) {
+    if (this.invincibleTimer > 0) return
+    if (this.shields > 0) {
+      this.shields--
+      this.invincibleTimer = this.invincibleDuration
+      return
+    }
+    const actual = amount * this._damageMultiplier
+    this.hp = Math.max(0, this.hp - actual)
+    this.invincibleTimer = this.invincibleDuration
+    this.flashTimer = 0.15
+  }
+
+  // ── 회복 ──
+
+  heal(amount) {
+    this.hp = Math.min(this.maxHp, this.hp + amount)
+  }
+
+  // ── 보호막 추가 ──
+
+  addShield(count) {
+    this.shields += count
+  }
+
+  // ── 버프 적용 ──
+
+  /**
+   * @param {string} type      - 'speed' | 'damageReduction' | ...
+   * @param {number} value     - 배율값 (speed: 1.3 = 30% 증가, damageReduction: 0.2 = 20% 감소)
+   * @param {number} duration  - 지속 초. Infinity 또는 9999 초과 시 패시브로 처리
+   */
+  applyBuff(type, value, duration) {
+    // 같은 타입 기존 버프 제거 후 재적용
+    this.buffs = this.buffs.filter(b => b.type !== type)
+    if (duration === Infinity || duration > 9999) {
+      this._applyPassive(type, value)
+      return
+    }
+    this.buffs.push({ type, value, duration, remaining: duration })
+    this._recalcBuffs()
+  }
+
+  _applyPassive(type, value) {
+    if (type === 'speed')           this._baseSpeedMult = value
+    if (type === 'damageReduction') this._baseDmgMult   = 1 - value
+  }
+
+  _recalcBuffs() {
+    let speedMult = this._baseSpeedMult
+    let dmgMult   = this._baseDmgMult
+    for (const b of this.buffs) {
+      if (b.type === 'speed')           speedMult *= b.value
+      if (b.type === 'damageReduction') dmgMult   *= (1 - b.value)
+    }
+    this._speedMultiplier  = speedMult
+    this._damageMultiplier = dmgMult
+  }
+
+  // ── 넉백 ──
+
+  knockback(fromX, fromY, distance) {
+    const dx = this.x - fromX
+    const dy = this.y - fromY
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    this.x += (dx / len) * distance
+    this.y += (dy / len) * distance
+    this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
+    this.y = Math.max(this.collisionRadius, Math.min(600 - this.collisionRadius, this.y))
+  }
+
+  // ── 렌더링 ──
+
+  render(ctx) {
+    const x = this.x, y = this.y
+    const flash = this.flashTimer > 0
+    ctx.save()
+    if (flash) ctx.globalAlpha = 0.35
+
+    // 보호막 글로우
+    if (this.shields > 0) {
+      ctx.save()
+      ctx.strokeStyle = '#44aaff'
+      ctx.shadowColor = '#44aaff'
+      ctx.shadowBlur = 14
+      ctx.lineWidth = 2.5
+      ctx.beginPath()
+      ctx.arc(x, y - 4, this.collisionRadius + 10, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    // 다리
+    ctx.fillStyle = '#2255cc'
+    ctx.fillRect(x - 8, y + 10, 6, 14)
+    ctx.fillRect(x + 2, y + 10, 6, 14)
+    // 신발
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(x - 9, y + 21, 8, 4)
+    ctx.fillRect(x + 1, y + 21, 8, 4)
+
+    // 몸통 (후디)
+    ctx.fillStyle = '#4488ff'
+    ctx.fillRect(x - 11, y - 13, 22, 24)
+    // 후디 포켓
+    ctx.fillStyle = '#3366cc'
+    ctx.fillRect(x - 7, y + 4, 14, 7)
+
+    // 팔 (왼쪽 — 노트북 들고 있음)
+    ctx.fillStyle = '#4488ff'
+    ctx.fillRect(x - 17, y - 10, 7, 18)
+    ctx.fillRect(x + 10, y - 10, 7, 14)
+
+    // 노트북 (왼팔에 걸침)
+    ctx.fillStyle = '#888'
+    ctx.fillRect(x - 19, y - 2, 13, 9)
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(x - 18, y - 1, 11, 7)
+    ctx.fillStyle = '#2244aa'
+    ctx.fillRect(x - 17, y, 9, 5)
+    // 화면 글로우
+    ctx.fillStyle = '#44aaff'
+    ctx.fillRect(x - 16, y + 1, 3, 1)
+
+    // 머리
+    ctx.fillStyle = '#66aaff'
+    ctx.beginPath()
+    ctx.arc(x, y - 21, 10, 0, Math.PI * 2)
+    ctx.fill()
+    // 머리 하이라이트
+    ctx.fillStyle = 'rgba(200,230,255,0.4)'
+    ctx.beginPath()
+    ctx.arc(x - 3, y - 24, 5, 0, Math.PI * 2)
+    ctx.fill()
+    // 눈 (안경 느낌)
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x - 7, y - 24, 5, 4)
+    ctx.strokeRect(x + 2, y - 24, 5, 4)
+    ctx.fillStyle = '#aaddff'
+    ctx.fillRect(x - 6, y - 23, 3, 2)
+    ctx.fillRect(x + 3, y - 23, 3, 2)
+
+    ctx.restore()
+
+    // HP 바
+    const barW = 38
+    const barX = x - barW / 2
+    const barY = y + 27
+    ctx.fillStyle = '#222'
+    ctx.fillRect(barX, barY, barW, 5)
+    const hpRatio = this.hp / this.maxHp
+    ctx.fillStyle = hpRatio > 0.5 ? '#44ff88' : hpRatio > 0.3 ? '#ffaa00' : '#ff3333'
+    ctx.fillRect(barX, barY, barW * hpRatio, 5)
+  }
+}
+
+// ─────────────────────────────────────────
+// 전역 노출
+// ─────────────────────────────────────────
+window.Player = Player
+
+  </script>
+
+  <!-- entities/enemies.js -->
+  <script>
+// ============================================================
+// enemies.js — M3: CartBot, PCBot, MirrorBot, AIBot 추가
+// GDD Part 4 기준
+// ============================================================
+
+// 공통 HP 바 헬퍼
+function _drawHpBar(ctx, enemy, barW) {
+  if (enemy.hp >= enemy.maxHp) return
+  ctx.fillStyle = '#444'
+  ctx.fillRect(enemy.x - barW / 2, enemy.y - 22, barW, 4)
+  ctx.fillStyle = '#ff4444'
+  ctx.fillRect(enemy.x - barW / 2, enemy.y - 22, barW * (enemy.hp / enemy.maxHp), 4)
+}
+
+// ============================================================
+// Enemy 베이스 클래스
+// ============================================================
+class Enemy {
+  constructor(x, y, config) {
+    this.x = x
+    this.y = y
+    this.hp = config.hp
+    this.maxHp = config.hp
+    this.speed = config.speed
+    this.damage = config.damage
+    this.expReward = config.expReward
+    this.scoreReward = config.scoreReward || config.expReward
+    this.collisionRadius = config.collisionRadius || 16
+    this.collisionCooldown = 0
+    this.alive = true
+  }
+
+  isAlive() { return this.alive && this.hp > 0 }
+
+  takeDamage(amount) {
+    this.hp -= amount
+    if (this.hp <= 0) {
+      this.hp = 0
+      this.alive = false
+      this.onKilled()
+    }
+  }
+
+  onKilled() {
+    GameState.killCount++
+    GameState.basicKills++
+    GameState.score += this.scoreReward * 5
+    GameState.playerExp += Math.floor(this.expReward * (GameState.expMultiplier || 1))
+  }
+
+  update(deltaTime, player) { /* 서브클래스에서 구현 */ }
+  render(ctx) { /* 서브클래스에서 구현 */ }
+}
+
+// ============================================================
+// BoxBot — HP 30, 속도 80, 직진형
+// ============================================================
+class BoxBot extends Enemy {
+  constructor(x, y) {
+    super(x, y, {
+      hp: 30, speed: 80, damage: 10,
+      expReward: 5, scoreReward: 5,
+      collisionRadius: 14,
+    })
+  }
+
+  update(deltaTime, player) {
+    if (!this.isAlive()) return
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist > 0) {
+      this.x += (dx / dist) * this.speed * deltaTime
+      this.y += (dy / dist) * this.speed * deltaTime
+    }
+  }
+
+  render(ctx) {
+    if (!this.isAlive()) return
+    const x = this.x, y = this.y
+    // 박스 본체
+    ctx.fillStyle = '#C8AA7A'
+    ctx.fillRect(x - 13, y - 13, 26, 22)
+    ctx.strokeStyle = '#8B6914'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x - 13, y - 13, 26, 22)
+    // 테이프 (수평/수직 크로스)
+    ctx.strokeStyle = '#E8CC88'
+    ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(x - 13, y - 2); ctx.lineTo(x + 13, y - 2); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.lineTo(x, y + 9); ctx.stroke()
+    // 눈 (픽셀)
+    const blink = Math.floor(Date.now() / 1200) % 8 !== 0
+    ctx.fillStyle = '#1a1a1a'
+    if (blink) {
+      ctx.fillRect(x - 8, y - 10, 5, 4)
+      ctx.fillRect(x + 3, y - 10, 5, 4)
+    } else {
+      ctx.fillRect(x - 8, y - 8, 5, 2)
+      ctx.fillRect(x + 3, y - 8, 5, 2)
+    }
+    // 팔 (양 옆 작은 돌출)
+    ctx.fillStyle = '#A88050'
+    ctx.fillRect(x - 18, y - 5, 5, 8)
+    ctx.fillRect(x + 13, y - 5, 5, 8)
+    // 발
+    ctx.fillRect(x - 10, y + 9, 7, 5)
+    ctx.fillRect(x + 3, y + 9, 7, 5)
+    _drawHpBar(ctx, this, 28)
+  }
+}
+
+// ============================================================
+// CartBot — HP 55, 속도 130, 3초마다 돌진
+// ============================================================
+class CartBot extends Enemy {
+  constructor(x, y) {
+    super(x, y, {
+      hp: 55, speed: 130, damage: 15,
+      expReward: 10, scoreReward: 10,
+      collisionRadius: 16,
+    })
+    this.dashTimer = 0
+    this.dashCooldown = 3.0
+    this.isDashing = false
+    this.dashDuration = 0
+    this.dashDx = 0
+    this.dashDy = 0
+  }
+
+  update(deltaTime, player) {
+    if (!this.isAlive()) return
+
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    this.dashTimer += deltaTime
+
+    if (!this.isDashing && this.dashTimer >= this.dashCooldown) {
+      this.isDashing = true
+      this.dashTimer = 0
+      this.dashDuration = 0
+      if (dist > 0) {
+        this.dashDx = dx / dist
+        this.dashDy = dy / dist
+      }
+    }
+
+    if (this.isDashing) {
+      this.dashDuration += deltaTime
+      this.x += this.dashDx * this.speed * 2 * deltaTime
+      this.y += this.dashDy * this.speed * 2 * deltaTime
+      if (this.dashDuration >= 0.6) {
+        this.isDashing = false
+        this.dashDuration = 0
+      }
+    } else {
+      if (dist > 0) {
+        this.x += (dx / dist) * this.speed * deltaTime
+        this.y += (dy / dist) * this.speed * deltaTime
+      }
+    }
+  }
+
+  render(ctx) {
+    if (!this.isAlive()) return
+    const x = this.x, y = this.y
+    const dash = this.isDashing
+    ctx.save()
+    if (dash) {
+      ctx.shadowColor = '#FF6600'
+      ctx.shadowBlur = 16
+    }
+    // 카트 바구니 (와이어 느낌)
+    ctx.strokeStyle = dash ? '#FFAA44' : '#E8833A'
+    ctx.lineWidth = 2.5
+    ctx.strokeRect(x - 14, y - 8, 28, 18)
+    // 카트 안쪽 격자
+    ctx.lineWidth = 1
+    ctx.strokeStyle = dash ? '#FF8822' : '#C06020'
+    ctx.beginPath(); ctx.moveTo(x - 7, y - 8); ctx.lineTo(x - 7, y + 10); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(x + 7, y - 8); ctx.lineTo(x + 7, y + 10); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(x - 14, y + 2); ctx.lineTo(x + 14, y + 2); ctx.stroke()
+    // 손잡이
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = dash ? '#FFCC44' : '#CC7730'
+    ctx.beginPath(); ctx.moveTo(x - 10, y - 8); ctx.lineTo(x - 10, y - 16); ctx.lineTo(x + 10, y - 16); ctx.lineTo(x + 10, y - 8); ctx.stroke()
+    // 바퀴
+    ctx.fillStyle = '#222'
+    ctx.beginPath(); ctx.arc(x - 9, y + 13, 5, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(x + 9, y + 13, 5, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = '#555'
+    ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.arc(x - 9, y + 13, 5, 0, Math.PI * 2); ctx.stroke()
+    ctx.beginPath(); ctx.arc(x + 9, y + 13, 5, 0, Math.PI * 2); ctx.stroke()
+    ctx.restore()
+    _drawHpBar(ctx, this, 32)
+  }
+}
+
+// ============================================================
+// PCBot — HP 80, 속도 70, 원거리 유지, 오류탄, 방해 구역
+// ============================================================
+class PCBot extends Enemy {
+  constructor(x, y) {
+    super(x, y, {
+      hp: 80, speed: 70, damage: 12,
+      expReward: 15, scoreReward: 15,
+      collisionRadius: 18,
+    })
+    this.shootTimer = 0
+    this.shootInterval = 2.5
+    this.hazardTimer = 0
+    this.hazardInterval = 6.0
+    this.preferredMin = 150
+    this.preferredMax = 250
+  }
+
+  update(deltaTime, player) {
+    if (!this.isAlive()) return
+
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    // 거리 유지 이동
+    if (dist > 0) {
+      if (dist < this.preferredMin) {
+        this.x -= (dx / dist) * this.speed * deltaTime
+        this.y -= (dy / dist) * this.speed * deltaTime
+      } else if (dist > this.preferredMax) {
+        this.x += (dx / dist) * this.speed * deltaTime
+        this.y += (dy / dist) * this.speed * deltaTime
+      }
+    }
+
+    // 오류탄 발사
+    this.shootTimer += deltaTime
+    if (this.shootTimer >= this.shootInterval) {
+      this.shootTimer = 0
+      GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
+    }
+
+    // 방해 구역 생성
+    this.hazardTimer += deltaTime
+    if (this.hazardTimer >= this.hazardInterval) {
+      this.hazardTimer = 0
+      if (!GameState.hazardZones) GameState.hazardZones = []
+      GameState.hazardZones.push(new HazardZone(this.x, this.y))
+    }
+  }
+
+  render(ctx) {
+    if (!this.isAlive()) return
+    const x = this.x, y = this.y
+    const t = Date.now()
+    // 본체 (PC 타워)
+    ctx.fillStyle = '#9A9A9A'
+    ctx.fillRect(x - 10, y - 6, 20, 22)
+    ctx.strokeStyle = '#666'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x - 10, y - 6, 20, 22)
+    // 드라이브 슬롯
+    ctx.fillStyle = '#555'
+    ctx.fillRect(x - 7, y, 14, 3)
+    ctx.fillRect(x - 7, y + 5, 14, 3)
+    // 전원 버튼 (깜빡임)
+    ctx.fillStyle = Math.floor(t / 800) % 2 === 0 ? '#00FF44' : '#009922'
+    ctx.beginPath(); ctx.arc(x + 5, y - 2, 2.5, 0, Math.PI * 2); ctx.fill()
+    // CRT 모니터
+    ctx.fillStyle = '#555'
+    ctx.fillRect(x - 16, y - 32, 32, 24)
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 14, y - 30, 28, 20)
+    // 화면 (글리치 or 에러)
+    const glitch = Math.floor(t / 200) % 10 === 0
+    ctx.fillStyle = glitch ? '#FF2200' : '#003300'
+    ctx.fillRect(x - 12, y - 28, 24, 16)
+    // 코드 라인들
+    ctx.fillStyle = glitch ? '#FF6644' : '#00CC44'
+    ctx.fillRect(x - 10, y - 26, 14, 2)
+    ctx.fillRect(x - 10, y - 22, 18, 2)
+    ctx.fillRect(x - 10, y - 18, 10, 2)
+    // 커서
+    if (Math.floor(t / 500) % 2 === 0) {
+      ctx.fillStyle = '#00FF88'
+      ctx.fillRect(x - 2, y - 18, 3, 8)
+    }
+    // 모니터 받침
+    ctx.fillStyle = '#666'
+    ctx.fillRect(x - 4, y - 8, 8, 3)
+    _drawHpBar(ctx, this, 36)
+  }
+}
+
+// ============================================================
+// MirrorBot — HP 150, 속도 170, 예측 추적, 연속 돌진 3회
+// ============================================================
+class MirrorBot extends Enemy {
+  constructor(x, y) {
+    super(x, y, {
+      hp: 150, speed: 170, damage: 25,
+      expReward: 30, scoreReward: 30,
+      collisionRadius: 15,
+    })
+    this.dashPhase = 'idle'   // 'idle' | 'dashing' | 'gap'
+    this.dashCycleTimer = 0
+    this.dashCycleInterval = 4.0
+    this.dashCount = 0
+    this.dashDuration = 0
+    this.dashGapTimer = 0
+    this.dashDx = 0
+    this.dashDy = 0
+    this.prevPlayerX = null
+    this.prevPlayerY = null
+  }
+
+  update(deltaTime, player) {
+    if (!this.isAlive()) return
+
+    // 첫 프레임 초기화
+    if (this.prevPlayerX === null) {
+      this.prevPlayerX = player.x
+      this.prevPlayerY = player.y
+    }
+
+    if (this.dashPhase === 'idle') {
+      // 예측 이동: 플레이어 속도 추정 → 0.25초 후 위치 예측
+      const pvx = (player.x - this.prevPlayerX) / Math.max(deltaTime, 0.001)
+      const pvy = (player.y - this.prevPlayerY) / Math.max(deltaTime, 0.001)
+      const clampedVx = Math.max(-500, Math.min(500, pvx))
+      const clampedVy = Math.max(-500, Math.min(500, pvy))
+      const targetX = player.x + clampedVx * 0.25
+      const targetY = player.y + clampedVy * 0.25
+
+      const dx = targetX - this.x
+      const dy = targetY - this.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist > 0) {
+        this.x += (dx / dist) * this.speed * deltaTime
+        this.y += (dy / dist) * this.speed * deltaTime
+      }
+
+      this.dashCycleTimer += deltaTime
+      if (this.dashCycleTimer >= this.dashCycleInterval) {
+        this.dashCycleTimer = 0
+        this.dashPhase = 'dashing'
+        this.dashCount = 0
+        this.dashDuration = 0
+        this._startDash(player)
+      }
+
+    } else if (this.dashPhase === 'dashing') {
+      this.dashDuration += deltaTime
+      this.x += this.dashDx * this.speed * 2.5 * deltaTime
+      this.y += this.dashDy * this.speed * 2.5 * deltaTime
+      if (this.dashDuration >= 0.3) {
+        this.dashDuration = 0
+        this.dashCount++
+        if (this.dashCount < 3) {
+          this.dashPhase = 'gap'
+          this.dashGapTimer = 0
+        } else {
+          this.dashPhase = 'idle'
+        }
+      }
+
+    } else if (this.dashPhase === 'gap') {
+      this.dashGapTimer += deltaTime
+      if (this.dashGapTimer >= 0.2) {
+        this.dashPhase = 'dashing'
+        this.dashDuration = 0
+        this._startDash(player)
+      }
+    }
+
+    this.prevPlayerX = player.x
+    this.prevPlayerY = player.y
+  }
+
+  _startDash(player) {
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist > 0) {
+      this.dashDx = dx / dist
+      this.dashDy = dy / dist
+    }
+  }
+
+  onKilled() {
+    GameState.killCount++
+    GameState.mirrorBotKills = (GameState.mirrorBotKills || 0) + 1
+    GameState.score += this.scoreReward * 5
+    GameState.playerExp += this.expReward
+  }
+
+  render(ctx) {
+    if (!this.isAlive()) return
+    const x = this.x, y = this.y
+    const isDashing = this.dashPhase === 'dashing'
+    ctx.save()
+    // 돌진 잔상
+    if (isDashing) {
+      ctx.globalAlpha = 0.25
+      ctx.fillStyle = '#C0C0FF'
+      ctx.fillRect(x - 10 - 12, y - 9, 20, 30)
+      ctx.globalAlpha = 0.12
+      ctx.fillRect(x - 10 - 22, y - 9, 20, 30)
+      ctx.globalAlpha = 1
+      ctx.shadowColor = '#8888FF'
+      ctx.shadowBlur = 18
+    }
+    // 다리
+    ctx.fillStyle = isDashing ? '#E0E0FF' : '#A8A8B8'
+    ctx.fillRect(x - 9, y + 11, 7, 13)
+    ctx.fillRect(x + 2, y + 11, 7, 13)
+    // 발 (약간 넓게)
+    ctx.fillRect(x - 11, y + 21, 9, 4)
+    ctx.fillRect(x + 2, y + 21, 9, 4)
+    // 몸통
+    ctx.fillStyle = isDashing ? '#E8E8FF' : '#C0C0C8'
+    ctx.fillRect(x - 11, y - 10, 22, 22)
+    // 몸통 하이라이트 (반사)
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'
+    ctx.fillRect(x - 9, y - 8, 6, 18)
+    // 머리
+    ctx.fillStyle = isDashing ? '#E8E8FF' : '#C8C8D8'
+    ctx.beginPath()
+    ctx.arc(x, y - 19, 10, 0, Math.PI * 2)
+    ctx.fill()
+    // 머리 하이라이트
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'
+    ctx.beginPath()
+    ctx.arc(x - 3, y - 22, 5, 0, Math.PI * 2)
+    ctx.fill()
+    // 눈
+    ctx.fillStyle = isDashing ? '#FF3333' : '#6666FF'
+    ctx.shadowColor = isDashing ? '#FF3333' : '#6666FF'
+    ctx.shadowBlur = 8
+    ctx.fillRect(x - 6, y - 23, 4, 4)
+    ctx.fillRect(x + 2, y - 23, 4, 4)
+    ctx.restore()
+    _drawHpBar(ctx, this, 32)
+  }
+}
+
+// ============================================================
+// AIBot — HP 600, 속도 200, 보스, 충격파, 카트봇 소환
+// ============================================================
+class AIBot extends Enemy {
+  constructor(x, y) {
+    super(x, y, {
+      hp: 600, speed: 200, damage: 35,
+      expReward: 200, scoreReward: 200,
+      collisionRadius: 25,
+    })
+    this.dashTimer = 0
+    this.dashInterval = 5.0
+    this.isDashing = false
+    this.dashDuration = 0
+    this.dashDx = 0
+    this.dashDy = 0
+
+    this.shockwaveTimer = 0
+    this.shockwaveInterval = 8.0
+
+    this.summonTimer = 0
+    this.summonInterval = 20.0
+    this.hasSummonedOnHalf = false
+
+    // 등장 이벤트
+    GameState.aiBotReached = true
+  }
+
+  update(deltaTime, player) {
+    if (!this.isAlive()) return
+
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    // 돌진
+    this.dashTimer += deltaTime
+    if (!this.isDashing && this.dashTimer >= this.dashInterval) {
+      this.isDashing = true
+      this.dashTimer = 0
+      this.dashDuration = 0
+      if (dist > 0) {
+        this.dashDx = dx / dist
+        this.dashDy = dy / dist
+      }
+    }
+
+    if (this.isDashing) {
+      this.dashDuration += deltaTime
+      this.x += this.dashDx * this.speed * 3 * deltaTime
+      this.y += this.dashDy * this.speed * 3 * deltaTime
+      if (this.dashDuration >= 0.8) this.isDashing = false
+    } else {
+      if (dist > 0) {
+        this.x += (dx / dist) * this.speed * deltaTime
+        this.y += (dy / dist) * this.speed * deltaTime
+      }
+    }
+
+    // 충격파 (8초마다, 200px 이내)
+    this.shockwaveTimer += deltaTime
+    if (this.shockwaveTimer >= this.shockwaveInterval) {
+      this.shockwaveTimer = 0
+      if (dist < 200) {
+        player.takeDamage(40)
+        // 넉백: 플레이어를 AIBot 반대 방향으로 120px
+        if (dist > 0) {
+          const nx = dx / dist
+          const ny = dy / dist
+          player.x = Math.max(20, Math.min(780, player.x + nx * 120))
+          player.y = Math.max(20, Math.min(580, player.y + ny * 120))
+        }
+      }
+    }
+
+    // HP 50% 이하 — 카트봇 소환 (20초마다)
+    if (this.hp <= this.maxHp * 0.5) {
+      this.summonTimer += deltaTime
+      if (this.summonTimer >= this.summonInterval) {
+        this.summonTimer = 0
+        const offsets = [
+          { x: this.x + 120, y: this.y + 80 },
+          { x: this.x - 120, y: this.y - 80 },
+        ]
+        for (const pos of offsets) {
+          GameState.enemies.push(new CartBot(
+            Math.max(20, Math.min(780, pos.x)),
+            Math.max(20, Math.min(580, pos.y))
+          ))
+        }
+      }
+    }
+  }
+
+  onKilled() {
+    GameState.killCount++
+    GameState.aiBotKilled = true
+    GameState.score += this.scoreReward * 5
+    GameState.playerExp += this.expReward
+  }
+
+  render(ctx) {
+    if (!this.isAlive()) return
+    const x = this.x, y = this.y
+    const halfHp = this.hp <= this.maxHp * 0.5
+    const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'
+    const t = Date.now()
+
+    ctx.save()
+    ctx.shadowColor = eyeColor
+    ctx.shadowBlur = halfHp ? 30 : 20
+
+    // 맥동 광환 (바깥)
+    const pulse = 0.7 + 0.3 * Math.sin(t / 300)
+    ctx.globalAlpha = 0.18 * pulse
+    ctx.strokeStyle = eyeColor
+    ctx.lineWidth = halfHp ? 5 : 3
+    ctx.beginPath(); ctx.arc(x, y - 5, 42, 0, Math.PI * 2); ctx.stroke()
+    ctx.globalAlpha = 0.10 * pulse
+    ctx.beginPath(); ctx.arc(x, y - 5, 54, 0, Math.PI * 2); ctx.stroke()
+    ctx.globalAlpha = 1
+
+    // 다리
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 14, y + 15, 11, 20)
+    ctx.fillRect(x + 3, y + 15, 11, 20)
+    // 발
+    ctx.fillStyle = '#1a1a1a'
+    ctx.fillRect(x - 16, y + 31, 14, 5)
+    ctx.fillRect(x + 2, y + 31, 14, 5)
+
+    // 팔
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 24, y - 12, 10, 26)
+    ctx.fillRect(x + 14, y - 12, 10, 26)
+    // 손 (클로)
+    ctx.fillRect(x - 26, y + 10, 5, 8)
+    ctx.fillRect(x - 22, y + 12, 5, 8)
+    ctx.fillRect(x + 21, y + 10, 5, 8)
+    ctx.fillRect(x + 17, y + 12, 5, 8)
+
+    // 몸통
+    ctx.fillStyle = '#0d0d0d'
+    ctx.fillRect(x - 15, y - 13, 30, 29)
+    // 코어 (가슴)
+    ctx.fillStyle = halfHp ? '#FF3C3C' : '#00FFFF'
+    ctx.shadowBlur = 20
+    ctx.beginPath(); ctx.arc(x, y + 2, 6, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath(); ctx.arc(x, y + 2, 2.5, 0, Math.PI * 2); ctx.fill()
+
+    // 머리
+    ctx.shadowBlur = 0
+    ctx.fillStyle = '#111'
+    ctx.beginPath(); ctx.arc(x, y - 26, 14, 0, Math.PI * 2); ctx.fill()
+
+    // 눈
+    ctx.fillStyle = eyeColor
+    ctx.shadowColor = eyeColor
+    ctx.shadowBlur = 16
+    ctx.fillRect(x - 9, y - 30, 6, 5)
+    ctx.fillRect(x + 3, y - 30, 6, 5)
+
+    // HP 50% → 이마 금 균열
+    if (halfHp) {
+      ctx.strokeStyle = '#FF6644'
+      ctx.lineWidth = 1.5
+      ctx.shadowBlur = 6
+      ctx.beginPath()
+      ctx.moveTo(x - 2, y - 37)
+      ctx.lineTo(x + 1, y - 30)
+      ctx.lineTo(x - 1, y - 24)
+      ctx.stroke()
+    }
+
+    ctx.restore()
+
+    // HP 바
+    if (this.hp < this.maxHp) {
+      const barW = 54
+      ctx.fillStyle = '#222'
+      ctx.fillRect(x - barW / 2, y - 52, barW, 6)
+      ctx.fillStyle = halfHp ? '#FF3C3C' : '#00CCFF'
+      ctx.fillRect(x - barW / 2, y - 52, barW * (this.hp / this.maxHp), 6)
+      ctx.strokeStyle = '#444'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x - barW / 2, y - 52, barW, 6)
+    }
+  }
+}
+
+// ============================================================
+// ErrorBullet — PCBot 오류탄
+// ============================================================
+class ErrorBullet {
+  constructor(x, y, tx, ty) {
+    this.x = x
+    this.y = y
+    const dx = tx - x
+    const dy = ty - y
+    const d = Math.sqrt(dx * dx + dy * dy) || 1
+    this.vx = (dx / d) * 80
+    this.vy = (dy / d) * 80
+    this.alive = true
+    this.radius = 6
+  }
+
+  update(deltaTime, player) {
+    this.x += this.vx * deltaTime
+    this.y += this.vy * deltaTime
+
+    // 화면 밖 제거
+    if (this.x < -60 || this.x > 860 || this.y < -60 || this.y > 660) {
+      this.alive = false
+      return
+    }
+
+    // 플레이어 충돌
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    const pRadius = player.collisionRadius || 15
+    if (Math.sqrt(dx * dx + dy * dy) < this.radius + pRadius) {
+      this.alive = false
+      if (player.applyBuff) player.applyBuff('speed', 0.7, 2)
+    }
+  }
+
+  render(ctx) {
+    ctx.save()
+    ctx.fillStyle = '#FF4444'
+    ctx.shadowColor = '#FF0000'
+    ctx.shadowBlur = 8
+    ctx.beginPath()
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+}
+
+// ============================================================
+// HazardZone — PCBot 방해 구역 (반경 80px, 4초 지속)
+// ============================================================
+class HazardZone {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+    this.radius = 80
+    this.duration = 4.0
+    this.elapsed = 0
+    this.alive = true
+    this.damageCooldown = 0
+  }
+
+  update(deltaTime, player) {
+    this.elapsed += deltaTime
+    this.damageCooldown -= deltaTime
+
+    if (this.elapsed >= this.duration) {
+      this.alive = false
+      return
+    }
+
+    const dx = player.x - this.x
+    const dy = player.y - this.y
+    if (Math.sqrt(dx * dx + dy * dy) < this.radius && this.damageCooldown <= 0) {
+      player.takeDamage(8)
+      this.damageCooldown = 0.5
+    }
+  }
+
+  render(ctx) {
+    const fade = 1 - this.elapsed / this.duration
+    ctx.save()
+    ctx.globalAlpha = fade * 0.30
+    ctx.fillStyle = '#FF3300'
+    ctx.beginPath()
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.globalAlpha = fade * 0.65
+    ctx.strokeStyle = '#FF6600'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.restore()
+  }
+}
+
+// ============================================================
+// 전역 노출
+// ============================================================
+window.Enemy = Enemy
+window.BoxBot = BoxBot
+window.CartBot = CartBot
+window.PCBot = PCBot
+window.MirrorBot = MirrorBot
+window.AIBot = AIBot
+window.ErrorBullet = ErrorBullet
+window.HazardZone = HazardZone
+window.EnemyRegistry = { BoxBot, CartBot, PCBot, MirrorBot, AIBot }
+
+  </script>
+
+  <!-- entities/skills.js -->
+  <script>
+// entities/skills.js — M4: 스킬 확장
+// 액티브 7종 (Q/W/E/R 슬롯) + 패시브 2종
+
+// ---------------------------------------------------------------------------
+// 시각 이펙트 저장소
+// ---------------------------------------------------------------------------
+
+const _skillEffects = []
+
+function addEffect(effect) {
+  _skillEffects.push(effect)
+}
+
+function updateAndRenderEffects(ctx, deltaTime) {
+  for (let i = _skillEffects.length - 1; i >= 0; i--) {
+    const e = _skillEffects[i]
+    e.life -= deltaTime
+    if (e.life <= 0) { _skillEffects.splice(i, 1); continue }
+    const alpha = e.life / e.maxLife
+    ctx.globalAlpha = alpha
+    if (e.type === 'circle') {
+      ctx.beginPath()
+      ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2)
+      ctx.strokeStyle = e.color
+      ctx.lineWidth = 3
+      ctx.stroke()
+    } else if (e.type === 'hit') {
+      ctx.fillStyle = e.color
+      ctx.beginPath()
+      ctx.arc(e.x, e.y, e.radius * (1 - alpha * 0.5), 0, Math.PI * 2)
+      ctx.fill()
+    } else if (e.type === 'fan') {
+      ctx.beginPath()
+      ctx.moveTo(e.x, e.y)
+      ctx.arc(e.x, e.y, e.radius, e.startAngle, e.endAngle)
+      ctx.closePath()
+      ctx.fillStyle = e.color
+      ctx.fill()
+    }
+    ctx.globalAlpha = 1
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SkillManager
+// ---------------------------------------------------------------------------
+
+class SkillManager {
+  constructor(player) {
+    this.player = player
+    // 4개 슬롯 (Q/W/E/R) — 액티브 스킬 전용
+    this.slots = [null, null, null, null]
+    this.cooldowns = [0, 0, 0, 0]
+
+    // 패시브 스킬 (슬롯 없음)
+    this.passives = new Set()
+    this.autoSaveTimer = 0   // 자동 저장 타이머
+    this.napTimer = 0        // 낮잠자기 남은 시간 (>0 이면 진행 중)
+
+    // 스킬 데이터 정의
+    this.skillDefs = {
+      // ── 기존 스킬 ──
+      '긴급수정': {
+        name: '긴급 수정',
+        type: 'active',
+        cooldown: 5,
+        level: 1,
+        activate: (sm) => sm._emergencyFix(),
+      },
+      '디버그': {
+        name: '디버그',
+        type: 'active',
+        cooldown: 2.5,
+        level: 1,
+        activate: (sm) => sm._debug(),
+      },
+      // ── M4 액티브 스킬 ──
+      '우선순위정리': {
+        name: '우선순위정리',
+        type: 'active',
+        cooldown: 7,
+        level: 1,
+        activate: (sm) => sm._prioritySort(),
+      },
+      '커피': {
+        name: '커피 한 잔',
+        type: 'active',
+        cooldown: 20,
+        level: 1,
+        activate: (sm) => sm._coffee(),
+      },
+      '피규어청소': {
+        name: '피규어청소',
+        type: 'active',
+        cooldown: 12,
+        level: 1,
+        activate: (sm) => sm._cleanFigure(),
+      },
+      '강아지': {
+        name: '강아지쓰다듬기',
+        type: 'active',
+        cooldown: 20,
+        level: 1,
+        activate: (sm) => sm._petDog(),
+      },
+      '낮잠': {
+        name: '낮잠자기',
+        type: 'active',
+        cooldown: 30,
+        level: 1,
+        activate: (sm) => sm._nap(),
+      },
+      // ── M4 패시브 스킬 ──
+      '자동저장': {
+        name: '자동 저장',
+        type: 'passive',
+        level: 1,
+      },
+      '산책': {
+        name: '산책하기',
+        type: 'passive',
+        level: 1,
+      },
+    }
+  }
+
+  update(deltaTime) {
+    // 쿨다운 감소
+    for (let i = 0; i < 4; i++) {
+      if (this.cooldowns[i] > 0) this.cooldowns[i] = Math.max(0, this.cooldowns[i] - deltaTime)
+    }
+
+    // 자동 저장 패시브: 12초마다 보호막 1 충전
+    if (this.passives.has('자동저장')) {
+      this.autoSaveTimer += deltaTime
+      if (this.autoSaveTimer >= 12) {
+        this.autoSaveTimer = 0
+        this.player.addShield(1)
+        addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 32, color: '#44aaff', life: 0.5, maxLife: 0.5 })
+      }
+    }
+
+    // 낮잠자기 타이머: 1.5초 경과 시 HP 50% 회복
+    if (this.napTimer > 0) {
+      this.napTimer -= deltaTime
+      if (this.napTimer <= 0) {
+        this.napTimer = 0
+        const healAmt = Math.floor(this.player.maxHp * 0.5 * (GameState.healMultiplier || 1))
+        this.player.heal(healAmt)
+        addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 50, color: '#88ff88', life: 0.6, maxLife: 0.6 })
+      }
+    }
+  }
+
+  activateSkill(slot) {
+    const skillId = this.slots[slot]
+    if (!skillId) return
+    if (this.cooldowns[slot] > 0) return
+    const def = this.skillDefs[skillId]
+    if (!def || def.type === 'passive') return
+    def.activate(this)
+    this.cooldowns[slot] = def.cooldown
+  }
+
+  assignSkill(slot, skillId) {
+    this.slots[slot] = skillId
+    this.cooldowns[slot] = 0
+  }
+
+  // 패시브 스킬 습득 (슬롯 불필요)
+  assignPassive(skillId) {
+    this.passives.add(skillId)
+    if (skillId === '산책') {
+      // 이동속도 +30% 영구 적용
+      this.player.applyBuff('speed', 1.3, Infinity)
+    }
+    if (skillId === '자동저장') {
+      this.autoSaveTimer = 0
+    }
+  }
+
+  upgradeSkill(skillId) {
+    const def = this.skillDefs[skillId]
+    if (def) def.level = Math.min(4, (def.level || 1) + 1)
+  }
+
+  getSkillState(slot) {
+    const skillId = this.slots[slot]
+    if (!skillId) return { isEmpty: true }
+    const def = this.skillDefs[skillId]
+    if (!def) return { isEmpty: true }
+    return {
+      isEmpty: false,
+      name: def.name,
+      cooldownRemaining: this.cooldowns[slot],
+      cooldownMax: def.cooldown,
+      level: def.level || 1,
+      isPassive: def.type === 'passive',
+    }
+  }
+
+  renderEffects(ctx, deltaTime) {
+    updateAndRenderEffects(ctx, deltaTime)
+  }
+
+  // ── 스킬 구현 ──────────────────────────────────────────────────────────────
+
+  // 긴급 수정: 반경 120px 내 모든 적에게 피해 40
+  _emergencyFix() {
+    const p = this.player
+    const def = this.skillDefs['긴급수정']
+    let radius = 120
+    let damage = 40
+    if (def.level >= 2) damage += 20
+    if (def.level >= 3) radius += 40
+    if (def.level >= 4 && def.cooldown > 3) def.cooldown = 3
+    damage = Math.floor(damage * (GameState.skillDamageMult || 1))
+
+    for (const enemy of GameState.enemies) {
+      if (!enemy.isAlive()) continue
+      const dx = enemy.x - p.x
+      const dy = enemy.y - p.y
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+        enemy.takeDamage(damage)
+        addEffect({ type: 'hit', x: enemy.x, y: enemy.y, radius: 10, color: '#ffaa00', life: 0.3, maxLife: 0.3 })
+      }
+    }
+    addEffect({ type: 'circle', x: p.x, y: p.y, radius, color: '#ffaa00', life: 0.4, maxLife: 0.4 })
+  }
+
+  // 디버그: 가장 가까운 적 1명(Lv3+: 2명)에게 피해 70
+  _debug() {
+    const p = this.player
+    const def = this.skillDefs['디버그']
+    let damage = 70
+    let targetCount = 1
+    if (def.level >= 2) damage += 30
+    if (def.level >= 3) targetCount = 2
+    if (def.level >= 4 && def.cooldown > 1.5) def.cooldown = 1.5
+    damage = Math.floor(damage * (GameState.skillDamageMult || 1))
+
+    const alive = GameState.enemies.filter(e => e.isAlive())
+    alive.sort((a, b) => {
+      const da = (a.x - p.x) ** 2 + (a.y - p.y) ** 2
+      const db = (b.x - p.x) ** 2 + (b.y - p.y) ** 2
+      return da - db
+    })
+
+    for (let i = 0; i < Math.min(targetCount, alive.length); i++) {
+      alive[i].takeDamage(damage)
+      addEffect({ type: 'hit', x: alive[i].x, y: alive[i].y, radius: 14, color: '#44ffaa', life: 0.4, maxLife: 0.4 })
+    }
+  }
+
+  // 우선순위 정리: 전방 부채꼴(120°) 160px, 피해 30, 넉백 100px, 쿨 7초
+  _prioritySort() {
+    const p = this.player
+    const radius = 160
+    const damage = Math.floor(30 * (GameState.skillDamageMult || 1))
+    const knockbackDist = 100
+    const halfAngle = Math.PI / 3   // ±60° = 총 120°
+
+    const facingAngle = Math.atan2(p.lastDirY, p.lastDirX)
+
+    for (const enemy of GameState.enemies) {
+      if (!enemy.isAlive()) continue
+      const dx = enemy.x - p.x
+      const dy = enemy.y - p.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist > radius) continue
+
+      let diff = Math.atan2(dy, dx) - facingAngle
+      while (diff >  Math.PI) diff -= 2 * Math.PI
+      while (diff < -Math.PI) diff += 2 * Math.PI
+
+      if (Math.abs(diff) <= halfAngle) {
+        enemy.takeDamage(damage)
+        if (dist > 0) {
+          enemy.x = Math.max(20, Math.min(780, enemy.x + (dx / dist) * knockbackDist))
+          enemy.y = Math.max(20, Math.min(580, enemy.y + (dy / dist) * knockbackDist))
+        }
+        addEffect({ type: 'hit', x: enemy.x, y: enemy.y, radius: 8, color: '#ff8844', life: 0.3, maxLife: 0.3 })
+      }
+    }
+    addEffect({
+      type: 'fan',
+      x: p.x, y: p.y,
+      radius,
+      startAngle: facingAngle - halfAngle,
+      endAngle: facingAngle + halfAngle,
+      color: 'rgba(255,136,68,0.4)',
+      life: 0.35, maxLife: 0.35,
+    })
+  }
+
+  // 커피 한 잔: 이동속도 +40% (5초), 현재 쿨다운 20% 단축, 쿨 20초
+  _coffee() {
+    const p = this.player
+    p.applyBuff('speed', 1.4, 5)
+    for (let i = 0; i < 4; i++) {
+      if (this.cooldowns[i] > 0) this.cooldowns[i] *= 0.8
+    }
+    addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
+  }
+
+  // 피규어 청소하기: 받는 피해 -40% (4초), 주변 150px 적 넉백 120px, 쿨 12초
+  _cleanFigure() {
+    const p = this.player
+    p.applyBuff('damageReduction', 0.4, 4)
+
+    for (const enemy of GameState.enemies) {
+      if (!enemy.isAlive()) continue
+      const dx = enemy.x - p.x
+      const dy = enemy.y - p.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist <= 150 && dist > 0) {
+        enemy.x = Math.max(20, Math.min(780, enemy.x + (dx / dist) * 120))
+        enemy.y = Math.max(20, Math.min(580, enemy.y + (dy / dist) * 120))
+      }
+    }
+    addEffect({ type: 'circle', x: p.x, y: p.y, radius: 150, color: '#aaddff', life: 0.5, maxLife: 0.5 })
+  }
+
+  // 강아지 쓰다듬기: 최대 HP 25% 회복, 쿨 20초
+  _petDog() {
+    const p = this.player
+    const healAmt = Math.floor(p.maxHp * 0.25 * (GameState.healMultiplier || 1))
+    p.heal(healAmt)
+    addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
+  }
+
+  // 낮잠자기: 이동 1.5초 정지 후 HP 50% 회복, 쿨 30초
+  _nap() {
+    if (this.napTimer > 0) return
+    this.player.applyBuff('speed', 0, 1.5)
+    this.napTimer = 1.5
+    addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 전역 노출 및 자동 등록
+// ---------------------------------------------------------------------------
+
+window.SkillManager = SkillManager
+
+if (window.Game && Game.player) {
+  Game.registerSkillSystem(new SkillManager(Game.player))
+} else {
+  window.addEventListener('gameReady', () => {
+    if (Game.player) Game.registerSkillSystem(new SkillManager(Game.player))
+  })
+  window.addEventListener('playerCreated', (e) => {
+    Game.registerSkillSystem(new SkillManager(e.detail.player))
+  })
+}
+
+  </script>
+
+  <!-- systems/spawner.js -->
+  <script>
+// ============================================================
+// spawner.js — M3: 스폰 타임라인 확장 (GDD Part 4.4)
+// CartBot / PCBot / MirrorBot / AIBot 스폰 추가
+// ErrorBullet / HazardZone 업데이트 & 렌더링 처리
+// ============================================================
+
+const SPAWN_TIMELINE = [
+  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 2.5, maxEnemies: 5  },
+  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.0, maxEnemies: 8  },
+  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 1.8, maxEnemies: 10 },
+  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.5, maxEnemies: 12 },
+  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.0, maxEnemies: 8  },
+  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.0, maxEnemies: 10 },
+]
+
+class Spawner {
+  constructor() {
+    this.spawnTimer = 0
+    this.aiBotSpawned = false
+  }
+
+  update(deltaTime) {
+    if (!GameState.isRunning || GameState.isPaused) return
+
+    const player = Game.player
+    if (!player) return
+
+    // hazardZones 배열 보장
+    if (!GameState.hazardZones) GameState.hazardZones = []
+
+    const t = GameState.gameTime
+    const aliveCount = GameState.enemies.filter(e => e.isAlive()).length
+
+    // ── 2:50 이후: AIBot 단독 등장 ──────────────────────────
+    if (t >= 170) {
+      if (!this.aiBotSpawned) {
+        this.aiBotSpawned = true
+        GameState.aiBotIntro = true
+        GameState.aiBotIntroTimer = 0
+        const pos = this._randomEdgePosition()
+        GameState.enemies.push(new AIBot(pos.x, pos.y))
+      }
+    } else {
+      // ── 일반 스폰 타임라인 ────────────────────────────────
+      const phase = SPAWN_TIMELINE.find(p => t >= p.from && t < p.to)
+      if (phase) {
+        this.spawnTimer += deltaTime
+        if (this.spawnTimer >= phase.interval && aliveCount < phase.maxEnemies) {
+          this.spawnTimer = 0
+          this._spawnEnemy(phase.types)
+        }
+      }
+    }
+
+    // ── 죽은 적 정리 & 업데이트 ──────────────────────────────
+    GameState.enemies = GameState.enemies.filter(e => e.isAlive())
+    for (const enemy of GameState.enemies) {
+      enemy.update(deltaTime, player)
+    }
+
+    // ── 투사체 업데이트 & 정리 ───────────────────────────────
+    GameState.projectiles = GameState.projectiles.filter(p => p.alive)
+    for (const p of GameState.projectiles) {
+      p.update(deltaTime, player)
+    }
+
+    // ── 방해 구역 업데이트 & 정리 ────────────────────────────
+    GameState.hazardZones = GameState.hazardZones.filter(h => h.alive)
+    for (const h of GameState.hazardZones) {
+      h.update(deltaTime, player)
+    }
+  }
+
+  _spawnEnemy(types) {
+    const pos = this._randomEdgePosition()
+    const type = types[Math.floor(Math.random() * types.length)]
+    let enemy
+    switch (type) {
+      case 'BoxBot':    enemy = new BoxBot(pos.x, pos.y);    break
+      case 'CartBot':   enemy = new CartBot(pos.x, pos.y);   break
+      case 'PCBot':     enemy = new PCBot(pos.x, pos.y);     break
+      case 'MirrorBot': enemy = new MirrorBot(pos.x, pos.y); break
+      default:          enemy = new BoxBot(pos.x, pos.y)
+    }
+    GameState.enemies.push(enemy)
+  }
+
+  _randomEdgePosition() {
+    const margin = 30
+    const side = Math.floor(Math.random() * 4)
+    switch (side) {
+      case 0: return { x: Math.random() * 800, y: -margin }
+      case 1: return { x: Math.random() * 800, y: 600 + margin }
+      case 2: return { x: -margin, y: Math.random() * 600 }
+      case 3: return { x: 800 + margin, y: Math.random() * 600 }
+    }
+  }
+
+  // game.js의 렌더 루프에서 호출
+  renderEnemies(ctx) {
+    // 방해 구역 (바닥 레이어)
+    if (GameState.hazardZones) {
+      for (const h of GameState.hazardZones) h.render(ctx)
+    }
+    // 적
+    for (const enemy of GameState.enemies) {
+      enemy.render(ctx)
+    }
+    // 투사체 (상단 레이어)
+    for (const p of GameState.projectiles) {
+      p.render(ctx)
+    }
+  }
+}
+
+// 자동 등록
+window.Spawner = Spawner
+const _spawnerInstance = new Spawner()
+if (window.Game) {
+  Game.registerEnemySystem(_spawnerInstance)
+} else {
+  window.addEventListener('gameReady', () => {
+    Game.registerEnemySystem(_spawnerInstance)
+  })
+}
+
+  </script>
+
+  <!-- systems/levelup.js -->
+  <script>
+// systems/levelup.js
+// Haon — Player Skill & Progression Designer
+// 경험치/레벨업 시스템 (M1~M2 스코프)
+
+// ---------------------------------------------------------------------------
+// ctx.roundRect 폴리필 (구형 브라우저 대비)
+// ---------------------------------------------------------------------------
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2)
+    this.moveTo(x + radius, y)
+    this.lineTo(x + w - radius, y)
+    this.arcTo(x + w, y, x + w, y + radius, radius)
+    this.lineTo(x + w, y + h - radius)
+    this.arcTo(x + w, y + h, x + w - radius, y + h, radius)
+    this.lineTo(x + radius, y + h)
+    this.arcTo(x, y + h, x, y + h - radius, radius)
+    this.lineTo(x, y + radius)
+    this.arcTo(x, y, x + radius, y, radius)
+    this.closePath()
+    return this
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 경험치 커브 (GDD Part 5.1)
+// index = 레벨 (1~5), value = 해당 레벨 달성에 필요한 누적 경험치
+// ---------------------------------------------------------------------------
+const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
+
+// ---------------------------------------------------------------------------
+// 레벨업 선택지 정의
+// ---------------------------------------------------------------------------
+const LEVEL_UP_CHOICES = {
+  // 신규 스킬
+  '긴급수정_신규': {
+    label: '긴급 수정',
+    desc: '주변 범위 공격 (반경 120px, 피해 40)',
+    type: 'newSkill',
+    skillId: '긴급수정',
+  },
+  '디버그_신규': {
+    label: '디버그',
+    desc: '가장 가까운 적 단일 고화력 (피해 70)',
+    type: 'newSkill',
+    skillId: '디버그',
+  },
+  // 기존 스킬 강화
+  '긴급수정_강화': {
+    label: '긴급 수정 강화',
+    desc: '피해 +20 / 범위 +40px / 쿨다운 감소',
+    type: 'upgradeSkill',
+    skillId: '긴급수정',
+  },
+  '디버그_강화': {
+    label: '디버그 강화',
+    desc: '피해 +30 / 관통(2명) / 쿨다운 감소',
+    type: 'upgradeSkill',
+    skillId: '디버그',
+  },
+  // 기본 능력 강화
+  'hp강화': {
+    label: 'HP +15',
+    desc: '최대 체력이 15 증가합니다',
+    type: 'statBoost',
+    apply: (player) => { player.maxHp += 15; player.hp = Math.min(player.hp + 15, player.maxHp) },
+  },
+  'speed강화': {
+    label: '이동속도 +20',
+    desc: '이동 속도가 20px/s 증가합니다',
+    type: 'statBoost',
+    apply: (player) => { player.baseSpeed += 20 },
+  },
+  // M4 액티브 스킬
+  '우선순위정리_신규': {
+    label: '우선순위 정리',
+    desc: '전방 부채꼴 160px, 피해 30, 넉백 100px, 쿨 7초',
+    type: 'newSkill',
+    skillId: '우선순위정리',
+  },
+  '커피_신규': {
+    label: '커피 한 잔',
+    desc: '속도 +40% (5초), 쿨다운 -20%, 쿨 20초',
+    type: 'newSkill',
+    skillId: '커피',
+  },
+  '피규어청소_신규': {
+    label: '피규어 청소하기',
+    desc: '피해 감소 40% (4초) + 주변 적 넉백, 쿨 12초',
+    type: 'newSkill',
+    skillId: '피규어청소',
+  },
+  '강아지_신규': {
+    label: '강아지 쓰다듬기',
+    desc: '최대 HP 25% 즉시 회복, 쿨 20초',
+    type: 'newSkill',
+    skillId: '강아지',
+  },
+  '낮잠_신규': {
+    label: '낮잠자기',
+    desc: '1.5초 정지 후 HP 50% 회복, 쿨 30초',
+    type: 'newSkill',
+    skillId: '낮잠',
+  },
+  // M4 패시브 스킬
+  '자동저장_신규': {
+    label: '자동 저장',
+    desc: '12초마다 보호막 자동 충전 (패시브)',
+    type: 'passiveSkill',
+    skillId: '자동저장',
+  },
+  '산책_신규': {
+    label: '산책하기',
+    desc: '이동속도 +30% 영구 증가 (패시브)',
+    type: 'passiveSkill',
+    skillId: '산책',
+  },
+}
+
+// ---------------------------------------------------------------------------
+// LevelUpManager
+// ---------------------------------------------------------------------------
+class LevelUpManager {
+  constructor() {
+    this.pendingLevelUp = false
+    this.choices = []
+    this.choiceRects = []    // 클릭 감지용 { x, y, w, h }
+    this._checkLevel = 1
+  }
+
+  update() {
+    if (this.pendingLevelUp) return
+    const lvl = GameState.playerLevel
+    if (lvl >= EXP_THRESHOLDS.length) return  // 최대 레벨
+    const needed = EXP_THRESHOLDS[lvl]        // 다음 레벨 필요 누적 경험치
+    if (GameState.playerExp >= needed) {
+      GameState.playerLevel++
+      this._triggerLevelUp()
+    }
+  }
+
+  _triggerLevelUp() {
+    this.pendingLevelUp = true
+    this.flashStartTime = performance.now()
+    this.choices = this._generateChoices()
+    Game.pause()
+  }
+
+  _generateChoices() {
+    const sm = Game.skillManager
+    const ownedSlots = sm ? sm.slots.filter(Boolean) : []
+    const activePassives = sm ? [...sm.passives] : []
+    const hasEmptySlot = sm ? sm.slots.some(s => s === null) : false
+    const choices = []
+
+    // 미보유 액티브 스킬 신규 선택지 (빈 슬롯 있을 때만)
+    if (hasEmptySlot) {
+      if (!ownedSlots.includes('긴급수정'))    choices.push(LEVEL_UP_CHOICES['긴급수정_신규'])
+      if (!ownedSlots.includes('디버그'))      choices.push(LEVEL_UP_CHOICES['디버그_신규'])
+      if (!ownedSlots.includes('우선순위정리')) choices.push(LEVEL_UP_CHOICES['우선순위정리_신규'])
+      if (!ownedSlots.includes('커피'))        choices.push(LEVEL_UP_CHOICES['커피_신규'])
+      if (!ownedSlots.includes('피규어청소'))  choices.push(LEVEL_UP_CHOICES['피규어청소_신규'])
+      if (!ownedSlots.includes('강아지'))      choices.push(LEVEL_UP_CHOICES['강아지_신규'])
+      if (!ownedSlots.includes('낮잠'))        choices.push(LEVEL_UP_CHOICES['낮잠_신규'])
+    }
+
+    // 보유 스킬 강화 선택지
+    if (ownedSlots.includes('긴급수정')) choices.push(LEVEL_UP_CHOICES['긴급수정_강화'])
+    if (ownedSlots.includes('디버그'))   choices.push(LEVEL_UP_CHOICES['디버그_강화'])
+
+    // 미보유 패시브 스킬
+    if (!activePassives.includes('자동저장')) choices.push(LEVEL_UP_CHOICES['자동저장_신규'])
+    if (!activePassives.includes('산책'))     choices.push(LEVEL_UP_CHOICES['산책_신규'])
+
+    // 기본 능력 강화 (항상 풀에 포함)
+    choices.push(LEVEL_UP_CHOICES['hp강화'])
+    choices.push(LEVEL_UP_CHOICES['speed강화'])
+
+    // 랜덤 3개 선택
+    const shuffled = choices.sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 3)
+  }
+
+  applyChoice(index) {
+    if (index < 0 || index >= this.choices.length) return
+    const choice = this.choices[index]
+    const sm = Game.skillManager
+    const player = Game.player
+
+    if (choice.type === 'newSkill' && sm) {
+      const emptySlot = sm.slots.findIndex(s => s === null)
+      if (emptySlot !== -1) sm.assignSkill(emptySlot, choice.skillId)
+    } else if (choice.type === 'upgradeSkill' && sm) {
+      sm.upgradeSkill(choice.skillId)
+    } else if (choice.type === 'passiveSkill' && sm) {
+      sm.assignPassive(choice.skillId)
+    } else if (choice.type === 'statBoost' && player) {
+      choice.apply(player)
+    }
+
+    this.pendingLevelUp = false
+    this.choices = []
+    this.choiceRects = []
+    Game.resume()
+  }
+
+  handleClick(x, y) {
+    if (!this.pendingLevelUp) return
+    for (let i = 0; i < this.choiceRects.length; i++) {
+      const r = this.choiceRects[i]
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+        this.applyChoice(i)
+        return
+      }
+    }
+  }
+
+  render(ctx) {
+    if (!this.pendingLevelUp) return
+
+    // 황금빛 광원 플래시 (0.4초)
+    const elapsed = (performance.now() - this.flashStartTime) / 1000
+    if (elapsed < 0.4) {
+      const flashAlpha = (1 - elapsed / 0.4) * 0.7
+      const grad = ctx.createRadialGradient(400, 300, 0, 400, 300, 400)
+      grad.addColorStop(0, `rgba(255, 215, 0, ${flashAlpha})`)
+      grad.addColorStop(0.5, `rgba(255, 160, 0, ${flashAlpha * 0.4})`)
+      grad.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, 800, 600)
+    }
+
+    // 반투명 오버레이
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'
+    ctx.fillRect(0, 0, 800, 600)
+
+    // 제목
+    ctx.fillStyle = '#FFD700'
+    ctx.font = 'bold 32px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(`Level Up!  Lv ${GameState.playerLevel - 1} → ${GameState.playerLevel}`, 400, 160)
+
+    ctx.font = '16px monospace'
+    ctx.fillStyle = '#aaaaaa'
+    ctx.fillText('클릭하거나 1 / 2 / 3 키로 선택하세요', 400, 190)
+
+    // 카드 3개
+    this.choiceRects = []
+    const cardW = 200, cardH = 130
+    const startX = 400 - (cardW * 1.5 + 20)
+
+    for (let i = 0; i < this.choices.length; i++) {
+      const c = this.choices[i]
+      const cx = startX + i * (cardW + 20)
+      const cy = 220
+
+      // 카드 배경
+      ctx.fillStyle = '#1e2a4a'
+      ctx.strokeStyle = '#4466aa'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.roundRect(cx, cy, cardW, cardH, 8)
+      ctx.fill()
+      ctx.stroke()
+
+      // 번호
+      ctx.fillStyle = '#FFD700'
+      ctx.font = 'bold 18px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(`[${i + 1}]`, cx + cardW / 2, cy + 26)
+
+      // 이름
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 15px monospace'
+      ctx.fillText(c.label, cx + cardW / 2, cy + 52)
+
+      // 설명 (줄바꿈 처리)
+      ctx.fillStyle = '#aaccff'
+      ctx.font = '12px monospace'
+      const maxW = cardW - 16
+      this._wrapText(ctx, c.desc, cx + cardW / 2, cy + 74, maxW, 18, true)
+
+      this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
+    }
+
+    ctx.textAlign = 'left'
+  }
+
+  _wrapText(ctx, text, cx, y, maxWidth, lineHeight, centered) {
+    const words = text.split(' ')
+    let line = ''
+    for (const word of words) {
+      const test = line + word + ' '
+      if (ctx.measureText(test).width > maxWidth && line !== '') {
+        ctx.fillText(line.trim(), cx, y)
+        line = word + ' '
+        y += lineHeight
+      } else {
+        line = test
+      }
+    }
+    if (line) ctx.fillText(line.trim(), cx, y)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 전역 노출 및 이벤트 등록
+// ---------------------------------------------------------------------------
+
+window.LevelUpManager = LevelUpManager
+
+const _levelUpManager = new LevelUpManager()
+window._levelUpManager = _levelUpManager
+
+// 클릭 이벤트 등록
+window.addEventListener('click', (e) => {
+  const canvas = document.getElementById('gameCanvas')
+  if (!canvas) return
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = 800 / rect.width
+  const scaleY = 600 / rect.height
+  const x = (e.clientX - rect.left) * scaleX
+  const y = (e.clientY - rect.top) * scaleY
+  _levelUpManager.handleClick(x, y)
+})
+
+// 키보드 1/2/3 선택
+window.addEventListener('keydown', (e) => {
+  if (!_levelUpManager.pendingLevelUp) return
+  if (e.code === 'Digit1') _levelUpManager.applyChoice(0)
+  if (e.code === 'Digit2') _levelUpManager.applyChoice(1)
+  if (e.code === 'Digit3') _levelUpManager.applyChoice(2)
+})
+
+  </script>
+
+  <!-- systems/score.js -->
+  <script>
+// GDD Part 6.1 스코어 공식
+function calculateFinalScore() {
+  const s = GameState
+  const survivalScore = Math.floor(s.gameTime) * 10
+  const killScore = (s.basicKills || 0) * 5
+               + (s.pcBotKills || 0) * 10
+               + (s.mirrorBotKills || 0) * 30
+  const aiBonus = (s.aiBotReached ? 500 : 0)
+               + (s.aiBotKilled ? 1500 : 0)
+  const hpBonus = Game.player ? Math.floor(Game.player.hp * 2) : 0
+  const progressBonus = s.releaseProgress >= 100 ? 300 : 0
+  return survivalScore + killScore + aiBonus + hpBonus + progressBonus
+}
+
+// 매 프레임 호출: 출시 진행률 업데이트 (시간 기반)
+function updateReleaseProgress(deltaTime) {
+  if (!GameState.isRunning || GameState.isPaused) return
+  GameState.releaseProgress = Math.min(100, GameState.releaseProgress + deltaTime * 0.5)
+}
+
+// 게임 종료 시 최종 점수 확정 및 베스트 스코어 저장
+function finalizeScore() {
+  const final = calculateFinalScore()
+  GameState.score = final
+  const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
+  if (final > best) localStorage.setItem('devsurvival_best', String(final))
+  return final
+}
+
+window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore }
+
+  </script>
+
+  <!-- systems/meta.js -->
+  <script>
+// systems/meta.js — GDD Part 6.3 출시 포인트 & Part 6.4 메타 업그레이드
+// Mason 담당 (M5)
+
+// ── 업그레이드 정의 ────────────────────────────────────────────────────────
+const META_UPGRADES = [
+  { name: '조금 더 버티기',     desc: 'maxHP +15/단계',       costs: [15, 25, 40], maxLevel: 3 },
+  { name: '더 빠르게 움직이기', desc: '이동속도 +15px/s',      costs: [10, 20, 35], maxLevel: 3 },
+  { name: '정리 속도 높이기',   desc: '스킬 데미지 +8%',       costs: [15, 25, 40], maxLevel: 3 },
+  { name: '빠른 판단',          desc: '경험치 획득 +15%',      costs: [20, 35, 50], maxLevel: 3 },
+  { name: '회복 습관',          desc: '회복량 +10%',           costs: [15, 25, 40], maxLevel: 3 },
+  { name: '실수 줄이기',        desc: '받는 피해 -5%',         costs: [20, 35, 50], maxLevel: 3 },
+  { name: '준비된 하루',        desc: '시작 시 보호막 1 충전',  costs: [25],         maxLevel: 1 },
+  { name: '손이 빨라짐',        desc: '모든 쿨다운 -0.3초',    costs: [20, 35, 55], maxLevel: 3 },
+  { name: '성과 더 받기',       desc: '출시 포인트 획득 +15%', costs: [25, 40],     maxLevel: 2 },
+  { name: '시작부터 하나 더',   desc: '시작 시 기본 스킬 지급', costs: [30],         maxLevel: 1 },
+]
+
+// ── MetaManager ────────────────────────────────────────────────────────────
+const MetaManager = {
+  STORAGE_POINTS:   'devsurvival_points',
+  STORAGE_UPGRADES: 'devsurvival_upgrades',
+
+  loadPoints() {
+    return parseInt(localStorage.getItem(this.STORAGE_POINTS) || '0')
+  },
+  savePoints(p) {
+    localStorage.setItem(this.STORAGE_POINTS, String(Math.max(0, p)))
+  },
+
+  loadUpgrades() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(this.STORAGE_UPGRADES) || '[]')
+      const arr = Array(10).fill(0)
+      raw.forEach((v, i) => { if (i < 10) arr[i] = v || 0 })
+      return arr
+    } catch { return Array(10).fill(0) }
+  },
+  saveUpgrades(levels) {
+    localStorage.setItem(this.STORAGE_UPGRADES, JSON.stringify(levels))
+  },
+
+  // ── GDD 6.3: 출시 포인트 계산 ──────────────────────────────────────────
+  calculateReleasePoints() {
+    const s = GameState
+    let pts = 5                              // 플레이 시작 무조건
+    if (s.gameTime >= 60)           pts += 10  // 1분 생존
+    if (s.gameTime >= 120)          pts += 15  // 2분 생존
+    if (s._lastWin)                 pts += 20  // 3분 완주
+    if (s.killCount >= 50)          pts += 10  // 적 50마리 처치
+    pts += (s.mirrorBotKills || 0) * 8         // 미러봇 처치 × 8
+    if (s.aiBotReached)             pts += 15  // AI봇 도달
+    if (s.aiBotKilled)              pts += 30  // AI봇 처치
+    if (s.releaseProgress >= 100)   pts += 10  // 출시 진행률 100%
+
+    // 성과 더 받기 메타 보너스
+    const levels = this.loadUpgrades()
+    if (levels[8] > 0) pts = Math.floor(pts * (1 + 0.15 * levels[8]))
+    return pts
+  },
+
+  // 게임 종료 시 포인트 적립 (한 판당 1회)
+  awardPoints() {
+    const earned = this.calculateReleasePoints()
+    this.savePoints(this.loadPoints() + earned)
+    return earned
+  },
+
+  // ── GDD 6.4: 업그레이드 구매 ───────────────────────────────────────────
+  purchase(index) {
+    const levels = this.loadUpgrades()
+    const upg    = META_UPGRADES[index]
+    if (!upg || levels[index] >= upg.maxLevel) return false
+    const cost = upg.costs[levels[index]]
+    const pts  = this.loadPoints()
+    if (pts < cost) return false
+    this.savePoints(pts - cost)
+    levels[index]++
+    this.saveUpgrades(levels)
+    return true
+  },
+
+  // ── GDD 6.4: 메타 효과 적용 ────────────────────────────────────────────
+  applyToPlayer(player, skillManager) {
+    const lv = this.loadUpgrades()
+
+    // 0. 조금 더 버티기: maxHP +15/lv
+    if (lv[0] > 0) { player.maxHp += 15 * lv[0]; player.hp = player.maxHp }
+
+    // 1. 더 빠르게 움직이기: speed +15px/s/lv
+    if (lv[1] > 0) player.baseSpeed += 15 * lv[1]
+
+    // 2. 정리 속도 높이기: 스킬 데미지 배율 (skills.js에서 참조)
+    GameState.skillDamageMult = 1 + 0.08 * (lv[2] || 0)
+
+    // 3. 빠른 판단: 경험치 배율 (enemies.js에서 참조)
+    GameState.expMultiplier = 1 + 0.15 * (lv[3] || 0)
+
+    // 4. 회복 습관: 회복량 배율 (skills.js에서 참조)
+    GameState.healMultiplier = 1 + 0.10 * (lv[4] || 0)
+
+    // 5. 실수 줄이기: 받는 피해 감소 -5%/lv (영구 패시브)
+    if (lv[5] > 0) player.applyBuff('damageReduction', 0.05 * lv[5], Infinity)
+
+    // 6. 준비된 하루: 시작 시 보호막 1
+    if (lv[6] > 0) player.addShield(1)
+
+    // 7. 손이 빨라짐: 모든 액티브 스킬 쿨다운 -0.3초/lv
+    if (lv[7] > 0 && skillManager) {
+      const red = 0.3 * lv[7]
+      for (const def of Object.values(skillManager.skillDefs)) {
+        if (def.type === 'active') def.cooldown = Math.max(0.5, def.cooldown - red)
+      }
+    }
+
+    // 8. 성과 더 받기: calculateReleasePoints()에서 처리
+
+    // 9. 시작부터 하나 더: 랜덤 기본 스킬 1개 지급
+    if (lv[9] > 0 && skillManager) {
+      const basics = ['긴급수정', '디버그']
+      const pick = basics[Math.floor(Math.random() * basics.length)]
+      const emptySlot = skillManager.slots.findIndex(s => s === null)
+      if (emptySlot !== -1) skillManager.assignSkill(emptySlot, pick)
+    }
+  },
+
+  // ── 업그레이드 화면 렌더링 ─────────────────────────────────────────────
+  _buyRects: [],
+
+  render(ctx) {
+    if (GameState.screen !== 'upgrade') return
+
+    const levels = this.loadUpgrades()
+    const pts    = this.loadPoints()
+
+    // 배경
+    ctx.fillStyle = '#0d0d1a'
+    ctx.fillRect(0, 0, 800, 600)
+    ctx.strokeStyle = '#1a1a3e'
+    ctx.lineWidth = 1
+    for (let x = 0; x < 800; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,600); ctx.stroke() }
+    for (let y = 0; y < 600; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(800,y); ctx.stroke() }
+
+    // 헤더
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#4488ff'
+    ctx.font = 'bold 26px monospace'
+    ctx.fillText('업그레이드', 400, 34)
+    ctx.fillStyle = '#FFD700'
+    ctx.font = '15px monospace'
+    ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 56)
+
+    // 아이템 그리드 (2열 × 5행)
+    this._buyRects = []
+    const colW = 384, rowH = 90
+    const colX = [8, 408]
+    const startY = 64
+
+    for (let i = 0; i < META_UPGRADES.length; i++) {
+      const col  = i % 2
+      const row  = Math.floor(i / 2)
+      const bx   = colX[col]
+      const by   = startY + row * rowH
+      const upg  = META_UPGRADES[i]
+      const lv   = levels[i]
+      const maxed  = lv >= upg.maxLevel
+      const cost   = maxed ? 0 : upg.costs[lv]
+      const canBuy = !maxed && pts >= cost
+
+      // 카드 배경
+      ctx.fillStyle = '#111827'
+      ctx.strokeStyle = maxed ? '#44aa44' : canBuy ? '#4466aa' : '#2a2a4a'
+      ctx.lineWidth = 1.5
+      ctx.fillRect(bx, by, colW, rowH - 6)
+      ctx.strokeRect(bx, by, colW, rowH - 6)
+
+      // 이름
+      ctx.fillStyle = '#ddeeff'
+      ctx.font = 'bold 12px monospace'
+      ctx.textAlign = 'left'
+      ctx.fillText(upg.name, bx + 8, by + 18)
+
+      // 레벨 별
+      let stars = ''
+      for (let s = 0; s < upg.maxLevel; s++) stars += s < lv ? '★' : '☆'
+      ctx.fillStyle = '#FFD700'
+      ctx.font = '12px monospace'
+      ctx.textAlign = 'right'
+      ctx.fillText(stars, bx + colW - 8, by + 18)
+
+      // 효과 설명
+      ctx.fillStyle = '#778899'
+      ctx.font = '11px monospace'
+      ctx.textAlign = 'left'
+      ctx.fillText(lv > 0 ? `${upg.desc} (현재 ${lv}단계)` : upg.desc, bx + 8, by + 38)
+
+      // 구매 버튼 또는 MAX
+      if (maxed) {
+        ctx.fillStyle = '#44aa44'
+        ctx.font = 'bold 12px monospace'
+        ctx.textAlign = 'right'
+        ctx.fillText('MAX', bx + colW - 8, by + 62)
+        this._buyRects.push(null)
+      } else {
+        const btnX = bx + colW - 104
+        const btnY = by + 46
+        const btnW = 96, btnH = 24
+        ctx.fillStyle = canBuy ? '#1e3a6e' : '#151520'
+        ctx.strokeStyle = canBuy ? '#4488ff' : '#333'
+        ctx.lineWidth = 1
+        ctx.fillRect(btnX, btnY, btnW, btnH)
+        ctx.strokeRect(btnX, btnY, btnW, btnH)
+        ctx.fillStyle = canBuy ? '#ffffff' : '#445'
+        ctx.font = '11px monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 16)
+        this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
+      }
+    }
+
+    // 돌아가기 버튼
+    ctx.fillStyle = '#0d1a0d'
+    ctx.strokeStyle = '#44aa44'
+    ctx.lineWidth = 2
+    ctx.fillRect(300, 540, 200, 44)
+    ctx.strokeRect(300, 540, 200, 44)
+    ctx.fillStyle = '#88ff88'
+    ctx.font = 'bold 16px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('[ 돌아가기 ]', 400, 568)
+    ctx.textAlign = 'left'
+  },
+
+  handleClick(x, y) {
+    if (GameState.screen !== 'upgrade') return
+    for (const rect of this._buyRects) {
+      if (!rect) continue
+      if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) {
+        this.purchase(rect.index)
+        return
+      }
+    }
+    if (x >= 300 && x <= 500 && y >= 540 && y <= 584) {
+      GameState.screen = 'lobby'
+    }
+  },
+}
+
+window.MetaManager = MetaManager
+
+window.addEventListener('click', (e) => {
+  const canvas = document.getElementById('gameCanvas')
+  if (!canvas) return
+  const rect = canvas.getBoundingClientRect()
+  MetaManager.handleClick(
+    (e.clientX - rect.left) * (800 / rect.width),
+    (e.clientY - rect.top)  * (600 / rect.height)
+  )
+})
+
+  </script>
+
+  <!-- ui/hud.js -->
+  <script>
+class HUD {
+  render(ctx, gameTime) {
+    if (GameState.screen !== 'playing' && GameState.screen !== 'paused') return
+    const player = Game.player
+    if (!player) return
+    this._drawTopBar(ctx, player, gameTime)
+    this._drawBottomBar(ctx)
+    this._drawDangerOverlay(ctx, gameTime)
+  }
+
+  _drawTopBar(ctx, player, gameTime) {
+    // 상단 반투명 바 배경
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(0, 0, 800, 48)
+
+    // HP 바
+    ctx.fillStyle = '#333'
+    ctx.fillRect(12, 12, 180, 16)
+    const hpRatio = player.hp / player.maxHp
+    ctx.fillStyle = hpRatio < 0.3 ? '#ff3333' : hpRatio < 0.6 ? '#ffaa00' : '#33cc66'
+    ctx.fillRect(12, 12, 180 * hpRatio, 16)
+    ctx.strokeStyle = '#555'
+    ctx.lineWidth = 1
+    ctx.strokeRect(12, 12, 180, 16)
+    ctx.fillStyle = '#fff'
+    ctx.font = '12px monospace'
+    ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 24)
+
+    // 보호막 아이콘
+    if (player.shields > 0) {
+      ctx.fillStyle = '#44aaff'
+      ctx.font = '12px monospace'
+      ctx.fillText(`🛡 ${player.shields}`, 200, 24)
+    }
+
+    // 타이머 (남은 시간)
+    const remaining = Math.max(0, 180 - gameTime)
+    const mins = Math.floor(remaining / 60)
+    const secs = Math.floor(remaining % 60)
+    const timeStr = `${mins}:${secs.toString().padStart(2,'0')}`
+    ctx.fillStyle = remaining <= 30 ? '#ff4444' : '#ffffff'
+    ctx.font = 'bold 22px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(timeStr, 400, 30)
+    ctx.textAlign = 'left'
+
+    // 출시 진행률
+    ctx.fillStyle = '#333'
+    ctx.fillRect(520, 12, 140, 10)
+    ctx.fillStyle = '#44ffaa'
+    ctx.fillRect(520, 12, 140 * (GameState.releaseProgress / 100), 10)
+    ctx.fillStyle = '#aaa'
+    ctx.font = '11px monospace'
+    ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 522, 34)
+
+    // 점수
+    ctx.fillStyle = '#FFD700'
+    ctx.font = '13px monospace'
+    ctx.textAlign = 'right'
+    ctx.fillText(`${GameState.score.toLocaleString()}`, 788, 24)
+    ctx.textAlign = 'left'
+  }
+
+  _drawBottomBar(ctx) {
+    // 하단 반투명 바 배경
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(0, 548, 800, 52)
+
+    // 스킬 슬롯 4개 (Q/W/E/R)
+    const keys = ['Q','W','E','R']
+    for (let i = 0; i < 4; i++) {
+      const sx = 12 + i * 112
+      const sy = 553
+      const state = Game.skillManager?.getSkillState(i) || { isEmpty: true }
+
+      if (state.isEmpty) {
+        ctx.fillStyle = '#1a1a2e'
+        ctx.strokeStyle = '#333'
+      } else if (state.cooldownRemaining > 0) {
+        ctx.fillStyle = '#111'
+        ctx.strokeStyle = '#444'
+      } else {
+        ctx.fillStyle = '#1e2a4a'
+        ctx.strokeStyle = '#4488ff'
+      }
+      ctx.lineWidth = 1.5
+      ctx.fillRect(sx, sy, 100, 40)
+      ctx.strokeRect(sx, sy, 100, 40)
+
+      // 키 레이블
+      ctx.fillStyle = '#888'
+      ctx.font = '10px monospace'
+      ctx.fillText(keys[i], sx + 4, sy + 13)
+
+      if (!state.isEmpty) {
+        // 스킬 이름
+        ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
+        ctx.font = '11px monospace'
+        ctx.fillText(state.name.substring(0, 7), sx + 14, sy + 22)
+
+        // 쿨다운 숫자
+        if (state.cooldownRemaining > 0) {
+          ctx.fillStyle = '#ff8844'
+          ctx.font = 'bold 13px monospace'
+          ctx.textAlign = 'center'
+          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 50, sy + 36)
+          ctx.textAlign = 'left'
+
+          // 쿨다운 진행 바
+          ctx.fillStyle = '#224'
+          ctx.fillRect(sx, sy + 38, 100, 3)
+          const ratio = 1 - state.cooldownRemaining / state.cooldownMax
+          ctx.fillStyle = '#4488ff'
+          ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
+        } else {
+          ctx.fillStyle = '#44ff88'
+          ctx.font = '10px monospace'
+          ctx.fillText('READY', sx + 34, sy + 36)
+        }
+      }
+    }
+
+    // 레벨 & 경험치 바
+    ctx.fillStyle = '#aaa'
+    ctx.font = '12px monospace'
+    ctx.fillText(`Lv.${GameState.playerLevel}`, 462, 568)
+
+    const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
+    const lvl = GameState.playerLevel
+    const expNeeded = lvl < EXP_THRESHOLDS.length ? EXP_THRESHOLDS[lvl] : EXP_THRESHOLDS[EXP_THRESHOLDS.length - 1]
+    const expCurrent = GameState.playerExp
+    const expRatio = expNeeded > 0 ? Math.min(1, expCurrent / expNeeded) : 1
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(460, 576, 200, 8)
+    ctx.fillStyle = '#aa66ff'
+    ctx.fillRect(460, 576, 200 * expRatio, 8)
+    ctx.strokeStyle = '#555'
+    ctx.lineWidth = 1
+    ctx.strokeRect(460, 576, 200, 8)
+
+    // 처치 수
+    ctx.fillStyle = '#aaa'
+    ctx.font = '11px monospace'
+    ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
+  }
+
+  _drawDangerOverlay(ctx, gameTime) {
+    if (!GameState.playerDanger) return
+    const alpha = 0.25 + 0.2 * Math.abs(Math.sin(gameTime * Math.PI * 2))
+    ctx.strokeStyle = `rgba(255,50,50,${alpha})`
+    ctx.lineWidth = 14
+    ctx.strokeRect(7, 7, 786, 586)
+  }
+}
+
+window.HUD = HUD
+const _hud = new HUD()
+window._hud = _hud
+
+  </script>
+
+  <!-- ui/lobby.js -->
+  <script>
+class Lobby {
+  constructor() {
+    this.startBtnRect   = { x: 300, y: 330, w: 200, h: 50 }
+    this.upgradeBtnRect = { x: 300, y: 392, w: 200, h: 44 }
+    this._bindClick()
+  }
+
+  _bindClick() {
+    window.addEventListener('click', (e) => {
+      if (GameState.screen !== 'lobby') return
+      const canvas = document.getElementById('gameCanvas')
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const scaleX = 800 / rect.width
+      const scaleY = 600 / rect.height
+      const x = (e.clientX - rect.left) * scaleX
+      const y = (e.clientY - rect.top)  * scaleY
+
+      const s = this.startBtnRect
+      if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) {
+        Game.start()
+        return
+      }
+      const u = this.upgradeBtnRect
+      if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
+        GameState.screen = 'upgrade'
+      }
+    })
+  }
+
+  render(ctx) {
+    if (GameState.screen !== 'lobby') return
+
+    // 배경
+    ctx.fillStyle = '#0d0d1a'
+    ctx.fillRect(0, 0, 800, 600)
+    ctx.strokeStyle = '#1a1a3e'
+    ctx.lineWidth = 1
+    for (let x = 0; x < 800; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,600); ctx.stroke() }
+    for (let y = 0; y < 600; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(800,y); ctx.stroke() }
+
+    // 타이틀
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#4488ff'
+    ctx.font = 'bold 56px monospace'
+    ctx.fillText('DEV', 400, 160)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 56px monospace'
+    ctx.fillText('SURVIVAL', 400, 220)
+
+    // 부제
+    ctx.fillStyle = '#7788aa'
+    ctx.font = '16px monospace'
+    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 258)
+
+    // 최고 기록
+    const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
+    ctx.fillStyle = '#FFD700'
+    ctx.font = '14px monospace'
+    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 400, 290)
+
+    // 출시 포인트
+    const pts = window.MetaManager ? MetaManager.loadPoints() : 0
+    ctx.fillStyle = '#88ffaa'
+    ctx.font = '14px monospace'
+    ctx.fillText(`보유 출시 포인트: ${pts}`, 400, 312)
+
+    // 시작 버튼
+    const s = this.startBtnRect
+    ctx.fillStyle = '#1e3a6e'
+    ctx.strokeStyle = '#4488ff'
+    ctx.lineWidth = 2
+    ctx.fillRect(s.x, s.y, s.w, s.h)
+    ctx.strokeRect(s.x, s.y, s.w, s.h)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 20px monospace'
+    ctx.fillText('[ 시작하기 ]', 400, 363)
+
+    // 업그레이드 버튼
+    const u = this.upgradeBtnRect
+    ctx.fillStyle = '#0d1a0d'
+    ctx.strokeStyle = '#44aa44'
+    ctx.lineWidth = 2
+    ctx.fillRect(u.x, u.y, u.w, u.h)
+    ctx.strokeRect(u.x, u.y, u.w, u.h)
+    ctx.fillStyle = '#88ff88'
+    ctx.font = 'bold 16px monospace'
+    ctx.fillText('[ 업그레이드 ]', 400, 420)
+
+    // 조작 안내
+    ctx.fillStyle = '#556677'
+    ctx.font = '13px monospace'
+    ctx.fillText('WASD 이동  /  Q~R 스킬 사용', 400, 470)
+    ctx.fillText('레벨업 시 1·2·3 키 또는 클릭으로 선택', 400, 492)
+
+    ctx.textAlign = 'left'
+  }
+}
+
+window.Lobby = Lobby
+const _lobby = new Lobby()
+window._lobby = _lobby
+
+  </script>
+
+  <!-- ui/result.js -->
+  <script>
+class Result {
+  constructor() {
+    this.restartBtnRect = { x: 210, y: 480, w: 160, h: 46 }
+    this.upgradeBtnRect = { x: 430, y: 480, w: 160, h: 46 }
+    this._bindClick()
+  }
+
+  _bindClick() {
+    window.addEventListener('click', (e) => {
+      if (GameState.screen !== 'result') return
+      const canvas = document.getElementById('gameCanvas')
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const scaleX = 800 / rect.width
+      const scaleY = 600 / rect.height
+      const x = (e.clientX - rect.left) * scaleX
+      const y = (e.clientY - rect.top)  * scaleY
+
+      const r = this.restartBtnRect
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+        Game.restart()
+        return
+      }
+      const u = this.upgradeBtnRect
+      if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
+        GameState.screen = 'upgrade'
+      }
+    })
+  }
+
+  render(ctx) {
+    if (GameState.screen !== 'result') return
+
+    const win = GameState._lastWin
+
+    // 배경
+    ctx.fillStyle = win ? '#0a1a0a' : '#0d0d0d'
+    ctx.fillRect(0, 0, 800, 600)
+
+    // 테두리
+    ctx.strokeStyle = win ? '#33cc66' : '#cc3333'
+    ctx.lineWidth = 4
+    ctx.strokeRect(4, 4, 792, 592)
+
+    // 타이틀
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 64px monospace'
+    ctx.fillStyle = win ? '#66ff88' : '#ff6666'
+    ctx.fillText(win ? 'Dev Win!' : 'AI Win!', 400, 120)
+
+    // 부제
+    ctx.font = '17px monospace'
+    ctx.fillStyle = '#888'
+    ctx.fillText(win ? '오늘은 내가 버텼다.' : 'AI가 더 잘했다.', 400, 150)
+
+    // 통계 박스
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'
+    ctx.fillRect(200, 170, 400, 200)
+    ctx.strokeStyle = '#334'
+    ctx.lineWidth = 1
+    ctx.strokeRect(200, 170, 400, 200)
+
+    const t    = GameState.gameTime
+    const mins = Math.floor(t / 60)
+    const secs = Math.floor(t % 60)
+
+    ctx.fillStyle = '#ccddff'
+    ctx.font = '15px monospace'
+    ctx.textAlign = 'left'
+    const statsX = 230
+    ctx.fillText('최종 점수',   statsX, 200)
+    ctx.fillText('생존 시간',   statsX, 226)
+    ctx.fillText('처치 수',     statsX, 252)
+    ctx.fillText('출시 진행률', statsX, 278)
+    ctx.fillText('도달 레벨',   statsX, 304)
+
+    ctx.textAlign = 'right'
+    ctx.fillStyle = '#ffffff'
+    const statsRX = 570
+    ctx.fillText(GameState.score.toLocaleString(),          statsRX, 200)
+    ctx.fillText(`${mins}:${secs.toString().padStart(2,'0')}`, statsRX, 226)
+    ctx.fillText(`${GameState.killCount}마리`,              statsRX, 252)
+    ctx.fillText(`${Math.floor(GameState.releaseProgress)}%`, statsRX, 278)
+    ctx.fillText(`Lv.${GameState.playerLevel}`,             statsRX, 304)
+
+    // 획득 출시 포인트
+    const earned = GameState.lastEarnedPoints || 0
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#FFD700'
+    ctx.font = 'bold 18px monospace'
+    ctx.fillText(`출시 포인트 +${earned} 획득!`, 400, 400)
+    const total = window.MetaManager ? MetaManager.loadPoints() : 0
+    ctx.fillStyle = '#88ffaa'
+    ctx.font = '13px monospace'
+    ctx.fillText(`(누적: ${total}pt)`, 400, 420)
+
+    // 다시 하기 버튼
+    const r = this.restartBtnRect
+    ctx.fillStyle = '#1e2a4a'
+    ctx.strokeStyle = '#4488ff'
+    ctx.lineWidth = 2
+    ctx.fillRect(r.x, r.y, r.w, r.h)
+    ctx.strokeRect(r.x, r.y, r.w, r.h)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 15px monospace'
+    ctx.fillText('[ 다시 하기 ]', r.x + r.w / 2, r.y + 29)
+
+    // 업그레이드 버튼
+    const u = this.upgradeBtnRect
+    ctx.fillStyle = '#0d1a0d'
+    ctx.strokeStyle = '#44aa44'
+    ctx.lineWidth = 2
+    ctx.fillRect(u.x, u.y, u.w, u.h)
+    ctx.strokeRect(u.x, u.y, u.w, u.h)
+    ctx.fillStyle = '#88ff88'
+    ctx.font = 'bold 15px monospace'
+    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 29)
+
+    ctx.textAlign = 'left'
+  }
+}
+
+window.Result = Result
+const _result = new Result()
+window._result = _result
+
+  </script>
+
+  <!-- ui/joystick.js -->
+  <script>
+// ui/joystick.js — 모바일 가상 조이스틱 (GDD Part 2.2)
+// 터치 디바이스에서만 활성화
+
+const JOYSTICK_RADIUS = 60
+const KNOB_RADIUS = 24
+const SKILL_BUTTONS = [
+  { slot: 0, label: 'Q', x: 680, y: 460 },
+  { slot: 1, label: 'W', x: 740, y: 420 },
+  { slot: 2, label: 'E', x: 740, y: 490 },
+  { slot: 3, label: 'R', x: 680, y: 530 },
+]
+const BTN_RADIUS = 28
+
+class VirtualJoystick {
+  constructor() {
+    this.active = false
+    this.baseX = 0
+    this.baseY = 0
+    this.knobX = 0
+    this.knobY = 0
+    this.touchId = null
+
+    // 스킬 버튼 터치 ID 추적
+    this.skillTouchIds = {}
+
+    this._isTouchDevice = false
+    this._bindEvents()
+  }
+
+  _bindEvents() {
+    const canvas = document.getElementById('gameCanvas')
+    if (!canvas) return
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault()
+      this._isTouchDevice = true
+      for (const t of e.changedTouches) {
+        const { cx, cy } = this._toCanvas(t, canvas)
+        // 스킬 버튼 체크 (오른쪽 영역)
+        const btn = this._hitSkillButton(cx, cy)
+        if (btn !== -1) {
+          this.skillTouchIds[t.identifier] = btn
+          if (GameState.screen === 'playing' && !GameState.isPaused) {
+            Game.skillManager?.activateSkill(btn)
+          }
+          continue
+        }
+        // 조이스틱 (왼쪽 절반, 미사용 터치만)
+        if (cx < 500 && this.touchId === null) {
+          this.touchId = t.identifier
+          this.active = true
+          this.baseX = cx
+          this.baseY = cy
+          this.knobX = cx
+          this.knobY = cy
+        }
+      }
+    }, { passive: false })
+
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault()
+      for (const t of e.changedTouches) {
+        if (t.identifier !== this.touchId) continue
+        const { cx, cy } = this._toCanvas(t, canvas)
+        const dx = cx - this.baseX
+        const dy = cy - this.baseY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const clamped = Math.min(dist, JOYSTICK_RADIUS)
+        const angle = Math.atan2(dy, dx)
+        this.knobX = this.baseX + Math.cos(angle) * clamped
+        this.knobY = this.baseY + Math.sin(angle) * clamped
+        this._updateKeys(dx, dy, dist)
+      }
+    }, { passive: false })
+
+    canvas.addEventListener('touchend', e => {
+      e.preventDefault()
+      for (const t of e.changedTouches) {
+        if (t.identifier === this.touchId) {
+          this.active = false
+          this.touchId = null
+          this._clearKeys()
+        }
+        if (t.identifier in this.skillTouchIds) {
+          delete this.skillTouchIds[t.identifier]
+        }
+      }
+    }, { passive: false })
+
+    canvas.addEventListener('touchcancel', e => {
+      this.active = false
+      this.touchId = null
+      this._clearKeys()
+      this.skillTouchIds = {}
+    }, { passive: false })
+  }
+
+  _toCanvas(touch, canvas) {
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = 800 / rect.width
+    const scaleY = 600 / rect.height
+    return {
+      cx: (touch.clientX - rect.left) * scaleX,
+      cy: (touch.clientY - rect.top) * scaleY,
+    }
+  }
+
+  _hitSkillButton(cx, cy) {
+    for (const btn of SKILL_BUTTONS) {
+      const dx = cx - btn.x
+      const dy = cy - btn.y
+      if (Math.sqrt(dx * dx + dy * dy) < BTN_RADIUS) return btn.slot
+    }
+    return -1
+  }
+
+  _updateKeys(dx, dy, dist) {
+    if (!window.inputKeys) return
+    const dead = 10
+    inputKeys['KeyW'] = dy < -dead
+    inputKeys['KeyS'] = dy > dead
+    inputKeys['KeyA'] = dx < -dead
+    inputKeys['KeyD'] = dx > dead
+  }
+
+  _clearKeys() {
+    if (!window.inputKeys) return
+    inputKeys['KeyW'] = false
+    inputKeys['KeyS'] = false
+    inputKeys['KeyA'] = false
+    inputKeys['KeyD'] = false
+  }
+
+  render(ctx) {
+    if (!this._isTouchDevice) return
+    if (GameState.screen !== 'playing') return
+
+    ctx.save()
+    ctx.globalAlpha = 0.5
+
+    // 조이스틱 베이스
+    if (this.active) {
+      ctx.beginPath()
+      ctx.arc(this.baseX, this.baseY, JOYSTICK_RADIUS, 0, Math.PI * 2)
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'
+      ctx.fill()
+
+      // 조이스틱 노브
+      ctx.beginPath()
+      ctx.arc(this.knobX, this.knobY, KNOB_RADIUS, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'
+      ctx.fill()
+    }
+
+    // 스킬 버튼
+    ctx.globalAlpha = 0.7
+    for (const btn of SKILL_BUTTONS) {
+      const skill = Game.skillManager?.slots?.[btn.slot]
+      const cd = Game.skillManager?.cooldowns?.[btn.slot] ?? 0
+      const maxCd = Game.skillManager?.maxCooldowns?.[btn.slot] ?? 1
+
+      // 버튼 배경
+      ctx.beginPath()
+      ctx.arc(btn.x, btn.y, BTN_RADIUS, 0, Math.PI * 2)
+      ctx.fillStyle = skill ? (cd > 0 ? '#334' : '#226') : '#222'
+      ctx.fill()
+      ctx.strokeStyle = skill ? '#4488ff' : '#445'
+      ctx.lineWidth = 2
+      ctx.stroke()
+
+      // 쿨다운 호
+      if (skill && cd > 0) {
+        const ratio = cd / maxCd
+        ctx.beginPath()
+        ctx.moveTo(btn.x, btn.y)
+        ctx.arc(btn.x, btn.y, BTN_RADIUS, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2)
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'
+        ctx.fill()
+      }
+
+      // 라벨
+      ctx.fillStyle = skill ? '#ffffff' : '#555'
+      ctx.font = `bold 14px monospace`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(btn.label, btn.x, btn.y)
+    }
+
+    ctx.textBaseline = 'alphabetic'
+    ctx.restore()
+  }
+}
+
+window._joystick = new VirtualJoystick()
+
+  </script>
+
+  <!-- game.js -->
+  <script>
+/**
+ * game.js — Dev Survival 진입점 & 코어 게임 루프
+ * Integration Lead (메인 에이전트) 통합 버전
+ */
+
+
+// ─────────────────────────────────────────
+// 전역 상태
+// ─────────────────────────────────────────
+window.GameState = {
+  screen: 'lobby',
+  gameTime: 0,
+  isRunning: false,
+  isPaused: false,
+  score: 0,
+  releaseProgress: 0,
+  killCount: 0,
+  basicKills: 0,
+  pcBotKills: 0,
+  mirrorBotKills: 0,
+  aiBotReached: false,
+  aiBotKilled: false,
+  enemies: [],
+  projectiles: [],
+  hazardZones: [],
+  playerDanger: false,
+  playerExpGained: 0,
+  playerLevel: 1,
+  playerExp: 0,
+  _lastWin: false,
+  aiBotIntro: false,
+  aiBotIntroTimer: 0,
+  // 메타 업그레이드 배율 (MetaManager.applyToPlayer 에서 설정)
+  skillDamageMult: 1,
+  expMultiplier:   1,
+  healMultiplier:  1,
+  lastEarnedPoints: 0,
+}
+
+// ─────────────────────────────────────────
+// 키 입력
+// ─────────────────────────────────────────
+const inputKeys = {}
+window.inputKeys = inputKeys
+
+window.addEventListener('keydown', e => {
+  inputKeys[e.code] = true
+  if (
+    ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].includes(e.code) &&
+    GameState.screen === 'playing' &&
+    !GameState.isPaused
+  ) {
+    const slot = ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].indexOf(e.code)
+    Game.skillManager?.activateSkill(slot)
+  }
+})
+window.addEventListener('keyup', e => { inputKeys[e.code] = false })
+
+// ─────────────────────────────────────────
+// 배경 렌더링
+// ─────────────────────────────────────────
+function drawBackground(ctx) {
+  ctx.fillStyle = '#0d0d1a'
+  ctx.fillRect(0, 0, 800, 600)
+  ctx.strokeStyle = '#1a1a3e'
+  ctx.lineWidth = 1
+  for (let x = 0; x < 800; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 600); ctx.stroke()
+  }
+  for (let y = 0; y < 600; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke()
+  }
+}
+
+// ─────────────────────────────────────────
+// Game 인터페이스
+// ─────────────────────────────────────────
+window.Game = {
+  canvas: null,
+  ctx: null,
+  player: null,
+  enemySystem: null,
+  skillManager: null,
+
+  registerEnemySystem(spawner) { Game.enemySystem = spawner },
+  registerSkillSystem(sm)      { Game.skillManager = sm },
+  registerUI(ui)               { /* 통합 버전에서는 개별 모듈 직접 호출 */ },
+
+  init() {
+    Game.canvas = document.getElementById('gameCanvas')
+    Game.ctx    = Game.canvas.getContext('2d')
+    GameState.screen = 'lobby'
+    _lastTime = performance.now()
+    requestAnimationFrame(_loop)
+  },
+
+  start() {
+    Object.assign(GameState, {
+      screen: 'playing',
+      gameTime: 0,
+      isRunning: true,
+      isPaused: false,
+      score: 0,
+      releaseProgress: 0,
+      killCount: 0,
+      basicKills: 0,
+      pcBotKills: 0,
+      mirrorBotKills: 0,
+      aiBotReached: false,
+      aiBotKilled: false,
+      enemies: [],
+      projectiles: [],
+      hazardZones: [],
+      playerDanger: false,
+      playerExpGained: 0,
+      playerLevel: 1,
+      playerExp: 0,
+      _lastWin: false,
+      skillDamageMult: 1,
+      expMultiplier:   1,
+      healMultiplier:  1,
+      lastEarnedPoints: 0,
+      aiBotIntro: false,
+      aiBotIntroTimer: 0,
+    })
+
+    // 플레이어 생성
+    if (window.Player) {
+      Game.player = new window.Player(400, 300)
+      // skills.js가 playerCreated 이벤트를 듣고 SkillManager를 등록
+      window.dispatchEvent(new CustomEvent('playerCreated', { detail: { player: Game.player } }))
+      // 메타 업그레이드 효과 적용
+      if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
+    }
+
+    // Spawner 리셋 (spawnTimer 초기화)
+    if (Game.enemySystem?.reset) Game.enemySystem.reset()
+    else if (Game.enemySystem) Game.enemySystem.spawnTimer = 0
+
+    // LevelUpManager 리셋
+    if (window._levelUpManager) {
+      window._levelUpManager.pendingLevelUp = false
+      window._levelUpManager.choices = []
+      window._levelUpManager.choiceRects = []
+    }
+
+    _lastTime = performance.now()
+  },
+
+  pause() {
+    GameState.isPaused = true
+    GameState.screen = 'paused'
+  },
+
+  resume() {
+    GameState.isPaused = false
+    GameState.screen = 'playing'
+  },
+
+  gameOver(win) {
+    GameState.isRunning = false
+    GameState.screen = 'result'
+    GameState.isPaused = false
+    GameState._lastWin = win
+    // 최종 점수 확정
+    if (window.ScoreSystem) {
+      GameState.score = ScoreSystem.finalizeScore()
+    }
+    // 출시 포인트 적립
+    if (window.MetaManager) {
+      GameState.lastEarnedPoints = MetaManager.awardPoints()
+    }
+  },
+
+  restart() {
+    GameState.screen = 'lobby'
+  },
+}
+
+// ─────────────────────────────────────────
+// 게임 루프
+// ─────────────────────────────────────────
+let _lastTime = 0
+
+function _loop(now) {
+  let deltaTime = (now - _lastTime) / 1000
+  _lastTime = now
+  deltaTime = Math.min(deltaTime, 0.05)
+
+  const gs = GameState
+  const player = Game.player
+  const ctx = Game.ctx
+
+  // ── 로직 업데이트 (playing 상태일 때만) ──
+  if (gs.screen === 'playing' && !gs.isPaused) {
+
+    gs.gameTime += deltaTime
+
+    if (player) {
+      player.update(deltaTime, inputKeys)
+      Game.enemySystem?.update(deltaTime)
+      Game.skillManager?.update(deltaTime)
+
+      // 출시 진행률 업데이트
+      window.ScoreSystem?.updateReleaseProgress(deltaTime)
+
+      // 충돌 감지
+      for (const enemy of gs.enemies) {
+        if (!enemy?.isAlive?.()) continue
+        const dx = player.x - enemy.x
+        const dy = player.y - enemy.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const hitR = (player.collisionRadius || 14) + (enemy.collisionRadius || 16)
+        if (dist < hitR) {
+          if (!(enemy._hitCooldown > 0)) {
+            player.takeDamage(enemy.damage || 10)
+            enemy._hitCooldown = 0.5
+          }
+        }
+        if (enemy._hitCooldown > 0) enemy._hitCooldown -= deltaTime
+      }
+
+      gs.playerDanger = player.hp / player.maxHp < 0.3
+
+      if (gs.aiBotIntro) {
+        gs.aiBotIntroTimer += deltaTime
+        if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
+      }
+
+      if (gs.gameTime >= 180) { Game.gameOver(true); return }
+      if (!player.isAlive)    { Game.gameOver(false); return }
+    }
+  }
+
+  // LevelUpManager 업데이트 (playing 중에만)
+  if (gs.screen === 'playing' && !gs.isPaused) {
+    window._levelUpManager?.update()
+  }
+
+  // ── 렌더링 ──
+  ctx.clearRect(0, 0, 800, 600)
+  drawBackground(ctx)
+
+  if (gs.screen === 'lobby') {
+    window._lobby?.render(ctx)
+
+  } else if (gs.screen === 'result') {
+    window._result?.render(ctx)
+
+  } else if (gs.screen === 'upgrade') {
+    window.MetaManager?.render(ctx)
+
+  } else {
+    // playing or paused
+    // 적
+    for (const enemy of gs.enemies) enemy?.render?.(ctx)
+    // 스킬 이펙트
+    Game.skillManager?.renderEffects?.(ctx, deltaTime)
+    // 플레이어
+    player?.render?.(ctx)
+    // HUD
+    window._hud?.render(ctx, gs.gameTime)
+    // 레벨업 오버레이 (paused 포함)
+    window._levelUpManager?.render(ctx)
+    // 모바일 조이스틱
+    window._joystick?.render(ctx)
+    // AIBot 등장 연출
+    if (gs.aiBotIntro) {
+      const alpha = 1 - gs.aiBotIntroTimer / 0.5
+      ctx.fillStyle = `rgba(0,0,0,${alpha * 0.85})`
+      ctx.fillRect(0, 0, 800, 600)
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#ff2222'
+      ctx.font = 'bold 36px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '20px monospace'
+      ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
+      ctx.restore()
+    }
+  }
+
+  requestAnimationFrame(_loop)
+}
+
+// ─────────────────────────────────────────
+// 부트스트랩
+// ─────────────────────────────────────────
+
+// 모든 모듈 이미 로드됨 — 동기 초기화
+window.dispatchEvent(new Event('gameReady'))
+Game.init()
+
+
+  </script>
+
+</body>
+</html>
