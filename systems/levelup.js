@@ -16,18 +16,13 @@ const _LU_ICON_BY_ID = {
 const _luIconCache = {}
 function _getLUIcon(skillId) {
   if (!skillId) return null
-  // hud.js가 먼저 로드되면 공유 캐시 사용, 아니면 자체 로드
-  if (window.getSkillIcon) {
-    // hud _SKILL_ICON_MAP 키는 스킬 표시명 기준 — skillId로 직접 매핑
-    const src = _LU_ICON_BY_ID[skillId]
-    if (!src) return null
-    if (!_luIconCache[skillId]) {
-      const img = new Image(); img.src = src
-      _luIconCache[skillId] = img
-    }
-    return _luIconCache[skillId]
+  const src = _LU_ICON_BY_ID[skillId]
+  if (!src) return null
+  if (!_luIconCache[skillId]) {
+    const img = new Image(); img.src = src
+    _luIconCache[skillId] = img
   }
-  return null
+  return _luIconCache[skillId]
 }
 
 // ---------------------------------------------------------------------------
@@ -270,7 +265,7 @@ class LevelUpManager {
 
     ctx.font = '18px "VT323", monospace'
     ctx.fillStyle = '#aaaaaa'
-    ctx.fillText('클릭하거나 Q / W / E 키로 선택하세요', 400, 190)
+    ctx.fillText('클릭하거나 1 / 2 / 3 키로 선택하세요', 400, 190)
 
     // 카드 3개
     this.choiceRects = []
@@ -317,7 +312,7 @@ class LevelUpManager {
       }
 
       // 키 레이블 (좌상단)
-      const cardKeys = ['Q', 'W', 'E']
+      const cardKeys = ['1', '2', '3']
       ctx.fillStyle = '#aaccff'
       ctx.font = 'bold 15px "VT323", monospace'
       ctx.textAlign = 'left'
@@ -337,16 +332,30 @@ class LevelUpManager {
       ctx.lineTo(cx + cardW - 10, cy + 128)
       ctx.stroke()
 
-      // 설명 (슬래시 또는 불릿 기준 줄바꿈)
+      // 설명 (슬래시·불릿 기준 줄바꿈 + 긴 줄 wrapText)
       ctx.fillStyle = '#aabbdd'
       ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'left'
+      const _descMaxW = cardW - 24
       const descParts = c.desc.split(/\s*\/\s*|\s*•\s*/).filter(Boolean)
       let lineY = cy + 148
       for (const part of descParts) {
-        if (lineY > cy + cardH - 12) break  // 카드 영역 초과 방지
-        ctx.fillText(part.trim(), cx + 12, lineY)
-        lineY += 20
+        if (lineY > cy + cardH - 12) break
+        // 긴 줄 단어 단위 줄바꿈
+        const words = part.trim().split(' ')
+        let line = ''
+        for (const word of words) {
+          const test = line ? line + ' ' + word : word
+          if (ctx.measureText(test).width > _descMaxW && line) {
+            if (lineY <= cy + cardH - 12) ctx.fillText(line, cx + 12, lineY)
+            lineY += 18
+            line = word
+          } else {
+            line = test
+          }
+        }
+        if (line && lineY <= cy + cardH - 12) ctx.fillText(line, cx + 12, lineY)
+        lineY += 18
       }
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
@@ -391,10 +400,10 @@ window.addEventListener('click', (e) => {
   _levelUpManager.handleClick(x, y)
 })
 
-// 키보드 Q/W/E 선택 (스킬 1/2/3/4와 충돌 없음)
+// 키보드 1/2/3 선택
 window.addEventListener('keydown', (e) => {
   if (!_levelUpManager.pendingLevelUp) return
-  if (e.code === 'KeyQ') _levelUpManager.applyChoice(0)
-  if (e.code === 'KeyW') _levelUpManager.applyChoice(1)
-  if (e.code === 'KeyE') _levelUpManager.applyChoice(2)
+  if (e.code === 'Digit1') _levelUpManager.applyChoice(0)
+  if (e.code === 'Digit2') _levelUpManager.applyChoice(1)
+  if (e.code === 'Digit3') _levelUpManager.applyChoice(2)
 })

@@ -67,3 +67,10 @@
 
 ---
 <!-- 이후 항목은 validate.js autoLearn 또는 PostCompact agent가 자동 추가 -->
+
+## Lesson #008
+**Pattern**: bundle.js SCRIPTS에 'systems/drops.js' 없음 → docs/index.html 미반영
+**Root Cause**: (자동 감지 — 다음 세션에서 원인 분석 필요)
+**Fix**: (미정)
+**Grep**: `BUNDLE_MISSING`
+**Detected**: 2026-03-21 (systems/drops.js)

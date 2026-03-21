@@ -136,7 +136,7 @@ window.ENEMY_SPRITE_CONFIGS = {
   PCBot: {
     idle: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 4 },
     walk: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 8 },
-    scale: 0.09,
+    scale: 0.18,
   },
   MirrorBot: {
     idle: { src: 'assets/enemies/Geralt_idle.png', fw: 32, fh: 32, frames: 2, fps: 4 },
@@ -720,6 +720,7 @@ class CartBot extends Enemy {
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0) return
 
     const dx = player.x - this.x
     const dy = player.y - this.y
@@ -740,6 +741,11 @@ class CartBot extends Enemy {
       if (dist > 0) {
         this.dashDx = dx / dist
         this.dashDy = dy / dist
+      } else {
+        // dist=0: 임의 방향으로 돌진 (NaN 방지)
+        const angle = Math.random() * Math.PI * 2
+        this.dashDx = Math.cos(angle)
+        this.dashDy = Math.sin(angle)
       }
     }
 
@@ -757,6 +763,11 @@ class CartBot extends Enemy {
         this.y += (dy / dist) * this.speed * deltaTime
         this._facingLeft = dx < 0
       }
+    }
+    // NaN 위치 전파 방지
+    if (isNaN(this.x) || isNaN(this.y)) {
+      this.x = player.x + 100
+      this.y = player.y
     }
     this._updateAnim(deltaTime, true)
   }
@@ -1001,6 +1012,7 @@ class MirrorBot extends Enemy {
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0) return
 
     const dx = player.x - this.x
     const dy = player.y - this.y
@@ -1018,7 +1030,15 @@ class MirrorBot extends Enemy {
         this.slashCycleTimer = 0
         this.slashPhase = 'slash1'
         this.slashTimer = 0
-        if (dist > 0) { this.slashDx = dx / dist; this.slashDy = dy / dist }
+        if (dist > 0) {
+          this.slashDx = dx / dist
+          this.slashDy = dy / dist
+        } else {
+          // dist=0: 임의 방향 (NaN 방지)
+          const angle = Math.random() * Math.PI * 2
+          this.slashDx = Math.cos(angle)
+          this.slashDy = Math.sin(angle)
+        }
       }
 
     } else if (this.slashPhase === 'slash1') {
@@ -1039,10 +1059,11 @@ class MirrorBot extends Enemy {
       if (this.slashTimer >= 0.22) {
         this.slashPhase = 'slash2'
         this.slashTimer = 0
-        // 두 번째 베기 방향 갱신
+        // 두 번째 베기 방향 갱신 (dist=0 || 1 로 NaN 방지)
         const dx2 = player.x - this.x, dy2 = player.y - this.y
         const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1
-        this.slashDx = dx2 / d2; this.slashDy = dy2 / d2
+        this.slashDx = dx2 / d2
+        this.slashDy = dy2 / d2
       }
 
     } else if (this.slashPhase === 'slash2') {
@@ -1067,11 +1088,22 @@ class MirrorBot extends Enemy {
         this.slashPhase = 'approach'
         this.slashTimer = 0
       }
+    } else {
+      // 알 수 없는 상태 복구
+      this.slashPhase = 'approach'
+      this.slashTimer = 0
     }
 
     if (this._slashEffect) {
       this._slashEffect.life -= deltaTime
       if (this._slashEffect.life <= 0) this._slashEffect = null
+    }
+
+    // NaN 위치 전파 방지
+    if (isNaN(this.x) || isNaN(this.y)) {
+      this.x = player.x + 80
+      this.y = player.y
+      this.slashPhase = 'approach'
     }
 
     this._facingLeft = (player.x - this.x) < 0
@@ -2215,7 +2247,7 @@ const ENEMY_INTRO_DATA = {
 }
 
 const SPAWN_TIMELINE = [
-  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 2.5, maxEnemies: 5  },
+  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 1.2, maxEnemies: 10 },
   { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.0, maxEnemies: 8  },
   { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 1.8, maxEnemies: 10 },
   { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.5, maxEnemies: 12 },
@@ -4232,20 +4264,33 @@ class Lobby {
       // 잠금 오버레이
       if (!window.MetaManager?.isUnlocked(card.key)) {
         ctx.save()
-        ctx.fillStyle = 'rgba(0,0,0,0.78)'
+        ctx.fillStyle = 'rgba(0,0,0,0.82)'
         ctx.fillRect(card.x, card.y, card.w, card.h)
-        ctx.font = '36px "VT323", monospace'
         ctx.textAlign = 'center'
-        ctx.fillText('🔒', cx, card.y + card.h / 2 - 16)
+        // 캐릭터 이름 (상단 강조)
+        ctx.fillStyle = '#ee88ff'
+        ctx.font = 'bold 20px "VT323", monospace'
+        ctx.fillText(cfg?.label || card.key, cx, card.y + 24)
+        // 구분선
+        ctx.strokeStyle = '#663388'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(card.x + 10, card.y + 30)
+        ctx.lineTo(card.x + card.w - 10, card.y + 30)
+        ctx.stroke()
+        // 잠금 아이콘
+        ctx.font = '30px "VT323", monospace'
+        ctx.fillText('🔒', cx, card.y + 64)
+        // 해금 안내
         ctx.fillStyle = '#cc88ff'
-        ctx.font = 'bold 14px "VT323", monospace'
-        ctx.fillText('보스 처치 후', cx, card.y + card.h / 2 + 8)
-        ctx.fillStyle = '#FFD700'
         ctx.font = 'bold 13px "VT323", monospace'
-        ctx.fillText('골드 다이아 × 1 획득', cx, card.y + card.h / 2 + 26)
+        ctx.fillText('보스 처치 후', cx, card.y + 90)
+        ctx.fillStyle = '#FFD700'
+        ctx.font = 'bold 12px "VT323", monospace'
+        ctx.fillText('골드 다이아 × 1 획득', cx, card.y + 108)
         ctx.fillStyle = '#aa88ff'
         ctx.font = '11px "VT323", monospace'
-        ctx.fillText('→ 자동 해금됩니다', cx, card.y + card.h / 2 + 42)
+        ctx.fillText('→ 자동 해금됩니다', cx, card.y + 124)
         ctx.restore()
       }
     }
