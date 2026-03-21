@@ -4,7 +4,7 @@
 // ============================================================
 
 // Gold item render size
-const GOLD_ICON_SIZE = 22
+const GOLD_ICON_SIZE = 44
 
 // Preload gold images (explicit paths so asset validator can resolve them)
 const _goldImgs = {}
@@ -28,7 +28,7 @@ class DropManager {
   }
 
   spawnDrop(x, y, type) {
-    this.items.push({ x, y, type, life: 8, maxLife: 8, pickupRadius: 24 })
+    this.items.push({ x, y, type, life: 8, maxLife: 8, pickupRadius: 28, bobTime: 0 })
   }
 
   getDropTypeForEnemy(enemyClass) {
@@ -51,6 +51,8 @@ class DropManager {
         this.items.splice(i, 1)
         continue
       }
+
+      item.bobTime = (item.bobTime || 0) + deltaTime
 
       // Pickup collision check
       const dx = player.x - item.x
@@ -90,23 +92,24 @@ class DropManager {
       const img = _goldImgs[item.type]
       // Fade out in last 2 seconds
       const alpha = item.life < 2 ? item.life / 2 : 1
+      const bob = Math.sin((item.bobTime || 0) * Math.PI * 2.5) * 4  // ±4px, 2.5 Hz
+      const drawY = item.y - GOLD_ICON_SIZE / 2 + bob
       ctx.save()
       ctx.globalAlpha = alpha
       if (img?.complete && img.naturalWidth > 0) {
-        ctx.drawImage(
-          img,
-          item.x - GOLD_ICON_SIZE / 2,
-          item.y - GOLD_ICON_SIZE / 2,
-          GOLD_ICON_SIZE,
-          GOLD_ICON_SIZE
-        )
+        ctx.shadowColor = '#FFD700'
+        ctx.shadowBlur = 8
+        ctx.drawImage(img, item.x - GOLD_ICON_SIZE / 2, drawY, GOLD_ICON_SIZE, GOLD_ICON_SIZE)
+        ctx.shadowBlur = 0
       } else {
+        ctx.shadowColor = '#FFD700'
+        ctx.shadowBlur = 8
         ctx.fillStyle = '#FFD700'
         ctx.beginPath()
-        ctx.arc(item.x, item.y, 8, 0, Math.PI * 2)
+        ctx.arc(item.x, item.y + bob, 8, 0, Math.PI * 2)
         ctx.fill()
+        ctx.shadowBlur = 0
       }
-      ctx.globalAlpha = 1
       ctx.restore()
     }
   }

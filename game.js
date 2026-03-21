@@ -230,6 +230,26 @@ window.Game = {
       }
     }
 
+    // 시작 말풍선
+    const _BUBBLE_LINES = [
+      { text: '열심히 해서 정규직이 될 거야!',   w: 1.3 },
+      { text: '오늘도 화이팅!',                   w: 1.0 },
+      { text: 'AI가 무섭게 발전하고 있어...',     w: 1.3 },
+      { text: '출근 완료. 오늘은 별 일 없겠지?', w: 1.0 },
+      { text: '일이 너무 많아서 큰일이야.',       w: 1.0 },
+      { text: '하이하이~ ^_^',                    w: 1.0 },
+      { text: '커피 수혈이 필요해...',            w: 1.0 },
+      { text: '어제 야근했더니 피곤하네.',        w: 1.3 },
+      { text: '오늘은 정시 퇴근할 수 있겠지?',   w: 1.3 },
+      { text: '멋진 개발자가 될 거야!',           w: 1.0 },
+    ]
+    {
+      const total = _BUBBLE_LINES.reduce((s, l) => s + l.w, 0)
+      let r = Math.random() * total
+      const picked = _BUBBLE_LINES.find(l => { r -= l.w; return r <= 0 }) || _BUBBLE_LINES[0]
+      GameState.speechBubble = { text: picked.text, timer: 4.0, maxTimer: 4.0 }
+    }
+
     // 골드 드롭 리셋
     window.dropManager?.reset()
     GameState.goldInventory = { 1: 0, 2: 0, 3: 0, 4: 0 }

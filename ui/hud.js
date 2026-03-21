@@ -32,6 +32,7 @@ class HUD {
     this._drawTopBar(ctx, player, gameTime)
     this._drawBottomBar(ctx)
     this._drawDangerOverlay(ctx, gameTime)
+    this._drawSpeechBubble(ctx)
     this._drawUnlockNotification(ctx)
   }
 
@@ -214,6 +215,61 @@ class HUD {
     ctx.fillStyle = '#aaa'
     ctx.font = '11px "VT323", monospace'
     ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
+  }
+
+  _drawSpeechBubble(ctx) {
+    const bubble = GameState.speechBubble
+    if (!bubble || bubble.timer <= 0) return
+    bubble.timer -= 1 / 60
+    const player = Game.player
+    if (!player) return
+
+    const alpha = bubble.timer < 1.0 ? bubble.timer : 1.0
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Measure text
+    ctx.font = '15px "VT323", monospace'
+    const tw = ctx.measureText(bubble.text).width
+    const bw = tw + 20
+    const bh = 28
+    // Screen-space position: convert world coords via Camera offset
+    const sx = player.x - (window.Camera?.x || 0)
+    const sy = player.y - (window.Camera?.y || 0)
+    const bx = sx - bw / 2
+    const by = sy - 80
+
+    // Bubble background (rounded rect + tail)
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'
+    ctx.strokeStyle = '#334466'
+    ctx.lineWidth = 1.5
+    const r = 6
+    ctx.beginPath()
+    ctx.moveTo(bx + r, by)
+    ctx.lineTo(bx + bw - r, by)
+    ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r)
+    ctx.lineTo(bx + bw, by + bh - r)
+    ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh)
+    ctx.lineTo(bx + bw / 2 + 8, by + bh)
+    ctx.lineTo(bx + bw / 2, by + bh + 8)
+    ctx.lineTo(bx + bw / 2 - 8, by + bh)
+    ctx.lineTo(bx + r, by + bh)
+    ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r)
+    ctx.lineTo(bx, by + r)
+    ctx.quadraticCurveTo(bx, by, bx + r, by)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    // Text
+    ctx.fillStyle = '#112244'
+    ctx.font = '15px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(bubble.text, bx + bw / 2, by + bh - 8)
+
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
   }
 
   _drawUnlockNotification(ctx) {
