@@ -314,7 +314,7 @@ class PCBot extends Enemy {
     this.preferredMax = 250
     // 스캔 빔
     this.scanTimer = 0
-    this.scanInterval = 5.0
+    this.scanInterval = 10.0
     this.scanBeam = null   // { tx, ty, life, maxLife }
   }
 

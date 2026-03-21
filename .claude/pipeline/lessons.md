@@ -5,11 +5,12 @@
 ---
 
 ## Lesson #001
-**Pattern**: Game.gameOver() 호출 후 return 없이 로직 계속 실행
-**Root Cause**: gameOver()는 GameState를 변경할 뿐 실행을 멈추지 않음. 이후 코드가 계속 돌아 이중 gameOver, 적 업데이트 등 사이드이펙트 발생.
-**Fix**: `Game.gameOver(win); return` 패턴 강제
-**Grep**: `Game\.gameOver\([^)]*\)[^;]*\n[^}]*[^r][^e][^t][^u][^r][^n]`
-**Detected**: 2025-03 (game.js 루프)
+**Pattern**: `_loop()` 안에서 `Game.gameOver()` 후 `return` 사용
+**Root Cause**: `_loop`는 마지막 줄 `requestAnimationFrame(_loop)` 호출로 루프를 유지한다. 중간에 `return`하면 rAF에 도달하지 못해 게임 루프가 완전히 멈춘다(화면 정지 버그).
+**Fix**: `_loop` 내부에서 `Game.gameOver()` 뒤 `return` 절대 금지. gameOver()가 `screen='result'`로 바꾸므로 다음 프레임에 자동으로 결과 화면이 렌더된다.
+**Why #001 이전 버전이 틀렸나**: 이전 lesson은 "gameOver 후 return 안 하면 이중 실행 위험"이라 했지만, _loop는 rAF 기반이므로 return이 오히려 루프 킬의 원인.
+**Grep**: `Game\.gameOver[^;]*;\s*\n\s*return` (이 패턴이 보이면 제거해야 함)
+**Detected**: 2026-03-22 (game.js 사망 시 화면 정지 버그 — return 제거로 해결)
 
 ---
 

@@ -344,7 +344,6 @@ function _loop(now) {
         // 보스 처치 후 골드 다이아 획득 → 퇴근 성공!
         if (gs.bossKilled) {
           Game.gameOver(true)
-          return
         }
       }
 
@@ -383,10 +382,9 @@ function _loop(now) {
         gs.bossGoldHint = true
         gs.speechBubble = { text: '골드 다이아를 먹고 퇴근하세요!', timer: 999, maxTimer: 999 }
       }
-      // 사망 체크
+      // 사망 체크 — return 금지: rAF(_loop) 도달 전에 탈출하면 루프 정지
       if (!player.isAlive) {
         Game.gameOver(false)
-        return
       }
     }
   }
