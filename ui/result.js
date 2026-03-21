@@ -22,7 +22,8 @@ class Result {
         ? (performance.now() - this._resultStartTime) / 1000 : 0
 
       const win = GameState._lastWin
-      if (!win && elapsed < 1.2) return  // 연출 중 버튼 무효
+      if (win  && elapsed < 1.2) return  // 승리 연출 중 버튼 무효
+      if (!win && elapsed < 1.2) return  // 패배 연출 중 버튼 무효
 
       const r = win ? this._winRestartRect  : this._loseRestartRect
       const u = win ? this._winUpgradeRect  : this._loseUpgradeRect
@@ -45,13 +46,16 @@ class Result {
     if (!this._resultStartTime) this._resultStartTime = performance.now()
     const elapsed = (performance.now() - this._resultStartTime) / 1000
 
-    if (GameState._lastWin) this._renderWin(ctx)
+    if (GameState._lastWin) this._renderWin(ctx, elapsed)
     else this._renderLose(ctx, elapsed)
   }
 
   // ── Dev Win ─────────────────────────────────────────────────────────────
 
-  _renderWin(ctx) {
+  _renderWin(ctx, elapsed) {
+    ctx.save()
+
+    // 배경
     ctx.fillStyle = '#030d03'
     ctx.fillRect(0, 0, 800, 600)
 
@@ -61,60 +65,79 @@ class Result {
     ctx.fillStyle = glow
     ctx.fillRect(0, 0, 800, 600)
 
+    // ① 제목 페이드인 (0 ~ 0.6s)
+    const titleAlpha = Math.min(1, elapsed / 0.6)
+    ctx.save()
+    ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
     ctx.font = 'bold 56px monospace'
+    ctx.shadowColor = '#FFD700'
+    ctx.shadowBlur = 24
     ctx.fillText('배포 성공!', 400, 94)
-
+    ctx.shadowBlur = 0
     ctx.fillStyle = '#88ff88'
     ctx.font = '14px monospace'
     ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
+    ctx.restore()
 
-    // 스탯 박스
+    // ② 스탯 박스 페이드인 (0.4s ~ 0.9s)
+    const statsAlpha = Math.min(1, Math.max(0, (elapsed - 0.4) / 0.5))
+    ctx.save()
+    ctx.globalAlpha = statsAlpha
+
     ctx.fillStyle = 'rgba(0,18,0,0.88)'
-    ctx.fillRect(188, 148, 424, 218)
+    ctx.fillRect(188, 148, 424, 240)
     ctx.strokeStyle = '#44aa44'
     ctx.lineWidth = 2
-    ctx.strokeRect(188, 148, 424, 218)
+    ctx.strokeRect(188, 148, 424, 240)
 
     const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     const t = GameState.gameTime
     const mins = Math.floor(t / 60)
     const secs = Math.floor(t % 60)
+    const prevRate = parseInt(localStorage.getItem('devSurvivor_survivalRate') || '30')
 
     ctx.font = '13px monospace'
     ctx.fillStyle = '#aaddcc'
     ctx.textAlign = 'left'
     const sx = 222
     const rows = [
-      ['최종 직급', rankName],
-      ['생존 시간', `${mins}:${secs.toString().padStart(2,'0')}`],
-      ['처치 수',   `${GameState.killCount}마리`],
-      ['출시 진행률', `${Math.floor(GameState.releaseProgress)}%`],
-      ['최고 점수', GameState.score.toLocaleString()],
+      ['최종 직급',  rankName],
+      ['생존 시간',  `${mins}:${secs.toString().padStart(2,'0')}`],
+      ['처치 수',    `${GameState.killCount}마리`],
+      ['출시 진행률',`${Math.floor(GameState.releaseProgress)}%`],
+      ['최고 점수',  GameState.score.toLocaleString()],
+      ['생존 확률',  `${prevRate}%`],
     ]
     rows.forEach(([label, val], i) => {
-      const ry = 186 + i * 34
+      const ry = 186 + i * 32
       ctx.fillStyle = '#aaddcc'
       ctx.textAlign = 'left'
+      ctx.font = '13px monospace'
       ctx.fillText(label, sx, ry)
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = i === 5 ? '#88ddff' : '#ffffff'
       ctx.font = 'bold 13px monospace'
       ctx.textAlign = 'right'
       ctx.fillText(val, 578, ry)
-      ctx.font = '13px monospace'
     })
+    ctx.restore()
+
+    // ③ 포인트 & 버튼 페이드인 (0.8s ~ 1.2s)
+    const btnAlpha = Math.min(1, Math.max(0, (elapsed - 0.8) / 0.4))
+    ctx.save()
+    ctx.globalAlpha = btnAlpha
 
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
     ctx.font = 'bold 17px monospace'
-    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 405)
+    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 432)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
     ctx.font = '12px monospace'
-    ctx.fillText(`(누적: ${total}pt)`, 400, 427)
+    ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
     const r = this._winRestartRect, u = this._winUpgradeRect
     ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
@@ -126,8 +149,9 @@ class Result {
     ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
+    ctx.restore()
 
-    ctx.textAlign = 'left'
+    ctx.restore()
   }
 
   // ── AI Win (드라마틱 연출) ───────────────────────────────────────────────

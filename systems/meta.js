@@ -204,15 +204,20 @@ const MetaManager = {
         const btnX = bx + colW - 104
         const btnY = by + 46
         const btnW = 96, btnH = 24
-        ctx.fillStyle = canBuy ? '#1e3a6e' : '#151520'
-        ctx.strokeStyle = canBuy ? '#4488ff' : '#333'
+        ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
+        ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
         ctx.lineWidth = 1
         ctx.fillRect(btnX, btnY, btnW, btnH)
         ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.fillStyle = canBuy ? '#ffffff' : '#445'
         ctx.font = '11px monospace'
         ctx.textAlign = 'center'
-        ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 16)
+        if (canBuy) {
+          ctx.fillStyle = '#ffffff'
+          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 16)
+        } else {
+          ctx.fillStyle = '#ff6666'
+          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 16)
+        }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
       }
     }
