@@ -456,6 +456,7 @@ function _loop(now) {
   await tryImport('./systems/spawner.js')
   await tryImport('./systems/levelup.js')
   await tryImport('./systems/score.js')
+  await tryImport('./systems/drops.js')
   await tryImport('./systems/meta.js')
   await tryImport('./ui/hud.js')
   await tryImport('./ui/lobby.js')

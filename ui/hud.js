@@ -25,6 +25,10 @@ function _getSkillIcon(name) {
 window.getSkillIcon = _getSkillIcon
 
 class HUD {
+  constructor() {
+    this._flyingGolds = []  // { x, y, targetX, targetY, type, t, duration, size }
+  }
+
   render(ctx, gameTime) {
     if (GameState.screen !== 'playing' && GameState.screen !== 'paused') return
     const player = Game.player
@@ -34,6 +38,8 @@ class HUD {
     this._drawDangerOverlay(ctx, gameTime)
     this._drawSpeechBubble(ctx)
     this._drawUnlockNotification(ctx)
+    this._drawGoldHUD(ctx)
+    this._updateFlyingGolds(ctx, 1/60)
   }
 
   _drawTopBar(ctx, player, gameTime) {
@@ -299,6 +305,129 @@ class HUD {
     ctx.strokeStyle = `rgba(255,50,50,${alpha})`
     ctx.lineWidth = 14
     ctx.strokeRect(7, 7, 786, 586)
+  }
+
+  _drawGoldHUD(ctx) {
+    const inv = window.GameState?.goldInventory
+    if (!inv) return
+
+    // Preload gold images once using explicit paths (validator-friendly)
+    if (!this._goldImgs) {
+      this._goldImgs = {}
+      const _goldPaths = {
+        1: 'assets/icon/gold_1.png',
+        2: 'assets/icon/gold_2.png',
+        3: 'assets/icon/gold_3.png',
+        4: 'assets/icon/gold_4.png',
+      }
+      for (const [k, src] of Object.entries(_goldPaths)) {
+        const img = new Image()
+        img.src = src
+        this._goldImgs[k] = img
+      }
+    }
+
+    // Only show types with count > 0
+    const types = [1, 2, 3, 4].filter(t => (inv[t] || 0) > 0)
+    if (types.length === 0) return
+
+    const iconSize = 20
+    const spacing = 52  // icon(20) + text space
+    const totalW = types.length * spacing
+    let startX = 790 - totalW
+    const y = 4
+
+    for (const type of types) {
+      const img = this._goldImgs[type]
+      const count = inv[type] || 0
+
+      // Small shadow bg
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'
+      ctx.fillRect(startX - 2, y - 2, spacing, iconSize + 4)
+
+      if (img?.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, startX, y, iconSize, iconSize)
+      }
+      ctx.fillStyle = '#FFD700'
+      ctx.font = 'bold 14px "VT323", monospace'
+      ctx.textAlign = 'left'
+      ctx.fillText(`\xd7${count}`, startX + iconSize + 2, y + 14)
+
+      startX += spacing
+    }
+  }
+
+  spawnFlyingGold(worldX, worldY, type) {
+    // Ensure gold images are preloaded using explicit paths (validator-friendly)
+    if (!this._goldImgs) {
+      this._goldImgs = {}
+      const _goldPaths = {
+        1: 'assets/icon/gold_1.png',
+        2: 'assets/icon/gold_2.png',
+        3: 'assets/icon/gold_3.png',
+        4: 'assets/icon/gold_4.png',
+      }
+      for (const [k, src] of Object.entries(_goldPaths)) {
+        const img = new Image()
+        img.src = src
+        this._goldImgs[k] = img
+      }
+    }
+
+    // Convert world coords to screen coords using camera
+    // Camera.x/y represent the top-left world position visible on screen
+    const camX = window.Camera?.x || 0
+    const camY = window.Camera?.y || 0
+    const screenX = worldX - camX
+    const screenY = worldY - camY
+
+    // Target: approximate center of where the gold type icon appears in HUD
+    // Gold HUD stacks from right; target center of the HUD area at top-right
+    const targetX = 770
+    const targetY = 14
+
+    this._flyingGolds.push({
+      x: screenX,
+      y: screenY,
+      targetX,
+      targetY,
+      type,
+      t: 0,
+      duration: 0.6,
+      size: 16,
+    })
+  }
+
+  _updateFlyingGolds(ctx, deltaTime) {
+    if (!this._flyingGolds.length) return
+    for (let i = this._flyingGolds.length - 1; i >= 0; i--) {
+      const f = this._flyingGolds[i]
+      f.t += (deltaTime || 1/60)
+      const progress = Math.min(1, f.t / f.duration)
+      const ease = 1 - Math.pow(1 - progress, 3)  // ease-out cubic
+
+      const x = f.x + (f.targetX - f.x) * ease
+      const y = f.y + (f.targetY - f.y) * ease
+
+      const alpha = progress > 0.8 ? (1 - progress) * 5 : 1
+
+      ctx.save()
+      ctx.globalAlpha = alpha
+      const img = this._goldImgs?.[f.type]
+      if (img?.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, x - f.size / 2, y - f.size / 2, f.size, f.size)
+      } else {
+        // Fallback circle
+        ctx.fillStyle = '#FFD700'
+        ctx.beginPath()
+        ctx.arc(x, y, f.size / 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+      ctx.restore()
+
+      if (progress >= 1) this._flyingGolds.splice(i, 1)
+    }
   }
 }
 

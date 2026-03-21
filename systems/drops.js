@@ -81,6 +81,11 @@ class DropManager {
       window.Game.addFloatingText(item.x, item.y - 20, `+gold_${type}`, '#FFD700', 1.2)
     }
 
+    // Flying gold animation toward HUD
+    if (window._hud?.spawnFlyingGold) {
+      window._hud.spawnFlyingGold(item.x, item.y, type)
+    }
+
     // Pickup event for unlock system
     window.GameState.lastPickedGold = type
 
