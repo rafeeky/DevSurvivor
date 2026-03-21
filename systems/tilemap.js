@@ -16,15 +16,6 @@ window.TilemapSystem = (() => {
   const WORLD_COLS = window.WORLD_W / TSIZE  // 75
   const WORLD_ROWS = Math.floor(window.WORLD_H / TSIZE)  // 56
 
-  // ─── 타일셋 좌표 상수 (col, row) ──────────────────────────
-  const T = {
-    FLOOR:      [0, 1],
-    FLOOR_ALT:  [1, 1],
-    FLOOR_DARK: [2, 1],
-    WALL_TOP:   [0, 0],
-    CARPET:     [5, 1],
-  }
-
   // ─── 세계 타일맵 생성 ────────────────────────────────────
   // 여러 오피스 구역이 이어지는 대형 맵
   // F=기본바닥  A=변형바닥  D=어두운바닥  C=카펫  W=벽
@@ -119,13 +110,14 @@ window.TilemapSystem = (() => {
     }
   }
 
-  const TILE_LOOKUP = { F: T.FLOOR, A: T.FLOOR_ALT, D: T.FLOOR_DARK, W: T.WALL_TOP, C: T.CARPET }
-
-  // ─── 타일셋 이미지 ─────────────────────────────────────
-  const _img = new Image()
-  _img.src = 'assets/backgrounds/tileset_room.png'
-  let _loaded = false
-  _img.onload = () => { _loaded = true }
+  // 바닥 타일은 solid color로 렌더 (tileset stripe 타일 사용 안 함)
+  const FLOOR_COLORS = {
+    F: '#2a2a3a',  // 기본 바닥 — 다크 슬레이트
+    A: '#252540',  // 변형 바닥 — 약간 다른 색조
+    D: '#1e1e2c',  // 어두운 바닥 / 복도
+    C: '#2d2645',  // 카펫 — 보라빛 오피스 카펫
+    W: '#111120',  // 벽
+  }
 
   const _worldMap = _buildWorldMap()
 
@@ -253,14 +245,7 @@ window.TilemapSystem = (() => {
     render(ctx, camX, camY) {
       const cx = camX || 0, cy = camY || 0
 
-      if (!_loaded) {
-        ctx.fillStyle = '#1a1a2a'
-        ctx.fillRect(0, 0, 800, 600)
-        return
-      }
-
       // 뷰포트에 보이는 타일 범위만 계산
-      ctx.imageSmoothingEnabled = false
       const startCol = Math.max(0, Math.floor(cx / TSIZE))
       const startRow = Math.max(0, Math.floor(cy / TSIZE))
       const endCol   = Math.min(WORLD_COLS - 1, Math.ceil((cx + 800) / TSIZE))
@@ -269,12 +254,8 @@ window.TilemapSystem = (() => {
       for (let row = startRow; row <= endRow; row++) {
         for (let col = startCol; col <= endCol; col++) {
           const code = _worldMap[row]?.[col] ?? 'F'
-          const [tc, tr] = TILE_LOOKUP[code] ?? T.FLOOR
-          ctx.drawImage(
-            _img,
-            tc * TILE, tr * TILE, TILE, TILE,
-            col * TSIZE - cx, row * TSIZE - cy, TSIZE, TSIZE
-          )
+          ctx.fillStyle = FLOOR_COLORS[code] ?? FLOOR_COLORS.F
+          ctx.fillRect(col * TSIZE - cx, row * TSIZE - cy, TSIZE, TSIZE)
         }
       }
 
