@@ -1,0 +1,1 @@
+"C:\Program Files\Rainmeter\Rainmeter.exe" !ActivateConfig "W98PLAYER" "W98PLAYER.ini"

@@ -36,6 +36,11 @@ class Player {
 
     // 깜빡임 (피격 시)
     this.flashTimer = 0
+
+    // 스프라이트 애니메이션
+    this._animTimer  = 0
+    this._animFrame  = 0
+    this._isMoving   = false
   }
 
   // ── Computed properties ──
@@ -78,8 +83,22 @@ class Player {
       this.lastDirY = dy
     }
 
+    this._isMoving = (dx !== 0 || dy !== 0)
     this.x += dx * this.speed * deltaTime
     this.y += dy * this.speed * deltaTime
+
+    // 스프라이트 애니메이션 프레임 업데이트
+    const charKey = window.GameState?.selectedCharacter || 'adam'
+    const charCfg = window.CHAR_CONFIGS?.[charKey]
+    if (charCfg) {
+      const anim = this._isMoving ? charCfg.walk : charCfg.idle
+      this._animTimer += deltaTime
+      const frameDur = 1 / anim.fps
+      while (this._animTimer >= frameDur) {
+        this._animTimer -= frameDur
+        this._animFrame = (this._animFrame + 1) % anim.frames
+      }
+    }
 
     // 캔버스 경계 클램프
     this.x = Math.max(this.collisionRadius, Math.min(800 - this.collisionRadius, this.x))
@@ -168,77 +187,52 @@ class Player {
 
   render(ctx) {
     const x = this.x, y = this.y
-    const flash = this.flashTimer > 0
+
     ctx.save()
-    if (flash) ctx.globalAlpha = 0.35
+    if (this.flashTimer > 0) ctx.globalAlpha = 0.35
 
     // 보호막 글로우
     if (this.shields > 0) {
       ctx.save()
       ctx.strokeStyle = '#44aaff'
       ctx.shadowColor = '#44aaff'
-      ctx.shadowBlur = 14
-      ctx.lineWidth = 2.5
+      ctx.shadowBlur  = 14
+      ctx.lineWidth   = 2.5
       ctx.beginPath()
       ctx.arc(x, y - 4, this.collisionRadius + 10, 0, Math.PI * 2)
       ctx.stroke()
       ctx.restore()
     }
 
-    // 다리
-    ctx.fillStyle = '#2255cc'
-    ctx.fillRect(x - 8, y + 10, 6, 14)
-    ctx.fillRect(x + 2, y + 10, 6, 14)
-    // 신발
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(x - 9, y + 21, 8, 4)
-    ctx.fillRect(x + 1, y + 21, 8, 4)
+    // ── 스프라이트 렌더링 시도 ──
+    const charKey = window.GameState?.selectedCharacter || 'adam'
+    const cfg     = window.CHAR_CONFIGS?.[charKey]
+    const spr     = window.CHAR_SPRITES?.[charKey]
 
-    // 몸통 (후디)
-    ctx.fillStyle = '#4488ff'
-    ctx.fillRect(x - 11, y - 13, 22, 24)
-    // 후디 포켓
-    ctx.fillStyle = '#3366cc'
-    ctx.fillRect(x - 7, y + 4, 14, 7)
+    if (cfg && spr) {
+      const anim = this._isMoving ? cfg.walk  : cfg.idle
+      const img  = this._isMoving ? spr.walk  : spr.idle
+      if (img?.complete && img.naturalWidth > 0) {
+        const dw = anim.fw * cfg.scale
+        const dh = anim.fh * cfg.scale
+        const sx = this._animFrame * anim.fw
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(img, sx, 0, anim.fw, anim.fh,
+          Math.round(x - dw / 2), Math.round(y - dh * 0.75), dw, dh)
+        ctx.imageSmoothingEnabled = true
+        ctx.restore()
+        this._drawHPBar(ctx, x, y)
+        return
+      }
+    }
 
-    // 팔 (왼쪽 — 노트북 들고 있음)
-    ctx.fillStyle = '#4488ff'
-    ctx.fillRect(x - 17, y - 10, 7, 18)
-    ctx.fillRect(x + 10, y - 10, 7, 14)
-
-    // 노트북 (왼팔에 걸침)
-    ctx.fillStyle = '#888'
-    ctx.fillRect(x - 19, y - 2, 13, 9)
-    ctx.fillStyle = '#1a1a2e'
-    ctx.fillRect(x - 18, y - 1, 11, 7)
-    ctx.fillStyle = '#2244aa'
-    ctx.fillRect(x - 17, y, 9, 5)
-    // 화면 글로우
-    ctx.fillStyle = '#44aaff'
-    ctx.fillRect(x - 16, y + 1, 3, 1)
-
-    // 머리
-    ctx.fillStyle = '#66aaff'
-    ctx.beginPath()
-    ctx.arc(x, y - 21, 10, 0, Math.PI * 2)
-    ctx.fill()
-    // 머리 하이라이트
-    ctx.fillStyle = 'rgba(200,230,255,0.4)'
-    ctx.beginPath()
-    ctx.arc(x - 3, y - 24, 5, 0, Math.PI * 2)
-    ctx.fill()
-    // 눈 (안경 느낌)
-    ctx.strokeStyle = '#ffffff'
-    ctx.lineWidth = 1.5
-    ctx.strokeRect(x - 7, y - 24, 5, 4)
-    ctx.strokeRect(x + 2, y - 24, 5, 4)
-    ctx.fillStyle = '#aaddff'
-    ctx.fillRect(x - 6, y - 23, 3, 2)
-    ctx.fillRect(x + 3, y - 23, 3, 2)
-
+    // ── 폴백: 캔버스 직접 드로잉 ──
+    this._drawCanvasPlayer(ctx, x, y)
     ctx.restore()
+    this._drawHPBar(ctx, x, y)
+  }
 
-    // HP 바
+  _drawHPBar(ctx, x, y) {
     const barW = 38
     const barX = x - barW / 2
     const barY = y + 27
@@ -247,6 +241,53 @@ class Player {
     const hpRatio = this.hp / this.maxHp
     ctx.fillStyle = hpRatio > 0.5 ? '#44ff88' : hpRatio > 0.3 ? '#ffaa00' : '#ff3333'
     ctx.fillRect(barX, barY, barW * hpRatio, 5)
+  }
+
+  _drawCanvasPlayer(ctx, x, y) {
+    // 다리
+    ctx.fillStyle = '#2255cc'
+    ctx.fillRect(x - 8, y + 10, 6, 14)
+    ctx.fillRect(x + 2, y + 10, 6, 14)
+    // 신발
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(x - 9, y + 21, 8, 4)
+    ctx.fillRect(x + 1, y + 21, 8, 4)
+    // 몸통 (후디)
+    ctx.fillStyle = '#4488ff'
+    ctx.fillRect(x - 11, y - 13, 22, 24)
+    // 후디 포켓
+    ctx.fillStyle = '#3366cc'
+    ctx.fillRect(x - 7, y + 4, 14, 7)
+    // 팔
+    ctx.fillStyle = '#4488ff'
+    ctx.fillRect(x - 17, y - 10, 7, 18)
+    ctx.fillRect(x + 10, y - 10, 7, 14)
+    // 노트북
+    ctx.fillStyle = '#888'
+    ctx.fillRect(x - 19, y - 2, 13, 9)
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(x - 18, y - 1, 11, 7)
+    ctx.fillStyle = '#2244aa'
+    ctx.fillRect(x - 17, y, 9, 5)
+    ctx.fillStyle = '#44aaff'
+    ctx.fillRect(x - 16, y + 1, 3, 1)
+    // 머리
+    ctx.fillStyle = '#66aaff'
+    ctx.beginPath()
+    ctx.arc(x, y - 21, 10, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = 'rgba(200,230,255,0.4)'
+    ctx.beginPath()
+    ctx.arc(x - 3, y - 24, 5, 0, Math.PI * 2)
+    ctx.fill()
+    // 눈 (안경)
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x - 7, y - 24, 5, 4)
+    ctx.strokeRect(x + 2, y - 24, 5, 4)
+    ctx.fillStyle = '#aaddff'
+    ctx.fillRect(x - 6, y - 23, 3, 2)
+    ctx.fillRect(x + 3, y - 23, 3, 2)
   }
 }
 

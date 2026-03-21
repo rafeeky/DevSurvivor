@@ -1,0 +1,1 @@
+If you would like a Desktop Icon to open the CD Player then simply create a shortcut of other\run_loadskin.vbs and rename it to CD Payer. Right Click the shortcut and click Change Icon and select other/ico.ico. If your rainmeter isn't installed in C:\Program Files\Rainmeter\Rainmeter.exe then you will need to edit the location in other\loadskin.bat 

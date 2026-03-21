@@ -42,6 +42,8 @@ window.GameState = {
   expMultiplier:   1,
   healMultiplier:  1,
   lastEarnedPoints: 0,
+  // 캐릭터 선택 (lobby에서 설정, 게임 재시작 시 유지)
+  selectedCharacter: localStorage.getItem('devSurvivor_char') || 'adam',
 }
 
 // ─────────────────────────────────────────
@@ -302,6 +304,7 @@ function _loop(now) {
 // 부트스트랩
 // ─────────────────────────────────────────
 ;(async () => {
+  await tryImport('./entities/charsprites.js')
   await tryImport('./entities/player.js')
   await tryImport('./entities/enemies.js')
   await tryImport('./entities/skills.js')
