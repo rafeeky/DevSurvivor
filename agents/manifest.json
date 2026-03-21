@@ -120,7 +120,7 @@
       "title": "tilemap.js WORLD_ROWS 소수점 버그 수정",
       "assignee": "raf",
       "completedAt": "2026-03-22",
-      "commit": "TBD",
+      "commit": "b9972e6",
       "notes": "WORLD_H(1800)/TSIZE(32)=56.25 → Math.floor() 추가. _buildWorldMap 크래시 해소, TilemapSystem 정상 할당. smoke-test PASS."
     }
   ],
