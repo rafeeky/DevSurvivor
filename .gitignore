@@ -10,5 +10,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Build output (dist/index.html은 추적)
+# Build output
+dist/
 build/

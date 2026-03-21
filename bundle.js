@@ -79,9 +79,9 @@ ${scriptBlocks}
 </html>
 `
 
-const outPath = path.join(BASE, 'dist', 'index.html')
-fs.mkdirSync(path.join(BASE, 'dist'), { recursive: true })
+const outPath = path.join(BASE, 'docs', 'index.html')
+fs.mkdirSync(path.join(BASE, 'docs'), { recursive: true })
 fs.writeFileSync(outPath, html, 'utf8')
 
 const size = (fs.statSync(outPath).size / 1024).toFixed(1)
-console.log(`✅ 번들 완료: dist/index.html (${size} KB)`)
+console.log(`✅ 번들 완료: docs/index.html (${size} KB)`)
