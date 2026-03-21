@@ -120,6 +120,31 @@ function _drawEnemyAnnouncement(ctx, ann) {
 }
 
 // ─────────────────────────────────────────
+// 캐릭터 패시브 적용
+// ─────────────────────────────────────────
+function _applyCharacterPassive(player, skillManager) {
+  const charKey = GameState.selectedCharacter || 'adam'
+  if (charKey === 'adam') {
+    // 속도형 / 빠른 적응: 경험치 +20%, 이동속도 +20
+    player._charPassive = 'speed'
+    GameState.expMultiplier = (GameState.expMultiplier || 1) + 0.2
+    player.baseSpeed += 20
+  } else if (charKey === 'alex') {
+    // 처리형 / 숙련된 디버깅: 스킬 데미지 +20%, 디버그 쿨다운 -0.5초
+    player._charPassive = 'combat'
+    GameState.skillDamageMult = (GameState.skillDamageMult || 1) + 0.2
+    if (skillManager?.skillDefs?.['디버그']) {
+      skillManager.skillDefs['디버그'].cooldown = Math.max(0.5, skillManager.skillDefs['디버그'].cooldown - 0.5)
+    }
+  } else if (charKey === 'amelia') {
+    // 버티기형 / 끝까지 버티기: 회복량 +25%, 보호막 +1, 저체력 피해 -20%(takeDamage에서 처리)
+    player._charPassive = 'survivor'
+    GameState.healMultiplier = (GameState.healMultiplier || 1) + 0.25
+    player.addShield(1)
+  }
+}
+
+// ─────────────────────────────────────────
 // 배경 렌더링
 // ─────────────────────────────────────────
 function drawBackground(ctx) {
@@ -194,6 +219,8 @@ window.Game = {
       window.dispatchEvent(new CustomEvent('playerCreated', { detail: { player: Game.player } }))
       // 메타 업그레이드 효과 적용
       if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
+      // 캐릭터 고유 패시브 적용 (메타 이후에 적용해 수치 누적)
+      _applyCharacterPassive(Game.player, Game.skillManager)
       // 시작 스킬 없으면 디버그 무료 지급
       if (Game.skillManager && !Game.skillManager.slots.some(Boolean)) {
         Game.skillManager.assignSkill(0, '디버그')

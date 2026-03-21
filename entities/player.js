@@ -30,6 +30,9 @@ class Player {
     this._baseSpeedMult = 1  // 패시브 스킬에 의한 영구 속도 배율
     this._baseDmgMult   = 1  // 메타 업그레이드에 의한 영구 피해 배율
 
+    // 캐릭터 패시브 식별자 ('speed' | 'combat' | 'survivor')
+    this._charPassive = null
+
     // 이동 방향 기억 (스킬용)
     this.lastDirX = 0
     this.lastDirY = 1
@@ -134,7 +137,10 @@ class Player {
       this.invincibleTimer = this.invincibleDuration
       return
     }
-    const actual = amount * this._damageMultiplier
+    let mult = this._damageMultiplier
+    // 버티기형 패시브: 체력 30% 이하 시 피해 -20%
+    if (this._charPassive === 'survivor' && this.hp / this.maxHp < 0.3) mult *= 0.8
+    const actual = amount * mult
     this.hp = Math.max(0, this.hp - actual)
     this.invincibleTimer = this.invincibleDuration
     this.flashTimer = 0.15
