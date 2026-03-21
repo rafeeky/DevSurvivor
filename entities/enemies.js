@@ -539,6 +539,10 @@ class AIBot extends Enemy {
 
     // 등장 이벤트
     GameState.aiBotReached = true
+
+    // 플레이어 클론 애니메이션 상태
+    this._mirrorFrame = 0
+    this._mirrorTimer = 0
   }
 
   update(deltaTime, player) {
@@ -619,98 +623,78 @@ class AIBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    // D003 A안: 붉은 외곽선 (shadowColor)
+
+    const charKey = window.GameState?.selectedCharacter || 'adam'
+    const spr = window.CHAR_SPRITES?.[charKey]
+    const cfg = window.CHAR_CONFIGS?.[charKey]
+    const moving = (this.vx !== 0 || this.vy !== 0)
+    const animCfg = cfg ? (moving ? cfg.walk : cfg.idle) : null
+    const img = spr ? (moving ? spr.walk : spr.idle) : null
+
+    // advance animation
+    if (animCfg) {
+      this._mirrorTimer += 1/60
+      const frameDur = 1 / (animCfg.fps || 8)
+      while (this._mirrorTimer >= frameDur) {
+        this._mirrorTimer -= frameDur
+        this._mirrorFrame = (this._mirrorFrame + 1) % (animCfg.frames || 1)
+      }
+    }
+
+    const scale = cfg?.scale || 3
+    const fw = animCfg?.fw || 32
+    const fh = animCfg?.fh || 32
+    const dw = Math.round(fw * scale)
+    const dh = Math.round(fh * scale)
+    const rx = Math.round(this.x - dw / 2)
+    const ry = Math.round(this.y - dh * (cfg?.yAnchor || 0.8))
+
+    if (img?.complete && img.naturalWidth > 0) {
+      // 1. Black aura (radial gradient behind sprite)
+      ctx.save()
+      const auraCX = this.x
+      const auraCY = this.y - dh * 0.4
+      const auraR = dw * 1.1
+      const grd = ctx.createRadialGradient(auraCX, auraCY, 0, auraCX, auraCY, auraR)
+      grd.addColorStop(0, 'rgba(0,0,0,0.55)')
+      grd.addColorStop(0.5, 'rgba(0,0,0,0.25)')
+      grd.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = grd
+      ctx.fillRect(auraCX - auraR, auraCY - auraR, auraR * 2, auraR * 2)
+      ctx.restore()
+
+      // 2. Sprite with red outline
+      ctx.save()
+      ctx.shadowColor = '#ff2222'
+      ctx.shadowBlur = 16
+      ctx.imageSmoothingEnabled = fw > 16
+      const sx = this._mirrorFrame * fw
+      // flip if moving left
+      if (this.vx < 0) {
+        ctx.translate(rx + dw, ry)
+        ctx.scale(-1, 1)
+        ctx.drawImage(img, sx, 0, fw, fh, 0, 0, dw, dh)
+      } else {
+        ctx.drawImage(img, sx, 0, fw, fh, rx, ry, dw, dh)
+      }
+      ctx.imageSmoothingEnabled = false
+      ctx.restore()
+
+      // HP bar
+      _drawHpBar(ctx, this, dw)
+      return
+    }
+
+    // fallback: red circle with outline
     ctx.save()
     ctx.shadowColor = '#ff2222'
-    ctx.shadowBlur = 14
-    const didSprite = this._renderSprite(ctx)
-    ctx.restore()
-    if (didSprite) { _drawHpBar(ctx, this, 50); return }
-    const x = this.x, y = this.y
-    const halfHp = this.hp <= this.maxHp * 0.5
-    const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'
-    const t = Date.now()
-
-    ctx.save()
-    ctx.shadowColor = eyeColor
-    ctx.shadowBlur = halfHp ? 30 : 20
-
-    // 맥동 광환 (바깥)
-    const pulse = 0.7 + 0.3 * Math.sin(t / 300)
-    ctx.globalAlpha = 0.18 * pulse
-    ctx.strokeStyle = eyeColor
-    ctx.lineWidth = halfHp ? 5 : 3
-    ctx.beginPath(); ctx.arc(x, y - 5, 42, 0, Math.PI * 2); ctx.stroke()
-    ctx.globalAlpha = 0.10 * pulse
-    ctx.beginPath(); ctx.arc(x, y - 5, 54, 0, Math.PI * 2); ctx.stroke()
-    ctx.globalAlpha = 1
-
-    // 다리
-    ctx.fillStyle = '#111'
-    ctx.fillRect(x - 14, y + 15, 11, 20)
-    ctx.fillRect(x + 3, y + 15, 11, 20)
-    // 발
-    ctx.fillStyle = '#1a1a1a'
-    ctx.fillRect(x - 16, y + 31, 14, 5)
-    ctx.fillRect(x + 2, y + 31, 14, 5)
-
-    // 팔
-    ctx.fillStyle = '#111'
-    ctx.fillRect(x - 24, y - 12, 10, 26)
-    ctx.fillRect(x + 14, y - 12, 10, 26)
-    // 손 (클로)
-    ctx.fillRect(x - 26, y + 10, 5, 8)
-    ctx.fillRect(x - 22, y + 12, 5, 8)
-    ctx.fillRect(x + 21, y + 10, 5, 8)
-    ctx.fillRect(x + 17, y + 12, 5, 8)
-
-    // 몸통
-    ctx.fillStyle = '#0d0d0d'
-    ctx.fillRect(x - 15, y - 13, 30, 29)
-    // 코어 (가슴)
-    ctx.fillStyle = halfHp ? '#FF3C3C' : '#00FFFF'
-    ctx.shadowBlur = 20
-    ctx.beginPath(); ctx.arc(x, y + 2, 6, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#ffffff'
-    ctx.beginPath(); ctx.arc(x, y + 2, 2.5, 0, Math.PI * 2); ctx.fill()
-
-    // 머리
-    ctx.shadowBlur = 0
-    ctx.fillStyle = '#111'
-    ctx.beginPath(); ctx.arc(x, y - 26, 14, 0, Math.PI * 2); ctx.fill()
-
-    // 눈
-    ctx.fillStyle = eyeColor
-    ctx.shadowColor = eyeColor
     ctx.shadowBlur = 16
-    ctx.fillRect(x - 9, y - 30, 6, 5)
-    ctx.fillRect(x + 3, y - 30, 6, 5)
-
-    // HP 50% → 이마 금 균열
-    if (halfHp) {
-      ctx.strokeStyle = '#FF6644'
-      ctx.lineWidth = 1.5
-      ctx.shadowBlur = 6
-      ctx.beginPath()
-      ctx.moveTo(x - 2, y - 37)
-      ctx.lineTo(x + 1, y - 30)
-      ctx.lineTo(x - 1, y - 24)
-      ctx.stroke()
-    }
-
+    ctx.fillStyle = '#cc0000'
+    ctx.beginPath()
+    ctx.arc(this.x, this.y, 22, 0, Math.PI * 2)
+    ctx.fill()
     ctx.restore()
-
-    // HP 바
-    if (this.hp < this.maxHp) {
-      const barW = 54
-      ctx.fillStyle = '#222'
-      ctx.fillRect(x - barW / 2, y - 52, barW, 6)
-      ctx.fillStyle = halfHp ? '#FF3C3C' : '#00CCFF'
-      ctx.fillRect(x - barW / 2, y - 52, barW * (this.hp / this.maxHp), 6)
-      ctx.strokeStyle = '#444'
-      ctx.lineWidth = 1
-      ctx.strokeRect(x - barW / 2, y - 52, barW, 6)
-    }
+    _drawHpBar(ctx, this, 44)
   }
 }
 

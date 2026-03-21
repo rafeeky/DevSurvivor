@@ -286,17 +286,9 @@ for (const { src, dst } of GERALT_SPRITES) {
 }
 console.log(`✅ Geralt(Alex) 스프라이트 변환 완료 (${geraltCount}/${GERALT_SPRITES.length})`)
 
-// Amelia(Twiggy) 스프라이트 변환 (sprite-pack-3 RGB → assets/custom/player/ RGBA)
-const TWIGGY_SPRITES = [
-  { src: `${SP3}/2 - Twiggy/Idle (32 x 32).png`,             dst: `${DST}/twiggy_idle.png` },
-  { src: `${SP3}/2 - Twiggy/Running (32 x 32).png`,           dst: `${DST}/twiggy_walk.png` },
-  { src: `${SP3}/2 - Twiggy/Hurt_&_Recovery (32 x 32).png`,   dst: `${DST}/twiggy_hit.png`  },
-]
-let twiggyCount = 0
-for (const { src, dst } of TWIGGY_SPRITES) {
-  try { convertRGBtoRGBA(src, dst); twiggyCount++ } catch (e) { console.warn('⚠️ Twiggy 변환 실패:', src, e.message) }
-}
-console.log(`✅ Twiggy(Amelia) 스프라이트 변환 완료 (${twiggyCount}/${TWIGGY_SPRITES.length})`)
+// Amelia(Twiggy) 스프라이트 — assets/player/Twiggy_idle.png & Twiggy_run.png 직접 사용
+// (변환 불필요: 파일이 assets/player/ 에 이미 존재)
+console.log('✅ Twiggy(Amelia) 스프라이트: assets/player/Twiggy_idle.png / Twiggy_run.png 직접 사용')
 
 // 적 스프라이트 RGBA 변환 (sprite-pack-3 RGB → assets/enemies/ RGBA)
 const ENEMY_DST = path.join(BASE, 'assets/enemies')
