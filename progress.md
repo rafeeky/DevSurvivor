@@ -1,129 +1,140 @@
 # Dev Survival — 진행 현황
 
-> 최종 업데이트: 2026-03-21
-> GDD 버전: 0.5
+> 최종 업데이트: 2026-03-22
+> GDD 버전: 0.7
+> 빌드: `docs/index.html` (183.7 KB)
 
 ---
 
 ## 완료된 작업
 
-### 문서
+### 핵심 게임 시스템
 
 | 파일 | 내용 | 상태 |
 |------|------|------|
-| `gameconcept.litcoffee` | 게임 컨셉 문서 (원본) | ✅ |
-| `GDD.md` | Game Design Document (v0.4) | ✅ |
-| `PROJECT_INDEX.md` | 파일 구조 / GDD Part 맵 / 작업 선택 가이드 | ✅ |
-| `agents/main-agent.md` | Rules (Work Order, Batch Rules, Output Format), Phase 2 병렬 체크리스트, 에이전트별 필수 컨텍스트 | ✅ |
-| `agents/raf.md` | Core System Designer context + 보고 형식 | ✅ |
-| `agents/marv.md` | Enemy & Combat Designer context + 보고 형식 | ✅ |
-| `agents/haon.md` | Skill & Progression Designer context + 보고 형식 | ✅ |
-| `agents/mason.md` | UI/UX Flow Designer context + 보고 형식 | ✅ |
-| `agents/milli.md` | GDD Editor context + 자율 결정 기준 | ✅ |
-| `agents/fleeky.md` | AI Experiment Logger context + 가설 판단 정량 기준 | ✅ |
-| `experiment_log.md` | 1차 협업 실험 로그 | ✅ |
+| `game.js` | GameState, Game 인터페이스, 게임 루프, 카메라, 3분 타이머 | ✅ |
+| `entities/player.js` | WASD 이동, HP 100, 무적, 버프, 보호막, `_charPassive` 태그, 저체력 피해 감소(survivor) | ✅ |
+| `entities/enemies.js` | 5종 적 — **박스봇·블루패치·모니터헤드·제럴드·미러워커**, ErrorBullet, HazardZone | ✅ |
+| `entities/skills.js` | SkillManager — 액티브 7종 + 패시브 2종 | ✅ |
+| `systems/spawner.js` | 6구간 타임라인 (BoxBot→AIBot), 투사체·방해구역 update/render | ✅ |
+| `systems/levelup.js` | 경험치 누적, 레벨업 3지선다, **Q/W/E** 키 + 클릭 선택 (1/2/3 스킬키 충돌 해소) | ✅ |
+| `systems/score.js` | 점수 공식, 출시 진행률, localStorage 최고 기록 | ✅ |
+| `systems/meta.js` | 메타 업그레이드 10종, 출시 포인트 경제, localStorage 연동 | ✅ |
 
-### 구현 코드
+### 캐릭터 패시브 시스템 (Session 1)
 
-| 파일 | 담당 에이전트 | 내용 |
-|------|------------|------|
-| `index.html` | Raf | 캔버스, 진입점 |
-| `game.js` | Raf → 통합 | GameState, Game 인터페이스, 게임 루프, 3분 타이머, 메타 연동 |
-| `entities/player.js` | Raf | Player 클래스 — WASD 이동, HP 100, 무적, 버프, 보호막, 패시브 기저 배율 버그 수정 |
-| `entities/enemies.js` | Marv | Enemy 베이스 + BoxBot + **CartBot + PCBot + MirrorBot + AIBot** + ErrorBullet + HazardZone, 속도 디버프 버그 수정, expMultiplier 반영 |
-| `entities/skills.js` | Haon | SkillManager — **7종 액티브 + 2종 패시브** 완전 구현 |
-| `systems/spawner.js` | Marv | **6구간 타임라인 확장** — BoxBot~AIBot 스폰, 투사체/방해구역 update·render |
-| `systems/levelup.js` | Haon | 경험치 누적, 레벨업 3지선다, 1/2/3 키 선택, **신규 스킬 선택지 9종 추가** |
-| `systems/score.js` | Mason | 스코어 공식, 출시 진행률, localStorage 최고 기록 |
-| `systems/meta.js` | Mason | **메타 업그레이드 10종, 출시 포인트 경제, localStorage 연동** |
-| `ui/hud.js` | Mason | HP 바, 타이머, 스킬 슬롯 4개, 경험치 바 |
-| `ui/lobby.js` | Mason | 로비 화면, 시작 버튼, **업그레이드 버튼, 출시 포인트 표시** |
-| `ui/result.js` | Mason | 결과 화면 (Dev Win! / AI Win!), **이번 판 포인트 획득 표시, 업그레이드 버튼** |
+| 파일 | 변경 내용 | 상태 |
+|------|---------|------|
+| `entities/charsprites.js` | `roleType`, `roleColor`, `passive`, `passiveDesc`, `sublabel` 필드 추가 (3캐릭터) | ✅ |
+| `entities/player.js` | `_charPassive` 필드, `takeDamage()` 내 survivor 저체력 피해 -20% 로직 | ✅ |
+| `game.js` | `_applyCharacterPassive()` 함수 — Game.start() 내 MetaManager 이후 호출 | ✅ |
+| `ui/lobby.js` | 역할 타입 배지 (색상 테두리), 패시브명, 카드 높이 148px, 버튼 위치 조정 | ✅ |
 
-### 지금 브라우저에서 동작하는 것
+**캐릭터별 패시브 효과:**
+- `adam` (속도형): `expMultiplier +0.2`, `baseSpeed +20`
+- `alex` (처리형): `skillDamageMult +0.2`, 디버그 쿨다운 -0.5초
+- `amelia` (버티기형): `healMultiplier +0.25`, 시작 보호막 +1, 체력 <30% 피해 -20%
 
-**기본 흐름**
-- 로비 화면 → [시작하기] 클릭 → 게임 시작
-- 로비/결과 화면 → [업그레이드] 클릭 → 메타 업그레이드 화면 → [돌아가기] → 로비
+### 폰트 시스템 (Session 2)
 
-**적 시스템**
-- BoxBot — 2.5초 간격 스폰, 직진 추적, 충돌 시 HP 감소
-- CartBot — 0:30 이후 등장, 3초마다 돌진 (속도 2배, 0.6초)
-- PCBot — 1:00 이후 등장, 거리 유지, 2.5초마다 오류탄(이동속도 -30%), 6초마다 방해 구역
-- MirrorBot — 2:10 이후 등장, 예측 추적, 4초마다 연속 돌진 3회
-- AIBot — 2:50 등장, 기존 스폰 중지, 충격파(200px, 데미지 40+넉백), HP 50% 이하 카트봇 소환
-
-**경험치 / 레벨업**
-- BoxBot 처치 → 경험치 5, CartBot → 10, PCBot → 15, MirrorBot → 30, AIBot → 200
-- 경험치 30 → 레벨업 팝업 (3지선다), 1/2/3 키 또는 클릭 선택
-
-**스킬 — 액티브 (Q/W/E/R 슬롯)**
-- Q: 긴급 수정 — 반경 120px 내 모든 적 피해 40, 쿨다운 5초
-- W: 디버그 — 가장 가까운 적 1명 피해 70, 쿨다운 2.5초
-- E: 우선순위 정리 — 전방 부채꼴 120° / 160px, 피해 30, 넉백 100px, 쿨다운 7초
-- 커피 한 잔 — 이동속도 +40% 5초, 현재 쿨다운 -20%, 쿨다운 20초
-- 피규어 청소하기 — 받는 피해 -40% 4초, 주변 150px 적 넉백 120px, 쿨다운 12초
-- 강아지 쓰다듬기 — 최대 HP 25% 회복, 쿨다운 20초
-- 낮잠자기 — 1.5초 이동 정지 후 HP 50% 회복, 쿨다운 30초
-
-**스킬 — 패시브 (슬롯 불필요)**
-- 자동 저장 — 12초마다 보호막 1 자동 충전
-- 산책하기 — 이동속도 영구 +30%
-
-**메타 업그레이드 시스템**
-- 출시 포인트 10가지 조건별 지급 (플레이 시작 5pt, 1분 생존 10pt, 2분 생존 15pt, 완주 20pt 등)
-- 메타 업그레이드 10종 구매 (maxHP+, 이동속도+, 스킬 데미지+, 경험치+, 회복+, 받는 피해-, 시작 보호막, 쿨다운-, 포인트+, 시작 스킬)
-- 업그레이드 효과 게임 시작 시 자동 적용
-
-**기타**
-- HP 30% 이하 → 화면 테두리 붉은 점멸
-- 3분 생존 → Dev Win! / HP 0 → AI Win!
-- 최고 기록, 출시 포인트, 업그레이드 상태 localStorage 저장
-
-### 버그 수정 이력
-
-| 버그 | 원인 | 수정 |
+| 위치 | 내용 | 상태 |
 |------|------|------|
-| PCBot 속도 디버프 시 플레이어 컨트롤 역전 | `applyBuff('speed', -0.3, 2)` → 음수 배율로 속도 음수 | 값 `-0.3` → `0.7` (30% 감소) |
-| 패시브 이동속도 버프가 매 프레임 초기화 | `_recalcBuffs()`가 `speedMult = 1`로 덮어씀 | `_baseSpeedMult` 기저 배율 추가, 패시브는 기저에 저장 |
-| 패시브 피해 감소 버프가 매 프레임 초기화 | 동일 — `_baseDmgMult` 부재 | `_baseDmgMult` 기저 배율 추가 |
+| `bundle.js` HTML head | Pixelify Sans + VT323 Google Fonts 링크 추가 | ✅ |
+| `bundle.js` regex | `(\d+)px monospace` → `Press Start 2P` 자동 변환 | ✅ |
+| `ui/hud.js` | 모든 폰트 → `"Pixelify Sans", sans-serif` | ✅ |
+| `ui/result.js` | 모든 폰트 → `"Pixelify Sans", sans-serif` | ✅ |
+| `ui/lobby.js` | 모든 폰트 → `"Pixelify Sans", sans-serif` | ✅ |
+| `game.js` | 신규 적 등장 알림 배너 → `"VT323", cursive` | ✅ |
 
-### hazardZones / AIBot 넉백 — 이슈 닫힘
+**3단계 폰트 규칙:**
+- Press Start 2P: 타이틀, 결과 헤드라인 (bundle.js가 monospace 자동 변환)
+- Pixelify Sans: HUD, 버튼, 팝업 본문, 캐릭터 설명
+- VT323: 시스템 메시지, 경고 배너, 적 등장 알림
 
-| 항목 | 결론 |
-|------|------|
-| `hazardZones` | `GameState.hazardZones = []` game.js에 선언됨 — 문제 없음 |
-| AIBot 넉백 `player.x/y` 직접 쓰기 | player.js의 x/y는 일반 프로퍼티 — 문제 없음 |
+### 오피스 맵 (Session 3)
+
+| 파일 | 내용 | 상태 |
+|------|------|------|
+| `systems/tilemap.js` | WORLD_W=2400, WORLD_H=1800, tileset_room.png 타일 렌더 | ✅ |
+| `systems/tilemap.js` | 9개 구역 레이아웃 (개발팀·회의실·서버실·오픈플랜·휴게실·복도·기획팀·보스룸·창고) | ✅ |
+| `systems/tilemap.js` | 오피스 프랍 60여 개 (office-props + julia 팩 에셋 사용) | ✅ |
+
+**이번 세션 수정:**
+- offscreen canvas bake 방식 → **뷰포트 내 타일 직접 렌더** 방식으로 교체 (렌더링 버그 수정)
+
+### GDD v0.7 변경 사항 (2026-03-22)
+
+| 항목 | 변경 내용 |
+|------|---------|
+| 보스 처치 플로우 | 미러워커 처치 → 골드 다이아 드롭 → "퇴근하세요!" 힌트 → 픽업 시 게임 종료 (180s 자동 승리 제거) |
+| 적 이름/행동 | CartBot→**블루패치**(이동보정 AI, 2.5초 빠른 돌진), PCBot→**모니터헤드**(스캔 빔 + 오류탄), MirrorBot→**제럴드**(친근접근 + 2회 베기), AIBot→**미러워커** |
+| 스프라이트 | BoxBot walk → `boxbot_walk.png` (6프레임), PCBot → `robot3_walk.png` (6프레임) |
+| 입력 분리 | 레벨업 카드 선택 1/2/3 → **Q/W/E** (스킬 1/2/3/4와 충돌 해소) |
+| HUD 개선 | 출시% 빨간색·크게, 스킬 슬롯에 타입 뱃지 (공격/회복/이속↑/방어/패시브) |
+| 로비 개선 | 캐릭터 카드 텍스트 크게, 잠금 해제 조건 카드 내부 표시, 출시 포인트 빨간색 |
+| UI 에셋 | 버튼·패널 전체 drawUIPanel(9-slice) 적용 (lobby/result/levelup) |
+| 뱀파이어 해금 | 클릭 팝업 → 카드 내 "보스 처치 후 골드 다이아 × 1 획득 → 자동 해금" 안내 |
+
+### 스프라이트 / 에셋
+
+| 파일 | 내용 | 상태 |
+|------|------|------|
+| `entities/charsprites.js` | adam(Tommy 32x32), alex(Alex 16x16), amelia(Julia 32x32) idle/walk/action/hit 애니메이션 | ✅ |
+| `entities/enemysprites.js` | 적 스프라이트 정의 | ✅ |
+| `ui/lobby.js` | 캐릭터 카드 내 idle 스프라이트 프리뷰 | ✅ |
+| `assets/custom/backgrounds/bg_office.png` | 로비 배경 이미지 | ✅ |
+
+### UI
+
+| 파일 | 내용 | 상태 |
+|------|------|------|
+| `ui/hud.js` | HP 바, 타이머, 스킬 슬롯 4개, 경험치 바, 출시 진행률 | ✅ |
+| `ui/lobby.js` | 로비 — 캐릭터 선택 3종, 시작 버튼, 업그레이드 버튼, 최고 기록·포인트 표시 | ✅ |
+| `ui/result.js` | 결과 — Dev Win! / AI Win!, 획득 포인트, 업그레이드 버튼 | ✅ |
+| `ui/joystick.js` | 모바일 가상 조이스틱 | ✅ |
+
+### 빌드 & 설정
+
+| 항목 | 내용 | 상태 |
+|------|------|------|
+| `bundle.js` | 단일 파일 번들러 (docs/index.html 생성) | ✅ |
+| `docs/index.html` | 배포용 단일 파일 148.6 KB | ✅ |
+| `.claude/settings.json` | PostToolUse 검증 훅, PostCompact 자기강화 훅, model: opus | ✅ |
+| `GDD.md` | v0.6 — Part 3.4~3.6 캐릭터 패시브, Part 7.0 폰트 규칙, Part 8.1b 오피스 맵, Part 11 에셋 목록 | ✅ |
 
 ---
 
 ## 남은 작업
 
-### ~~Milli 호출 필요 — GDD 수치 동기화~~ ✅ 완료 (v0.5)
+### 버그 / 렌더링 확인 필요
 
-### M6 — UI 완성 ✅ 완료
+| 항목 | 내용 | 우선순위 |
+|------|------|---------|
+| 타일맵 실제 표시 확인 | tileset_room.png 타일이 브라우저에서 정상 렌더되는지 육안 확인 필요 | 높음 |
+| 오피스 프랍 경로 확인 | `assets/packs/office-props/`, `assets/packs/julia/` 내 파일명 실제 존재 여부 | 중간 |
 
-| 항목 | 내용 | 상태 |
-|------|------|------|
-| AIBot 등장 연출 | 화면 암전 0.5초 + 경고 텍스트 오버레이 | ✅ |
-| 레벨업 이펙트 | 화면 중앙 황금빛 광원 플래시 | ✅ |
-| 메타 업그레이드 화면 polish | 카드 디자인 개선, 애니메이션 | 낮 (선택) |
+### 게임플레이 폴리싱
 
-### M7 — 폴리싱
+| 항목 | 내용 | 우선순위 |
+|------|------|---------|
+| 밸런스 조정 | 플레이테스트 피드백 반영 (적 HP, 스킬 데미지, 스폰 간격) | 중간 |
+| 낮잠자기 스킬 완성 | GDD에 "미구현" 표기 — levelup.js에서 처리 필요 | 낮음 |
+| 스킬 3단계 강화 | levelup.js에 강화 단계별 수치 확인/구현 | 낮음 |
+| 메타 업그레이드 화면 polish | 카드 디자인 개선, 애니메이션 | 낮음 |
 
-| 항목 | 내용 |
-|------|------|
-| 스프라이트 개선 | 현재 Canvas 도형 → 적 외형 개선 |
-| 사운드 (선택) | BGM, 스킬음, 처치음, 레벨업음 |
-| 밸런스 조정 | 플레이테스트 피드백 반영 (Milli 담당) |
-| 모바일 조이스틱 | 가상 조이스틱 추가 |
+### 사운드 (선택)
+
+| 항목 | 내용 | 우선순위 |
+|------|------|---------|
+| BGM | 오피스 테마 배경음악 | 낮음 (선택) |
+| 스킬음 / 처치음 / 레벨업음 | Web Audio API 또는 mp3 | 낮음 (선택) |
 
 ### 배포
 
 | 항목 | 내용 | 상태 |
 |------|------|------|
-| 단일 파일 번들 | `dist/index.html` (93.7 KB) — `node bundle.js`로 재생성 | ✅ |
-| 사내 공유 | 링크 배포 + 플레이테스트 수집 | 대기 중 |
+| GitHub Pages 배포 | `docs/index.html` → 사내 링크 공유 | 대기 중 |
+| 플레이테스트 수집 | 사내 링크 배포 + 피드백 수집 | 대기 중 |
 
 ---
 
@@ -131,30 +142,50 @@
 
 ```
 DevSurvivor/
-├── index.html                ✅ 완료
-├── game.js                   ✅ 완료 (통합 + 메타 연동)
-├── PROJECT_INDEX.md          ✅ 완료
+├── game.js                      ✅ 완료 (패시브 적용, 카메라, 3분 루프)
+├── bundle.js                    ✅ 완료 (폰트 변환, 에셋 복사)
+├── GDD.md                       ✅ v0.6
+├── progress.md                  ✅ 이 파일
 ├── entities/
-│   ├── player.js             ✅ 완료 (버그 수정 포함)
-│   ├── enemies.js            ✅ 5종 완료 (버그 수정 포함)
-│   └── skills.js             ✅ 7종 액티브 + 2종 패시브 완료 (M4)
+│   ├── charsprites.js           ✅ 완료 (3캐릭터 패시브 메타데이터)
+│   ├── enemysprites.js          ✅ 완료
+│   ├── player.js                ✅ 완료 (_charPassive, 저체력 피해 감소)
+│   ├── enemies.js               ✅ 5종 완료
+│   └── skills.js                ✅ 7종 액티브 + 2종 패시브
 ├── systems/
-│   ├── spawner.js            ✅ 6구간 타임라인 완료 (M3)
-│   ├── levelup.js            ✅ 완료 (신규 스킬 선택지 포함)
-│   ├── score.js              ✅ 완료
-│   └── meta.js               ✅ 완료 (M5)
+│   ├── tilemap.js               ✅ 완료 (9구역 오피스 맵, 뷰포트 직접 렌더)
+│   ├── spawner.js               ✅ 6구간 타임라인
+│   ├── levelup.js               ✅ 완료
+│   ├── score.js                 ✅ 완료
+│   └── meta.js                  ✅ 10종 메타 업그레이드
 ├── ui/
-│   ├── hud.js                ✅ 완료
-│   ├── lobby.js              ✅ 완료 (업그레이드 버튼 포함)
-│   └── result.js             ✅ 완료 (포인트 표시 + 업그레이드 버튼 포함)
-├── agents/
-│   ├── main-agent.md         ✅ Rules + 병렬 체크리스트 추가
-│   ├── raf.md                ✅ 보고 형식 추가
-│   ├── marv.md               ✅ 보고 형식 추가
-│   ├── haon.md               ✅ 보고 형식 추가
-│   ├── mason.md              ✅ 보고 형식 추가
-│   ├── milli.md              ✅ 자율 결정 기준 추가
-│   └── fleeky.md             ✅ 가설 정량 기준 추가
-├── GDD.md                    ✅ v0.4 (Milli 수치 동기화 필요)
-└── experiment_log.md         ✅ 1차 기록
+│   ├── hud.js                   ✅ 완료 (Pixelify Sans 폰트)
+│   ├── lobby.js                 ✅ 완료 (캐릭터 카드 + 역할 배지 + 패시브명)
+│   ├── result.js                ✅ 완료 (Pixelify Sans 폰트)
+│   └── joystick.js              ✅ 모바일 조이스틱
+├── assets/
+│   ├── backgrounds/             ✅ tileset_room.png, tileset_interiors.png
+│   ├── custom/player/           ✅ tommy_idle/walk/action/hit.png
+│   ├── custom/backgrounds/      ✅ bg_office.png
+│   ├── characters/              ✅ Alex_idle/run_16x16.png
+│   ├── packs/julia/             ✅ Julia 스프라이트 + 오피스 가구
+│   ├── packs/office-props/      ✅ Desk, Chair, Plant 등 40여 종
+│   └── enemies/                 ✅ 적 스프라이트
+├── docs/
+│   ├── index.html               ✅ 배포용 번들 (148.6 KB)
+│   └── assets/                  ✅ 에셋 복사본
+└── .claude/
+    ├── settings.json            ✅ 훅 + model: opus
+    └── pipeline/                ✅ validate.js, lessons.md
 ```
+
+---
+
+## 버그 수정 이력
+
+| 버그 | 원인 | 수정 |
+|------|------|------|
+| PCBot 속도 디버프 시 컨트롤 역전 | `applyBuff('speed', -0.3)` → 음수 배율 | 값 `-0.3` → `0.7` (30% 감소) |
+| 패시브 이동속도 버프 매 프레임 초기화 | `_recalcBuffs()`가 `speedMult=1`로 덮어씀 | `_baseSpeedMult` 기저 배율 추가 |
+| 패시브 피해 감소 버프 매 프레임 초기화 | `_baseDmgMult` 부재 | `_baseDmgMult` 기저 배율 추가 |
+| 타일맵 미표시 (검은 배경) | offscreen canvas bake 실패 (이미지 로딩 타이밍 문제) | 뷰포트 내 타일 직접 렌더 방식으로 교체 |

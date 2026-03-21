@@ -169,7 +169,7 @@ class BoxBot extends Enemy {
 }
 
 // ============================================================
-// CartBot — HP 55, 속도 130, 3초마다 돌진
+// CartBot — 블루패치 HP 55, 속도 130, 갑작스런 빠른 돌진
 // ============================================================
 class CartBot extends Enemy {
   constructor(x, y) {
@@ -179,11 +179,13 @@ class CartBot extends Enemy {
       collisionRadius: 16,
     })
     this.dashTimer = 0
-    this.dashCooldown = 3.0
+    this.dashCooldown = 2.5
     this.isDashing = false
     this.dashDuration = 0
     this.dashDx = 0
     this.dashDy = 0
+    this._dashWarnTimer = 0
+    this._dashWarning = false
   }
 
   update(deltaTime, player) {
@@ -195,8 +197,14 @@ class CartBot extends Enemy {
 
     this.dashTimer += deltaTime
 
+    // 돌진 0.3초 전 경고 깜빡임
+    if (!this.isDashing && this.dashTimer >= this.dashCooldown - 0.3) {
+      this._dashWarning = true
+    }
+
     if (!this.isDashing && this.dashTimer >= this.dashCooldown) {
       this.isDashing = true
+      this._dashWarning = false
       this.dashTimer = 0
       this.dashDuration = 0
       if (dist > 0) {
@@ -207,9 +215,9 @@ class CartBot extends Enemy {
 
     if (this.isDashing) {
       this.dashDuration += deltaTime
-      this.x += this.dashDx * this.speed * 2 * deltaTime
-      this.y += this.dashDy * this.speed * 2 * deltaTime
-      if (this.dashDuration >= 0.6) {
+      this.x += this.dashDx * this.speed * 2.8 * deltaTime
+      this.y += this.dashDy * this.speed * 2.8 * deltaTime
+      if (this.dashDuration >= 0.5) {
         this.isDashing = false
         this.dashDuration = 0
       }
@@ -225,7 +233,24 @@ class CartBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
+    if (this._renderSprite(ctx)) {
+      // 돌진 경고 표시
+      if (this._dashWarning && !this.isDashing) {
+        const blink = Math.floor(Date.now() / 120) % 2 === 0
+        if (blink) {
+          ctx.save()
+          ctx.strokeStyle = '#ff4400'
+          ctx.lineWidth = 2
+          ctx.shadowColor = '#ff4400'
+          ctx.shadowBlur = 8
+          ctx.beginPath()
+          ctx.arc(this.x, this.y, 22, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.restore()
+        }
+      }
+      _drawHpBar(ctx, this, 32); return
+    }
     const x = this.x, y = this.y
     const dash = this.isDashing
     ctx.save()
@@ -261,7 +286,7 @@ class CartBot extends Enemy {
 }
 
 // ============================================================
-// PCBot — HP 80, 속도 70, 원거리 유지, 오류탄, 방해 구역
+// PCBot — 모니터헤드 HP 80, 속도 70, 원거리, 스캔 빔, 방해 구역
 // ============================================================
 class PCBot extends Enemy {
   constructor(x, y) {
@@ -276,6 +301,10 @@ class PCBot extends Enemy {
     this.hazardInterval = 6.0
     this.preferredMin = 150
     this.preferredMax = 250
+    // 스캔 빔
+    this.scanTimer = 0
+    this.scanInterval = 5.0
+    this.scanBeam = null   // { tx, ty, life, maxLife }
   }
 
   onKilled() {
@@ -314,6 +343,36 @@ class PCBot extends Enemy {
       GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
     }
 
+    // 스캔 빔 (5초마다 플레이어에게 레이저 조사 → 2초 지속 → 데미지)
+    this.scanTimer += deltaTime
+    if (this.scanTimer >= this.scanInterval) {
+      this.scanTimer = 0
+      this.scanBeam = { tx: player.x, ty: player.y, life: 2.0, maxLife: 2.0 }
+    }
+    if (this.scanBeam) {
+      this.scanBeam.life -= deltaTime
+      // 빔 지속 중 플레이어가 빔 선 위에 있으면 데미지
+      if (this.scanBeam.life > 0) {
+        const bx = this.scanBeam.tx - this.x
+        const by = this.scanBeam.ty - this.y
+        const bLen = Math.sqrt(bx * bx + by * by) || 1
+        const px2 = player.x - this.x
+        const py2 = player.y - this.y
+        const proj = (px2 * bx + py2 * by) / (bLen * bLen)
+        const clampedProj = Math.max(0, Math.min(1, proj))
+        const closestX = this.x + clampedProj * bx
+        const closestY = this.y + clampedProj * by
+        const beamDist = Math.sqrt((player.x - closestX) ** 2 + (player.y - closestY) ** 2)
+        if (beamDist < 14 && !(this._beamDamageCooldown > 0)) {
+          player.takeDamage(8)
+          this._beamDamageCooldown = 0.4
+        }
+      } else {
+        this.scanBeam = null
+      }
+    }
+    if (this._beamDamageCooldown > 0) this._beamDamageCooldown -= deltaTime
+
     // 방해 구역 생성
     this.hazardTimer += deltaTime
     if (this.hazardTimer >= this.hazardInterval) {
@@ -328,6 +387,26 @@ class PCBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    // 스캔 빔 렌더 (스프라이트 아래 레이어)
+    if (this.scanBeam && this.scanBeam.life > 0) {
+      const alpha = Math.min(1, this.scanBeam.life / 0.4) * 0.85
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.strokeStyle = '#00ffcc'
+      ctx.lineWidth = 3
+      ctx.shadowColor = '#00ffcc'
+      ctx.shadowBlur = 12
+      ctx.beginPath()
+      ctx.moveTo(this.x, this.y)
+      ctx.lineTo(this.scanBeam.tx, this.scanBeam.ty)
+      ctx.stroke()
+      // 빔 끝 점
+      ctx.fillStyle = '#00ffcc'
+      ctx.beginPath()
+      ctx.arc(this.scanBeam.tx, this.scanBeam.ty, 6, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
     if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 36); return }
     const x = this.x, y = this.y
     const t = Date.now()
@@ -371,100 +450,102 @@ class PCBot extends Enemy {
 }
 
 // ============================================================
-// MirrorBot — HP 150, 속도 170, 예측 추적, 연속 돌진 3회
+// MirrorBot — 제럴드 HP 150, 속도 160, 친근접근 후 연속 2회 베기
 // ============================================================
 class MirrorBot extends Enemy {
   constructor(x, y) {
     super(x, y, {
-      hp: 150, speed: 170, damage: 25,
+      hp: 150, speed: 160, damage: 20,
       expReward: 30, scoreReward: 30,
       collisionRadius: 15,
     })
-    this.dashPhase = 'idle'   // 'idle' | 'dashing' | 'gap'
-    this.dashCycleTimer = 0
-    this.dashCycleInterval = 4.0
-    this.dashCount = 0
-    this.dashDuration = 0
-    this.dashGapTimer = 0
-    this.dashDx = 0
-    this.dashDy = 0
-    this.prevPlayerX = null
-    this.prevPlayerY = null
+    // 행동 상태: 'approach'(천천히 접근) | 'slash1' | 'pause' | 'slash2' | 'retreat'
+    this.slashPhase = 'approach'
+    this.slashTimer = 0
+    this.slashCooldown = 3.5  // 다음 베기 사이클까지
+    this.slashCycleTimer = 0
+    this.slashDx = 0
+    this.slashDy = 0
+    this._slashEffect = null   // { life, maxLife, ex, ey }
   }
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
 
-    // 첫 프레임 초기화
-    if (this.prevPlayerX === null) {
-      this.prevPlayerX = player.x
-      this.prevPlayerY = player.y
-    }
-
-    if (this.dashPhase === 'idle') {
-      // 예측 이동: 플레이어 속도 추정 → 0.25초 후 위치 예측
-      const pvx = (player.x - this.prevPlayerX) / Math.max(deltaTime, 0.001)
-      const pvy = (player.y - this.prevPlayerY) / Math.max(deltaTime, 0.001)
-      const clampedVx = Math.max(-500, Math.min(500, pvx))
-      const clampedVy = Math.max(-500, Math.min(500, pvy))
-      const targetX = player.x + clampedVx * 0.25
-      const targetY = player.y + clampedVy * 0.25
-
-      const dx = targetX - this.x
-      const dy = targetY - this.y
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist > 0) {
-        this.x += (dx / dist) * this.speed * deltaTime
-        this.y += (dy / dist) * this.speed * deltaTime
-      }
-
-      this.dashCycleTimer += deltaTime
-      if (this.dashCycleTimer >= this.dashCycleInterval) {
-        this.dashCycleTimer = 0
-        this.dashPhase = 'dashing'
-        this.dashCount = 0
-        this.dashDuration = 0
-        this._startDash(player)
-      }
-
-    } else if (this.dashPhase === 'dashing') {
-      this.dashDuration += deltaTime
-      this.x += this.dashDx * this.speed * 2.5 * deltaTime
-      this.y += this.dashDy * this.speed * 2.5 * deltaTime
-      if (this.dashDuration >= 0.3) {
-        this.dashDuration = 0
-        this.dashCount++
-        if (this.dashCount < 3) {
-          this.dashPhase = 'gap'
-          this.dashGapTimer = 0
-        } else {
-          this.dashPhase = 'idle'
-        }
-      }
-
-    } else if (this.dashPhase === 'gap') {
-      this.dashGapTimer += deltaTime
-      if (this.dashGapTimer >= 0.2) {
-        this.dashPhase = 'dashing'
-        this.dashDuration = 0
-        this._startDash(player)
-      }
-    }
-
-    this.prevPlayerX = player.x
-    this.prevPlayerY = player.y
-    this._facingLeft = (player.x - this.x) < 0
-    this._updateAnim(deltaTime, true)
-  }
-
-  _startDash(player) {
     const dx = player.x - this.x
     const dy = player.y - this.y
     const dist = Math.sqrt(dx * dx + dy * dy)
-    if (dist > 0) {
-      this.dashDx = dx / dist
-      this.dashDy = dy / dist
+
+    if (this.slashPhase === 'approach') {
+      // 친근하게 천천히 접근 (느린 속도)
+      if (dist > 0) {
+        this.x += (dx / dist) * this.speed * 0.65 * deltaTime
+        this.y += (dy / dist) * this.speed * 0.65 * deltaTime
+      }
+      this.slashCycleTimer += deltaTime
+      // 근거리(60px)에 오거나 타이머 경과 시 베기 시작
+      if (dist < 70 || this.slashCycleTimer >= this.slashCooldown) {
+        this.slashCycleTimer = 0
+        this.slashPhase = 'slash1'
+        this.slashTimer = 0
+        if (dist > 0) { this.slashDx = dx / dist; this.slashDy = dy / dist }
+      }
+
+    } else if (this.slashPhase === 'slash1') {
+      // 첫 번째 베기: 빠른 돌진
+      this.x += this.slashDx * this.speed * 3.5 * deltaTime
+      this.y += this.slashDy * this.speed * 3.5 * deltaTime
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.18) {
+        this.slashPhase = 'pause'
+        this.slashTimer = 0
+        // 베기 이펙트
+        this._slashEffect = { life: 0.25, maxLife: 0.25, ex: this.x + this.slashDx * 30, ey: this.y + this.slashDy * 30 }
+      }
+
+    } else if (this.slashPhase === 'pause') {
+      // 잠깐 멈춤
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.22) {
+        this.slashPhase = 'slash2'
+        this.slashTimer = 0
+        // 두 번째 베기 방향 갱신
+        const dx2 = player.x - this.x, dy2 = player.y - this.y
+        const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1
+        this.slashDx = dx2 / d2; this.slashDy = dy2 / d2
+      }
+
+    } else if (this.slashPhase === 'slash2') {
+      // 두 번째 베기
+      this.x += this.slashDx * this.speed * 3.5 * deltaTime
+      this.y += this.slashDy * this.speed * 3.5 * deltaTime
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.18) {
+        this.slashPhase = 'retreat'
+        this.slashTimer = 0
+        this._slashEffect = { life: 0.25, maxLife: 0.25, ex: this.x + this.slashDx * 30, ey: this.y + this.slashDy * 30 }
+      }
+
+    } else if (this.slashPhase === 'retreat') {
+      // 살짝 물러남
+      if (dist > 0) {
+        this.x -= (dx / dist) * this.speed * 1.2 * deltaTime
+        this.y -= (dy / dist) * this.speed * 1.2 * deltaTime
+      }
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.5) {
+        this.slashPhase = 'approach'
+        this.slashTimer = 0
+      }
     }
+
+    if (this._slashEffect) {
+      this._slashEffect.life -= deltaTime
+      if (this._slashEffect.life <= 0) this._slashEffect = null
+    }
+
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, this.slashPhase === 'slash1' || this.slashPhase === 'slash2' || this.slashPhase === 'approach')
   }
 
   onKilled() {
@@ -480,9 +561,30 @@ class MirrorBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    // 베기 이펙트
+    if (this._slashEffect && this._slashEffect.life > 0) {
+      const a = this._slashEffect.life / this._slashEffect.maxLife
+      ctx.save()
+      ctx.globalAlpha = a
+      ctx.strokeStyle = '#ffdd44'
+      ctx.lineWidth = 4
+      ctx.shadowColor = '#ffdd44'
+      ctx.shadowBlur = 10
+      for (let i = 0; i < 3; i++) {
+        const angle = -0.4 + i * 0.4
+        ctx.beginPath()
+        ctx.moveTo(this.x, this.y)
+        ctx.lineTo(
+          this._slashEffect.ex + Math.cos(angle) * 24,
+          this._slashEffect.ey + Math.sin(angle) * 24
+        )
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
     if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
     const x = this.x, y = this.y
-    const isDashing = this.dashPhase === 'dashing'
+    const isDashing = this.slashPhase === 'slash1' || this.slashPhase === 'slash2'
     ctx.save()
     // 돌진 잔상
     if (isDashing) {
@@ -530,7 +632,7 @@ class MirrorBot extends Enemy {
 }
 
 // ============================================================
-// AIBot — HP 600, 속도 200, 보스, 충격파, 카트봇 소환
+// AIBot — 미러워커 HP 600, 속도 200, 보스, 충격파, 카트봇 소환
 // ============================================================
 class AIBot extends Enemy {
   constructor(x, y) {
@@ -633,8 +735,11 @@ class AIBot extends Enemy {
   onKilled() {
     GameState.killCount++
     GameState.aiBotKilled = true
+    GameState.bossKilled = true
     GameState.score += this.scoreReward * 5
     GameState.playerExp += this.expReward
+    // 보스 처치 연출: 화면 전체 폭발 이펙트 알림
+    GameState.bossDeathAnnounce = { timer: 3.5, maxTimer: 3.5 }
     if (window.dropManager) {
       const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
       window.dropManager.spawnDrop(this.x, this.y, dropType)

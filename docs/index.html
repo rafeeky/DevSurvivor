@@ -114,18 +114,18 @@ window.CHAR_SPRITES = {}
   <script>
 /**
  * entities/enemysprites.js — 적 스프라이트 설정 & 이미지 로더
- * v0.7 확정 매핑:
- *   BoxBot   (1st) = assets/custom/enemies/boxbot_idle.png  (3-frame idle)
- *   CartBot  (2nd) = Gum Bot   (sprite-pack-3/1)
- *   PCBot    (3rd) = Robot J5  (sprite-pack-3/3)
- *   MirrorBot(4th) = Geralt    (sprite-pack-3/5)
- *   AIBot    (5th) = player clone + 붉은 외곽선 (enemies.js)
+ * v0.8 확정 매핑:
+ *   BoxBot     (1st) = assets/custom/enemies/boxbot_idle.png (idle), boxbot_walk.png (walk)
+ *   CartBot    (2nd) = Gum Bot   (sprite-pack-3/1)
+ *   PCBot      (3rd) = robot3_walk.png
+ *   MirrorBot  (4th) = Geralt    (sprite-pack-3/5)
+ *   AIBot      (5th) = player clone + 붉은 외곽선 (enemies.js)
  */
 
 window.ENEMY_SPRITE_CONFIGS = {
   BoxBot: {
     idle: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 384, fh: 1024, frames: 4, fps: 4 },
-    walk: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 384, fh: 1024, frames: 4, fps: 6 },
+    walk: { src: 'assets/enemies/boxbot_walk.png',        fw: 256, fh: 1024, frames: 6, fps: 8 },
     scale: 0.09,
   },
   CartBot: {
@@ -134,9 +134,9 @@ window.ENEMY_SPRITE_CONFIGS = {
     scale: 2,
   },
   PCBot: {
-    idle: { src: 'assets/enemies/RobotJ5_idle.png', fw: 32, fh: 32, frames: 5, fps: 4 },
-    walk: { src: 'assets/enemies/RobotJ5_walk.png', fw: 32, fh: 32, frames: 3, fps: 6 },
-    scale: 2,
+    idle: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 4 },
+    walk: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 8 },
+    scale: 0.09,
   },
   MirrorBot: {
     idle: { src: 'assets/enemies/Geralt_idle.png', fw: 32, fh: 32, frames: 2, fps: 4 },
@@ -699,7 +699,7 @@ class BoxBot extends Enemy {
 }
 
 // ============================================================
-// CartBot — HP 55, 속도 130, 3초마다 돌진
+// CartBot — 블루패치 HP 55, 속도 130, 갑작스런 빠른 돌진
 // ============================================================
 class CartBot extends Enemy {
   constructor(x, y) {
@@ -709,11 +709,13 @@ class CartBot extends Enemy {
       collisionRadius: 16,
     })
     this.dashTimer = 0
-    this.dashCooldown = 3.0
+    this.dashCooldown = 2.5
     this.isDashing = false
     this.dashDuration = 0
     this.dashDx = 0
     this.dashDy = 0
+    this._dashWarnTimer = 0
+    this._dashWarning = false
   }
 
   update(deltaTime, player) {
@@ -725,8 +727,14 @@ class CartBot extends Enemy {
 
     this.dashTimer += deltaTime
 
+    // 돌진 0.3초 전 경고 깜빡임
+    if (!this.isDashing && this.dashTimer >= this.dashCooldown - 0.3) {
+      this._dashWarning = true
+    }
+
     if (!this.isDashing && this.dashTimer >= this.dashCooldown) {
       this.isDashing = true
+      this._dashWarning = false
       this.dashTimer = 0
       this.dashDuration = 0
       if (dist > 0) {
@@ -737,9 +745,9 @@ class CartBot extends Enemy {
 
     if (this.isDashing) {
       this.dashDuration += deltaTime
-      this.x += this.dashDx * this.speed * 2 * deltaTime
-      this.y += this.dashDy * this.speed * 2 * deltaTime
-      if (this.dashDuration >= 0.6) {
+      this.x += this.dashDx * this.speed * 2.8 * deltaTime
+      this.y += this.dashDy * this.speed * 2.8 * deltaTime
+      if (this.dashDuration >= 0.5) {
         this.isDashing = false
         this.dashDuration = 0
       }
@@ -755,7 +763,24 @@ class CartBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
-    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
+    if (this._renderSprite(ctx)) {
+      // 돌진 경고 표시
+      if (this._dashWarning && !this.isDashing) {
+        const blink = Math.floor(Date.now() / 120) % 2 === 0
+        if (blink) {
+          ctx.save()
+          ctx.strokeStyle = '#ff4400'
+          ctx.lineWidth = 2
+          ctx.shadowColor = '#ff4400'
+          ctx.shadowBlur = 8
+          ctx.beginPath()
+          ctx.arc(this.x, this.y, 22, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.restore()
+        }
+      }
+      _drawHpBar(ctx, this, 32); return
+    }
     const x = this.x, y = this.y
     const dash = this.isDashing
     ctx.save()
@@ -791,7 +816,7 @@ class CartBot extends Enemy {
 }
 
 // ============================================================
-// PCBot — HP 80, 속도 70, 원거리 유지, 오류탄, 방해 구역
+// PCBot — 모니터헤드 HP 80, 속도 70, 원거리, 스캔 빔, 방해 구역
 // ============================================================
 class PCBot extends Enemy {
   constructor(x, y) {
@@ -806,6 +831,10 @@ class PCBot extends Enemy {
     this.hazardInterval = 6.0
     this.preferredMin = 150
     this.preferredMax = 250
+    // 스캔 빔
+    this.scanTimer = 0
+    this.scanInterval = 5.0
+    this.scanBeam = null   // { tx, ty, life, maxLife }
   }
 
   onKilled() {
@@ -844,6 +873,36 @@ class PCBot extends Enemy {
       GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
     }
 
+    // 스캔 빔 (5초마다 플레이어에게 레이저 조사 → 2초 지속 → 데미지)
+    this.scanTimer += deltaTime
+    if (this.scanTimer >= this.scanInterval) {
+      this.scanTimer = 0
+      this.scanBeam = { tx: player.x, ty: player.y, life: 2.0, maxLife: 2.0 }
+    }
+    if (this.scanBeam) {
+      this.scanBeam.life -= deltaTime
+      // 빔 지속 중 플레이어가 빔 선 위에 있으면 데미지
+      if (this.scanBeam.life > 0) {
+        const bx = this.scanBeam.tx - this.x
+        const by = this.scanBeam.ty - this.y
+        const bLen = Math.sqrt(bx * bx + by * by) || 1
+        const px2 = player.x - this.x
+        const py2 = player.y - this.y
+        const proj = (px2 * bx + py2 * by) / (bLen * bLen)
+        const clampedProj = Math.max(0, Math.min(1, proj))
+        const closestX = this.x + clampedProj * bx
+        const closestY = this.y + clampedProj * by
+        const beamDist = Math.sqrt((player.x - closestX) ** 2 + (player.y - closestY) ** 2)
+        if (beamDist < 14 && !(this._beamDamageCooldown > 0)) {
+          player.takeDamage(8)
+          this._beamDamageCooldown = 0.4
+        }
+      } else {
+        this.scanBeam = null
+      }
+    }
+    if (this._beamDamageCooldown > 0) this._beamDamageCooldown -= deltaTime
+
     // 방해 구역 생성
     this.hazardTimer += deltaTime
     if (this.hazardTimer >= this.hazardInterval) {
@@ -858,6 +917,26 @@ class PCBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    // 스캔 빔 렌더 (스프라이트 아래 레이어)
+    if (this.scanBeam && this.scanBeam.life > 0) {
+      const alpha = Math.min(1, this.scanBeam.life / 0.4) * 0.85
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.strokeStyle = '#00ffcc'
+      ctx.lineWidth = 3
+      ctx.shadowColor = '#00ffcc'
+      ctx.shadowBlur = 12
+      ctx.beginPath()
+      ctx.moveTo(this.x, this.y)
+      ctx.lineTo(this.scanBeam.tx, this.scanBeam.ty)
+      ctx.stroke()
+      // 빔 끝 점
+      ctx.fillStyle = '#00ffcc'
+      ctx.beginPath()
+      ctx.arc(this.scanBeam.tx, this.scanBeam.ty, 6, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
     if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 36); return }
     const x = this.x, y = this.y
     const t = Date.now()
@@ -901,100 +980,102 @@ class PCBot extends Enemy {
 }
 
 // ============================================================
-// MirrorBot — HP 150, 속도 170, 예측 추적, 연속 돌진 3회
+// MirrorBot — 제럴드 HP 150, 속도 160, 친근접근 후 연속 2회 베기
 // ============================================================
 class MirrorBot extends Enemy {
   constructor(x, y) {
     super(x, y, {
-      hp: 150, speed: 170, damage: 25,
+      hp: 150, speed: 160, damage: 20,
       expReward: 30, scoreReward: 30,
       collisionRadius: 15,
     })
-    this.dashPhase = 'idle'   // 'idle' | 'dashing' | 'gap'
-    this.dashCycleTimer = 0
-    this.dashCycleInterval = 4.0
-    this.dashCount = 0
-    this.dashDuration = 0
-    this.dashGapTimer = 0
-    this.dashDx = 0
-    this.dashDy = 0
-    this.prevPlayerX = null
-    this.prevPlayerY = null
+    // 행동 상태: 'approach'(천천히 접근) | 'slash1' | 'pause' | 'slash2' | 'retreat'
+    this.slashPhase = 'approach'
+    this.slashTimer = 0
+    this.slashCooldown = 3.5  // 다음 베기 사이클까지
+    this.slashCycleTimer = 0
+    this.slashDx = 0
+    this.slashDy = 0
+    this._slashEffect = null   // { life, maxLife, ex, ey }
   }
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
 
-    // 첫 프레임 초기화
-    if (this.prevPlayerX === null) {
-      this.prevPlayerX = player.x
-      this.prevPlayerY = player.y
-    }
-
-    if (this.dashPhase === 'idle') {
-      // 예측 이동: 플레이어 속도 추정 → 0.25초 후 위치 예측
-      const pvx = (player.x - this.prevPlayerX) / Math.max(deltaTime, 0.001)
-      const pvy = (player.y - this.prevPlayerY) / Math.max(deltaTime, 0.001)
-      const clampedVx = Math.max(-500, Math.min(500, pvx))
-      const clampedVy = Math.max(-500, Math.min(500, pvy))
-      const targetX = player.x + clampedVx * 0.25
-      const targetY = player.y + clampedVy * 0.25
-
-      const dx = targetX - this.x
-      const dy = targetY - this.y
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist > 0) {
-        this.x += (dx / dist) * this.speed * deltaTime
-        this.y += (dy / dist) * this.speed * deltaTime
-      }
-
-      this.dashCycleTimer += deltaTime
-      if (this.dashCycleTimer >= this.dashCycleInterval) {
-        this.dashCycleTimer = 0
-        this.dashPhase = 'dashing'
-        this.dashCount = 0
-        this.dashDuration = 0
-        this._startDash(player)
-      }
-
-    } else if (this.dashPhase === 'dashing') {
-      this.dashDuration += deltaTime
-      this.x += this.dashDx * this.speed * 2.5 * deltaTime
-      this.y += this.dashDy * this.speed * 2.5 * deltaTime
-      if (this.dashDuration >= 0.3) {
-        this.dashDuration = 0
-        this.dashCount++
-        if (this.dashCount < 3) {
-          this.dashPhase = 'gap'
-          this.dashGapTimer = 0
-        } else {
-          this.dashPhase = 'idle'
-        }
-      }
-
-    } else if (this.dashPhase === 'gap') {
-      this.dashGapTimer += deltaTime
-      if (this.dashGapTimer >= 0.2) {
-        this.dashPhase = 'dashing'
-        this.dashDuration = 0
-        this._startDash(player)
-      }
-    }
-
-    this.prevPlayerX = player.x
-    this.prevPlayerY = player.y
-    this._facingLeft = (player.x - this.x) < 0
-    this._updateAnim(deltaTime, true)
-  }
-
-  _startDash(player) {
     const dx = player.x - this.x
     const dy = player.y - this.y
     const dist = Math.sqrt(dx * dx + dy * dy)
-    if (dist > 0) {
-      this.dashDx = dx / dist
-      this.dashDy = dy / dist
+
+    if (this.slashPhase === 'approach') {
+      // 친근하게 천천히 접근 (느린 속도)
+      if (dist > 0) {
+        this.x += (dx / dist) * this.speed * 0.65 * deltaTime
+        this.y += (dy / dist) * this.speed * 0.65 * deltaTime
+      }
+      this.slashCycleTimer += deltaTime
+      // 근거리(60px)에 오거나 타이머 경과 시 베기 시작
+      if (dist < 70 || this.slashCycleTimer >= this.slashCooldown) {
+        this.slashCycleTimer = 0
+        this.slashPhase = 'slash1'
+        this.slashTimer = 0
+        if (dist > 0) { this.slashDx = dx / dist; this.slashDy = dy / dist }
+      }
+
+    } else if (this.slashPhase === 'slash1') {
+      // 첫 번째 베기: 빠른 돌진
+      this.x += this.slashDx * this.speed * 3.5 * deltaTime
+      this.y += this.slashDy * this.speed * 3.5 * deltaTime
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.18) {
+        this.slashPhase = 'pause'
+        this.slashTimer = 0
+        // 베기 이펙트
+        this._slashEffect = { life: 0.25, maxLife: 0.25, ex: this.x + this.slashDx * 30, ey: this.y + this.slashDy * 30 }
+      }
+
+    } else if (this.slashPhase === 'pause') {
+      // 잠깐 멈춤
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.22) {
+        this.slashPhase = 'slash2'
+        this.slashTimer = 0
+        // 두 번째 베기 방향 갱신
+        const dx2 = player.x - this.x, dy2 = player.y - this.y
+        const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1
+        this.slashDx = dx2 / d2; this.slashDy = dy2 / d2
+      }
+
+    } else if (this.slashPhase === 'slash2') {
+      // 두 번째 베기
+      this.x += this.slashDx * this.speed * 3.5 * deltaTime
+      this.y += this.slashDy * this.speed * 3.5 * deltaTime
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.18) {
+        this.slashPhase = 'retreat'
+        this.slashTimer = 0
+        this._slashEffect = { life: 0.25, maxLife: 0.25, ex: this.x + this.slashDx * 30, ey: this.y + this.slashDy * 30 }
+      }
+
+    } else if (this.slashPhase === 'retreat') {
+      // 살짝 물러남
+      if (dist > 0) {
+        this.x -= (dx / dist) * this.speed * 1.2 * deltaTime
+        this.y -= (dy / dist) * this.speed * 1.2 * deltaTime
+      }
+      this.slashTimer += deltaTime
+      if (this.slashTimer >= 0.5) {
+        this.slashPhase = 'approach'
+        this.slashTimer = 0
+      }
     }
+
+    if (this._slashEffect) {
+      this._slashEffect.life -= deltaTime
+      if (this._slashEffect.life <= 0) this._slashEffect = null
+    }
+
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, this.slashPhase === 'slash1' || this.slashPhase === 'slash2' || this.slashPhase === 'approach')
   }
 
   onKilled() {
@@ -1010,9 +1091,30 @@ class MirrorBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    // 베기 이펙트
+    if (this._slashEffect && this._slashEffect.life > 0) {
+      const a = this._slashEffect.life / this._slashEffect.maxLife
+      ctx.save()
+      ctx.globalAlpha = a
+      ctx.strokeStyle = '#ffdd44'
+      ctx.lineWidth = 4
+      ctx.shadowColor = '#ffdd44'
+      ctx.shadowBlur = 10
+      for (let i = 0; i < 3; i++) {
+        const angle = -0.4 + i * 0.4
+        ctx.beginPath()
+        ctx.moveTo(this.x, this.y)
+        ctx.lineTo(
+          this._slashEffect.ex + Math.cos(angle) * 24,
+          this._slashEffect.ey + Math.sin(angle) * 24
+        )
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
     if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
     const x = this.x, y = this.y
-    const isDashing = this.dashPhase === 'dashing'
+    const isDashing = this.slashPhase === 'slash1' || this.slashPhase === 'slash2'
     ctx.save()
     // 돌진 잔상
     if (isDashing) {
@@ -1060,7 +1162,7 @@ class MirrorBot extends Enemy {
 }
 
 // ============================================================
-// AIBot — HP 600, 속도 200, 보스, 충격파, 카트봇 소환
+// AIBot — 미러워커 HP 600, 속도 200, 보스, 충격파, 카트봇 소환
 // ============================================================
 class AIBot extends Enemy {
   constructor(x, y) {
@@ -1163,8 +1265,11 @@ class AIBot extends Enemy {
   onKilled() {
     GameState.killCount++
     GameState.aiBotKilled = true
+    GameState.bossKilled = true
     GameState.score += this.scoreReward * 5
     GameState.playerExp += this.expReward
+    // 보스 처치 연출: 화면 전체 폭발 이펙트 알림
+    GameState.bossDeathAnnounce = { timer: 3.5, maxTimer: 3.5 }
     if (window.dropManager) {
       const dropType = window.dropManager.getDropTypeForEnemy(this.constructor.name)
       window.dropManager.spawnDrop(this.x, this.y, dropType)
@@ -2103,10 +2208,10 @@ window.TilemapSystem = (() => {
 
 const ENEMY_INTRO_DATA = {
   'BoxBot':    { name: '박스봇',    desc: '돌진형 • 판지 갑옷을 두른 기초 드론, 직선 돌진' },
-  'CartBot':   { name: '버블봇',    desc: '신속형 • 끈적한 거품으로 경로를 막으며 빠르게 기동' },
-  'PCBot':     { name: '고철봇',    desc: '원거리형 • 낡은 회로에서 오류 투사체를 발사' },
-  'MirrorBot': { name: '전사봇',    desc: '복제형 • 무기를 들고 공격적으로 근접 추격' },
-  'AIBot':     { name: 'Mirror Bot', desc: '최종형 AI • 개발자의 모습을 복사해 혼란을 일으킨다' },
+  'CartBot':   { name: '블루패치',  desc: '신속형 • 이동 보정 AI 덧씌워진 패치봇, 갑자기 빠르게 돌진' },
+  'PCBot':     { name: '모니터헤드', desc: '원거리형 • 스캔 빔으로 개발자를 조준, 오류탄 발사' },
+  'MirrorBot': { name: '제럴드',    desc: '근접형 • 친근하게 접근 후 연속 2회 베기 시전' },
+  'AIBot':     { name: '미러워커',  desc: '보스 • 개발자의 능력을 완전히 학습, 모든 패턴 재현' },
 }
 
 const SPAWN_TIMELINE = [
@@ -2658,7 +2763,7 @@ class LevelUpManager {
 
     ctx.font = '18px "VT323", monospace'
     ctx.fillStyle = '#aaaaaa'
-    ctx.fillText('클릭하거나 1 / 2 / 3 키로 선택하세요', 400, 190)
+    ctx.fillText('클릭하거나 Q / W / E 키로 선택하세요', 400, 190)
 
     // 카드 3개
     this.choiceRects = []
@@ -2704,11 +2809,12 @@ class LevelUpManager {
         ctx.fillRect(iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
       }
 
-      // 번호 레이블 (좌상단)
+      // 키 레이블 (좌상단)
+      const cardKeys = ['Q', 'W', 'E']
       ctx.fillStyle = '#aaccff'
       ctx.font = 'bold 15px "VT323", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(`[${i + 1}]`, cx + 8, cy + 18)
+      ctx.fillText(`[${cardKeys[i]}]`, cx + 8, cy + 18)
 
       // 스킬 이름 (아이콘 아래 중앙)
       ctx.fillStyle = '#ffffff'
@@ -2778,12 +2884,12 @@ window.addEventListener('click', (e) => {
   _levelUpManager.handleClick(x, y)
 })
 
-// 키보드 1/2/3 선택
+// 키보드 Q/W/E 선택 (스킬 1/2/3/4와 충돌 없음)
 window.addEventListener('keydown', (e) => {
   if (!_levelUpManager.pendingLevelUp) return
-  if (e.code === 'Digit1') _levelUpManager.applyChoice(0)
-  if (e.code === 'Digit2') _levelUpManager.applyChoice(1)
-  if (e.code === 'Digit3') _levelUpManager.applyChoice(2)
+  if (e.code === 'KeyQ') _levelUpManager.applyChoice(0)
+  if (e.code === 'KeyW') _levelUpManager.applyChoice(1)
+  if (e.code === 'KeyE') _levelUpManager.applyChoice(2)
 })
 
   </script>
@@ -3357,6 +3463,19 @@ window.addEventListener('click', (e) => {
 
   <!-- ui/hud.js -->
   <script>
+// 스킬 이름 → 타입 뱃지 매핑
+const _SKILL_TYPE_BADGE = {
+  '긴급 수정':    { label: '공격', color: '#ff6644' },
+  '디버그':       { label: '공격', color: '#ff6644' },
+  '우선순위정리': { label: '공격', color: '#ff6644' },
+  '커피 한 잔':   { label: '이속↑', color: '#ffdd44' },
+  '피규어청소':   { label: '방어', color: '#44aaff' },
+  '강아지쓰다듬기': { label: '회복', color: '#ff88bb' },
+  '낮잠자기':     { label: '회복', color: '#ff88bb' },
+  '자동 저장':    { label: '패시브', color: '#aa88ff' },
+  '산책하기':     { label: '패시브', color: '#aa88ff' },
+}
+
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
   '긴급 수정':    'assets/custom/icons/skill_emergency_fix.png',
@@ -3460,12 +3579,12 @@ class HUD {
 
     // 출시 진행률
     ctx.fillStyle = '#333'
-    ctx.fillRect(520, 12, 140, 10)
+    ctx.fillRect(510, 12, 150, 10)
     ctx.fillStyle = '#44ffaa'
-    ctx.fillRect(520, 12, 140 * (GameState.releaseProgress / 100), 10)
-    ctx.fillStyle = '#aaa'
-    ctx.font = '11px "VT323", monospace'
-    ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 522, 34)
+    ctx.fillRect(510, 12, 150 * (GameState.releaseProgress / 100), 10)
+    ctx.fillStyle = '#ff4444'
+    ctx.font = 'bold 16px "VT323", monospace'
+    ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 512, 36)
 
     // 점수
     ctx.fillStyle = '#FFD700'
@@ -3515,10 +3634,19 @@ class HUD {
           ctx.restore()
         }
 
+        // 스킬 타입 뱃지
+        const badge = _SKILL_TYPE_BADGE[state.name]
+        if (badge) {
+          ctx.fillStyle = badge.color + '33'
+          ctx.fillRect(sx + 38, sy + 2, 58, 11)
+          ctx.fillStyle = badge.color
+          ctx.font = 'bold 9px "VT323", monospace'
+          ctx.fillText(badge.label, sx + 40, sy + 11)
+        }
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
         ctx.font = '11px "VT323", monospace'
-        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
+        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 25)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {
@@ -3905,10 +4033,11 @@ class Lobby {
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "VT323", monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
-    ctx.fillStyle = '#88ffaa'
-    ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
+    ctx.font = '15px "VT323", monospace'
+    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 230, 161)
+    ctx.fillStyle = '#ff4444'
+    ctx.font = 'bold 16px "VT323", monospace'
+    ctx.fillText(`출시 포인트: ${pts}`, 510, 161)
 
     // gold_4 보유량 표시 (뱀파이어 해금 재화)
     const g4 = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
@@ -3927,29 +4056,37 @@ class Lobby {
     // 캐릭터 카드
     this._drawCharCards(ctx)
 
-    // 시작 버튼 (메인 CTA — 글로우 강조)
+    // 시작 버튼 (메인 CTA — UI 패널 + 글로우)
     const s = this.startBtnRect
     ctx.save()
     ctx.shadowColor = '#4488ff'
     ctx.shadowBlur = 18
-    ctx.fillStyle = '#1a3060'
-    ctx.strokeStyle = '#66aaff'
-    ctx.lineWidth = 2.5
-    ctx.fillRect(s.x, s.y, s.w, s.h)
-    ctx.strokeRect(s.x, s.y, s.w, s.h)
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, s.x, s.y, s.w, s.h)
+    } else {
+      ctx.fillStyle = '#1a3060'
+      ctx.strokeStyle = '#66aaff'
+      ctx.lineWidth = 2.5
+      ctx.fillRect(s.x, s.y, s.w, s.h)
+      ctx.strokeRect(s.x, s.y, s.w, s.h)
+    }
     ctx.restore()
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 36px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
-    // 업그레이드 버튼 (보조 — 작고 어둡게)
+    // 업그레이드 버튼 (보조)
     const u = this.upgradeBtnRect
-    ctx.fillStyle = 'rgba(10,20,10,0.7)'
-    ctx.strokeStyle = '#336633'
-    ctx.lineWidth = 1
-    ctx.fillRect(u.x, u.y, u.w, u.h)
-    ctx.strokeRect(u.x, u.y, u.w, u.h)
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    } else {
+      ctx.fillStyle = 'rgba(10,20,10,0.7)'
+      ctx.strokeStyle = '#336633'
+      ctx.lineWidth = 1
+      ctx.fillRect(u.x, u.y, u.w, u.h)
+      ctx.strokeRect(u.x, u.y, u.w, u.h)
+    }
     ctx.fillStyle = '#66aa66'
     ctx.font = '18px "VT323", monospace'
     ctx.textAlign = 'center'
@@ -4096,42 +4233,48 @@ class Lobby {
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
-      ctx.font = 'bold 11px "VT323", monospace'
-      ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 40)
+      ctx.font = 'bold 15px "VT323", monospace'
+      ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 42)
 
       // 역할 타입 배지
       const roleType  = cfg?.roleType || ''
       const roleColor = cfg?.roleColor || '#888888'
       if (roleType) {
-        const badgeW = 64, badgeH = 14
+        const badgeW = 72, badgeH = 16
         const badgeX = cx - badgeW / 2
-        const badgeY = card.y + card.h - 34
+        const badgeY = card.y + card.h - 36
         ctx.fillStyle = roleColor + '33'
         ctx.strokeStyle = roleColor
         ctx.lineWidth = 1
         ctx.fillRect(badgeX, badgeY, badgeW, badgeH)
         ctx.strokeRect(badgeX, badgeY, badgeW, badgeH)
         ctx.fillStyle = roleColor
-        ctx.font = 'bold 9px "VT323", monospace'
-        ctx.fillText(roleType, cx, badgeY + 10)
+        ctx.font = 'bold 12px "VT323", monospace'
+        ctx.fillText(roleType, cx, badgeY + 12)
       }
 
       // 패시브명
-      ctx.fillStyle = sel ? '#ccbbff' : '#556677'
-      ctx.font = '9px "VT323", monospace'
+      ctx.fillStyle = sel ? '#ccbbff' : '#7788aa'
+      ctx.font = '12px "VT323", monospace'
       ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 4)
 
       // 잠금 오버레이
       if (!window.MetaManager?.isUnlocked(card.key)) {
         ctx.save()
-        ctx.fillStyle = 'rgba(0,0,0,0.72)'
+        ctx.fillStyle = 'rgba(0,0,0,0.78)'
         ctx.fillRect(card.x, card.y, card.w, card.h)
-        ctx.font = '32px "VT323", monospace'
+        ctx.font = '36px "VT323", monospace'
         ctx.textAlign = 'center'
-        ctx.fillText('🔒', cx, card.y + card.h / 2 - 4)
-        ctx.fillStyle = '#aa44ff'
+        ctx.fillText('🔒', cx, card.y + card.h / 2 - 16)
+        ctx.fillStyle = '#cc88ff'
+        ctx.font = 'bold 14px "VT323", monospace'
+        ctx.fillText('보스 처치 후', cx, card.y + card.h / 2 + 8)
+        ctx.fillStyle = '#FFD700'
+        ctx.font = 'bold 13px "VT323", monospace'
+        ctx.fillText('골드 다이아 × 1 획득', cx, card.y + card.h / 2 + 26)
+        ctx.fillStyle = '#aa88ff'
         ctx.font = '11px "VT323", monospace'
-        ctx.fillText('gold×1', cx, card.y + card.h / 2 + 16)
+        ctx.fillText('→ 자동 해금됩니다', cx, card.y + card.h / 2 + 42)
         ctx.restore()
       }
     }
@@ -4236,11 +4379,15 @@ class Result {
     ctx.save()
     ctx.globalAlpha = statsAlpha
 
-    ctx.fillStyle = 'rgba(0,18,0,0.88)'
-    ctx.fillRect(188, 148, 424, 240)
-    ctx.strokeStyle = '#44aa44'
-    ctx.lineWidth = 2
-    ctx.strokeRect(188, 148, 424, 240)
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, 188, 148, 424, 240)
+    } else {
+      ctx.fillStyle = 'rgba(0,18,0,0.88)'
+      ctx.fillRect(188, 148, 424, 240)
+      ctx.strokeStyle = '#44aa44'
+      ctx.lineWidth = 2
+      ctx.strokeRect(188, 148, 424, 240)
+    }
 
     const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
@@ -4290,13 +4437,17 @@ class Result {
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
     const r = this._winRestartRect, u = this._winUpgradeRect
-    ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
-    ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    } else {
+      ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
+      ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
+      ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+    }
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
-
-    ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
-    ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
@@ -4518,13 +4669,17 @@ class Result {
 
     // 버튼
     const r = this._loseRestartRect, u = this._loseUpgradeRect
-    ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
-    ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'; ctx.textAlign = 'center'
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    } else {
+      ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
+      ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
+      ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+    }
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
-
-    ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
-    ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 
@@ -4777,6 +4932,8 @@ window.GameState = {
   mirrorBotKills: 0,
   aiBotReached: false,
   aiBotKilled: false,
+  bossKilled: false,        // 보스(미러워커) 처치 여부
+  bossGoldHint: false,      // "퇴근하세요!" 힌트 표시 여부
   enemies: [],
   projectiles: [],
   hazardZones: [],
@@ -4945,6 +5102,9 @@ window.Game = {
       mirrorBotKills: 0,
       aiBotReached: false,
       aiBotKilled: false,
+      bossKilled: false,
+      bossGoldHint: false,
+      bossDeathAnnounce: null,
       enemies: [],
       projectiles: [],
       hazardZones: [],
@@ -5077,15 +5237,19 @@ function _loop(now) {
       Game.skillManager?.update(deltaTime)
       window.dropManager?.update(deltaTime, player)
 
-      // gold_4 픽업 → 뱀파이어 해금 체크
+      // gold_4 픽업 → 보스 처치 후 퇴근 조건 + 뱀파이어 해금
       if (gs.lastPickedGold === 4) {
         gs.lastPickedGold = null
         if (window.MetaManager && !MetaManager.isUnlocked('vampir')) {
           MetaManager.unlockChar('vampir')
           gs.unlockedChars = gs.unlockedChars || {}
           gs.unlockedChars.vampir = true
-          // 해금 알림 표시
           gs.unlockNotification = { msg: '뱀파이어 개발자 해금!', timer: 3.0 }
+        }
+        // 보스 처치 후 골드 다이아 획득 → 퇴근 성공!
+        if (gs.bossKilled) {
+          Game.gameOver(true)
+          return
         }
       }
 
@@ -5119,8 +5283,16 @@ function _loop(now) {
         gs.enemyAnnouncement.timer -= deltaTime
       }
 
-      if (gs.gameTime >= 180)  Game.gameOver(true)
-      else if (!player.isAlive) Game.gameOver(false)
+      // 보스 처치 후 "퇴근하세요!" 힌트 표시
+      if (gs.bossKilled && !gs.bossGoldHint) {
+        gs.bossGoldHint = true
+        gs.speechBubble = { text: '골드 다이아를 먹고 퇴근하세요!', timer: 999, maxTimer: 999 }
+      }
+      // 사망 체크
+      if (!player.isAlive) {
+        Game.gameOver(false)
+        return
+      }
     }
   }
 
@@ -5170,6 +5342,34 @@ function _loop(now) {
     // 신규 적 등장 알림
     if (gs.enemyAnnouncement?.timer > 0) {
       _drawEnemyAnnouncement(ctx, gs.enemyAnnouncement)
+    }
+
+    // 보스 처치 연출
+    if (gs.bossDeathAnnounce && gs.bossDeathAnnounce.timer > 0) {
+      gs.bossDeathAnnounce.timer -= deltaTime
+      const ann = gs.bossDeathAnnounce
+      const elapsed = ann.maxTimer - ann.timer
+      let alpha = elapsed < 0.3 ? elapsed / 0.3 : ann.timer < 0.8 ? ann.timer / 0.8 : 1
+      ctx.save()
+      ctx.globalAlpha = alpha
+      // 황금빛 배너
+      ctx.fillStyle = 'rgba(10,6,0,0.88)'
+      ctx.fillRect(100, 200, 600, 110)
+      ctx.strokeStyle = '#FFD700'
+      ctx.lineWidth = 2.5
+      ctx.strokeRect(100, 200, 600, 110)
+      ctx.fillStyle = '#FFD700'
+      ctx.font = 'bold 44px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.shadowColor = '#FFD700'
+      ctx.shadowBlur = 18
+      ctx.fillText('🏆 미러워커 처치!', 400, 248)
+      ctx.shadowBlur = 0
+      ctx.fillStyle = '#88ffcc'
+      ctx.font = '22px "VT323", monospace'
+      ctx.fillText('골드 다이아를 먹고 퇴근하세요!', 400, 286)
+      ctx.textAlign = 'left'
+      ctx.restore()
     }
 
     // AIBot 등장 연출

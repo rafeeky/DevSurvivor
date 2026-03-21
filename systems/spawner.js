@@ -7,10 +7,10 @@
 
 const ENEMY_INTRO_DATA = {
   'BoxBot':    { name: '박스봇',    desc: '돌진형 • 판지 갑옷을 두른 기초 드론, 직선 돌진' },
-  'CartBot':   { name: '버블봇',    desc: '신속형 • 끈적한 거품으로 경로를 막으며 빠르게 기동' },
-  'PCBot':     { name: '고철봇',    desc: '원거리형 • 낡은 회로에서 오류 투사체를 발사' },
-  'MirrorBot': { name: '전사봇',    desc: '복제형 • 무기를 들고 공격적으로 근접 추격' },
-  'AIBot':     { name: 'Mirror Bot', desc: '최종형 AI • 개발자의 모습을 복사해 혼란을 일으킨다' },
+  'CartBot':   { name: '블루패치',  desc: '신속형 • 이동 보정 AI 덧씌워진 패치봇, 갑자기 빠르게 돌진' },
+  'PCBot':     { name: '모니터헤드', desc: '원거리형 • 스캔 빔으로 개발자를 조준, 오류탄 발사' },
+  'MirrorBot': { name: '제럴드',    desc: '근접형 • 친근하게 접근 후 연속 2회 베기 시전' },
+  'AIBot':     { name: '미러워커',  desc: '보스 • 개발자의 능력을 완전히 학습, 모든 패턴 재현' },
 }
 
 const SPAWN_TIMELINE = [

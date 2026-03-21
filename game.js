@@ -27,6 +27,8 @@ window.GameState = {
   mirrorBotKills: 0,
   aiBotReached: false,
   aiBotKilled: false,
+  bossKilled: false,        // 보스(미러워커) 처치 여부
+  bossGoldHint: false,      // "퇴근하세요!" 힌트 표시 여부
   enemies: [],
   projectiles: [],
   hazardZones: [],
@@ -195,6 +197,9 @@ window.Game = {
       mirrorBotKills: 0,
       aiBotReached: false,
       aiBotKilled: false,
+      bossKilled: false,
+      bossGoldHint: false,
+      bossDeathAnnounce: null,
       enemies: [],
       projectiles: [],
       hazardZones: [],
@@ -327,15 +332,19 @@ function _loop(now) {
       Game.skillManager?.update(deltaTime)
       window.dropManager?.update(deltaTime, player)
 
-      // gold_4 픽업 → 뱀파이어 해금 체크
+      // gold_4 픽업 → 보스 처치 후 퇴근 조건 + 뱀파이어 해금
       if (gs.lastPickedGold === 4) {
         gs.lastPickedGold = null
         if (window.MetaManager && !MetaManager.isUnlocked('vampir')) {
           MetaManager.unlockChar('vampir')
           gs.unlockedChars = gs.unlockedChars || {}
           gs.unlockedChars.vampir = true
-          // 해금 알림 표시
           gs.unlockNotification = { msg: '뱀파이어 개발자 해금!', timer: 3.0 }
+        }
+        // 보스 처치 후 골드 다이아 획득 → 퇴근 성공!
+        if (gs.bossKilled) {
+          Game.gameOver(true)
+          return
         }
       }
 
@@ -369,8 +378,16 @@ function _loop(now) {
         gs.enemyAnnouncement.timer -= deltaTime
       }
 
-      if (gs.gameTime >= 180)  Game.gameOver(true)
-      else if (!player.isAlive) Game.gameOver(false)
+      // 보스 처치 후 "퇴근하세요!" 힌트 표시
+      if (gs.bossKilled && !gs.bossGoldHint) {
+        gs.bossGoldHint = true
+        gs.speechBubble = { text: '골드 다이아를 먹고 퇴근하세요!', timer: 999, maxTimer: 999 }
+      }
+      // 사망 체크
+      if (!player.isAlive) {
+        Game.gameOver(false)
+        return
+      }
     }
   }
 
@@ -420,6 +437,34 @@ function _loop(now) {
     // 신규 적 등장 알림
     if (gs.enemyAnnouncement?.timer > 0) {
       _drawEnemyAnnouncement(ctx, gs.enemyAnnouncement)
+    }
+
+    // 보스 처치 연출
+    if (gs.bossDeathAnnounce && gs.bossDeathAnnounce.timer > 0) {
+      gs.bossDeathAnnounce.timer -= deltaTime
+      const ann = gs.bossDeathAnnounce
+      const elapsed = ann.maxTimer - ann.timer
+      let alpha = elapsed < 0.3 ? elapsed / 0.3 : ann.timer < 0.8 ? ann.timer / 0.8 : 1
+      ctx.save()
+      ctx.globalAlpha = alpha
+      // 황금빛 배너
+      ctx.fillStyle = 'rgba(10,6,0,0.88)'
+      ctx.fillRect(100, 200, 600, 110)
+      ctx.strokeStyle = '#FFD700'
+      ctx.lineWidth = 2.5
+      ctx.strokeRect(100, 200, 600, 110)
+      ctx.fillStyle = '#FFD700'
+      ctx.font = 'bold 44px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.shadowColor = '#FFD700'
+      ctx.shadowBlur = 18
+      ctx.fillText('🏆 미러워커 처치!', 400, 248)
+      ctx.shadowBlur = 0
+      ctx.fillStyle = '#88ffcc'
+      ctx.font = '22px "VT323", monospace'
+      ctx.fillText('골드 다이아를 먹고 퇴근하세요!', 400, 286)
+      ctx.textAlign = 'left'
+      ctx.restore()
     }
 
     // AIBot 등장 연출

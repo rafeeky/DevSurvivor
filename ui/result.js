@@ -86,11 +86,15 @@ class Result {
     ctx.save()
     ctx.globalAlpha = statsAlpha
 
-    ctx.fillStyle = 'rgba(0,18,0,0.88)'
-    ctx.fillRect(188, 148, 424, 240)
-    ctx.strokeStyle = '#44aa44'
-    ctx.lineWidth = 2
-    ctx.strokeRect(188, 148, 424, 240)
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, 188, 148, 424, 240)
+    } else {
+      ctx.fillStyle = 'rgba(0,18,0,0.88)'
+      ctx.fillRect(188, 148, 424, 240)
+      ctx.strokeStyle = '#44aa44'
+      ctx.lineWidth = 2
+      ctx.strokeRect(188, 148, 424, 240)
+    }
 
     const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
@@ -140,13 +144,17 @@ class Result {
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
     const r = this._winRestartRect, u = this._winUpgradeRect
-    ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
-    ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    } else {
+      ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
+      ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
+      ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+    }
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
-
-    ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
-    ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
@@ -368,13 +376,17 @@ class Result {
 
     // 버튼
     const r = this._loseRestartRect, u = this._loseUpgradeRect
-    ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
-    ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "VT323", monospace'; ctx.textAlign = 'center'
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    } else {
+      ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
+      ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
+      ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+    }
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
-
-    ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
-    ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 

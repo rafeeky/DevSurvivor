@@ -1,17 +1,17 @@
 /**
  * entities/enemysprites.js — 적 스프라이트 설정 & 이미지 로더
- * v0.7 확정 매핑:
- *   BoxBot   (1st) = assets/custom/enemies/boxbot_idle.png  (3-frame idle)
- *   CartBot  (2nd) = Gum Bot   (sprite-pack-3/1)
- *   PCBot    (3rd) = Robot J5  (sprite-pack-3/3)
- *   MirrorBot(4th) = Geralt    (sprite-pack-3/5)
- *   AIBot    (5th) = player clone + 붉은 외곽선 (enemies.js)
+ * v0.8 확정 매핑:
+ *   BoxBot     (1st) = assets/custom/enemies/boxbot_idle.png (idle), boxbot_walk.png (walk)
+ *   CartBot    (2nd) = Gum Bot   (sprite-pack-3/1)
+ *   PCBot      (3rd) = robot3_walk.png
+ *   MirrorBot  (4th) = Geralt    (sprite-pack-3/5)
+ *   AIBot      (5th) = player clone + 붉은 외곽선 (enemies.js)
  */
 
 window.ENEMY_SPRITE_CONFIGS = {
   BoxBot: {
     idle: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 384, fh: 1024, frames: 4, fps: 4 },
-    walk: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 384, fh: 1024, frames: 4, fps: 6 },
+    walk: { src: 'assets/enemies/boxbot_walk.png',        fw: 256, fh: 1024, frames: 6, fps: 8 },
     scale: 0.09,
   },
   CartBot: {
@@ -20,9 +20,9 @@ window.ENEMY_SPRITE_CONFIGS = {
     scale: 2,
   },
   PCBot: {
-    idle: { src: 'assets/enemies/RobotJ5_idle.png', fw: 32, fh: 32, frames: 5, fps: 4 },
-    walk: { src: 'assets/enemies/RobotJ5_walk.png', fw: 32, fh: 32, frames: 3, fps: 6 },
-    scale: 2,
+    idle: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 4 },
+    walk: { src: 'assets/enemies/robot3_walk.png', fw: 256, fh: 1024, frames: 6, fps: 8 },
+    scale: 0.09,
   },
   MirrorBot: {
     idle: { src: 'assets/enemies/Geralt_idle.png', fw: 32, fh: 32, frames: 2, fps: 4 },

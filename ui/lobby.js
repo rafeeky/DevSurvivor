@@ -101,10 +101,11 @@ class Lobby {
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "VT323", monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 265, 161)
-    ctx.fillStyle = '#88ffaa'
-    ctx.fillText(`출시 포인트: ${pts}`, 535, 161)
+    ctx.font = '15px "VT323", monospace'
+    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 230, 161)
+    ctx.fillStyle = '#ff4444'
+    ctx.font = 'bold 16px "VT323", monospace'
+    ctx.fillText(`출시 포인트: ${pts}`, 510, 161)
 
     // gold_4 보유량 표시 (뱀파이어 해금 재화)
     const g4 = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
@@ -123,29 +124,37 @@ class Lobby {
     // 캐릭터 카드
     this._drawCharCards(ctx)
 
-    // 시작 버튼 (메인 CTA — 글로우 강조)
+    // 시작 버튼 (메인 CTA — UI 패널 + 글로우)
     const s = this.startBtnRect
     ctx.save()
     ctx.shadowColor = '#4488ff'
     ctx.shadowBlur = 18
-    ctx.fillStyle = '#1a3060'
-    ctx.strokeStyle = '#66aaff'
-    ctx.lineWidth = 2.5
-    ctx.fillRect(s.x, s.y, s.w, s.h)
-    ctx.strokeRect(s.x, s.y, s.w, s.h)
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, s.x, s.y, s.w, s.h)
+    } else {
+      ctx.fillStyle = '#1a3060'
+      ctx.strokeStyle = '#66aaff'
+      ctx.lineWidth = 2.5
+      ctx.fillRect(s.x, s.y, s.w, s.h)
+      ctx.strokeRect(s.x, s.y, s.w, s.h)
+    }
     ctx.restore()
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 36px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
 
-    // 업그레이드 버튼 (보조 — 작고 어둡게)
+    // 업그레이드 버튼 (보조)
     const u = this.upgradeBtnRect
-    ctx.fillStyle = 'rgba(10,20,10,0.7)'
-    ctx.strokeStyle = '#336633'
-    ctx.lineWidth = 1
-    ctx.fillRect(u.x, u.y, u.w, u.h)
-    ctx.strokeRect(u.x, u.y, u.w, u.h)
+    if (window.drawUIPanel) {
+      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    } else {
+      ctx.fillStyle = 'rgba(10,20,10,0.7)'
+      ctx.strokeStyle = '#336633'
+      ctx.lineWidth = 1
+      ctx.fillRect(u.x, u.y, u.w, u.h)
+      ctx.strokeRect(u.x, u.y, u.w, u.h)
+    }
     ctx.fillStyle = '#66aa66'
     ctx.font = '18px "VT323", monospace'
     ctx.textAlign = 'center'
@@ -292,42 +301,48 @@ class Lobby {
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
-      ctx.font = 'bold 11px "VT323", monospace'
-      ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 40)
+      ctx.font = 'bold 15px "VT323", monospace'
+      ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 42)
 
       // 역할 타입 배지
       const roleType  = cfg?.roleType || ''
       const roleColor = cfg?.roleColor || '#888888'
       if (roleType) {
-        const badgeW = 64, badgeH = 14
+        const badgeW = 72, badgeH = 16
         const badgeX = cx - badgeW / 2
-        const badgeY = card.y + card.h - 34
+        const badgeY = card.y + card.h - 36
         ctx.fillStyle = roleColor + '33'
         ctx.strokeStyle = roleColor
         ctx.lineWidth = 1
         ctx.fillRect(badgeX, badgeY, badgeW, badgeH)
         ctx.strokeRect(badgeX, badgeY, badgeW, badgeH)
         ctx.fillStyle = roleColor
-        ctx.font = 'bold 9px "VT323", monospace'
-        ctx.fillText(roleType, cx, badgeY + 10)
+        ctx.font = 'bold 12px "VT323", monospace'
+        ctx.fillText(roleType, cx, badgeY + 12)
       }
 
       // 패시브명
-      ctx.fillStyle = sel ? '#ccbbff' : '#556677'
-      ctx.font = '9px "VT323", monospace'
+      ctx.fillStyle = sel ? '#ccbbff' : '#7788aa'
+      ctx.font = '12px "VT323", monospace'
       ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 4)
 
       // 잠금 오버레이
       if (!window.MetaManager?.isUnlocked(card.key)) {
         ctx.save()
-        ctx.fillStyle = 'rgba(0,0,0,0.72)'
+        ctx.fillStyle = 'rgba(0,0,0,0.78)'
         ctx.fillRect(card.x, card.y, card.w, card.h)
-        ctx.font = '32px "VT323", monospace'
+        ctx.font = '36px "VT323", monospace'
         ctx.textAlign = 'center'
-        ctx.fillText('🔒', cx, card.y + card.h / 2 - 4)
-        ctx.fillStyle = '#aa44ff'
+        ctx.fillText('🔒', cx, card.y + card.h / 2 - 16)
+        ctx.fillStyle = '#cc88ff'
+        ctx.font = 'bold 14px "VT323", monospace'
+        ctx.fillText('보스 처치 후', cx, card.y + card.h / 2 + 8)
+        ctx.fillStyle = '#FFD700'
+        ctx.font = 'bold 13px "VT323", monospace'
+        ctx.fillText('골드 다이아 × 1 획득', cx, card.y + card.h / 2 + 26)
+        ctx.fillStyle = '#aa88ff'
         ctx.font = '11px "VT323", monospace'
-        ctx.fillText('gold×1', cx, card.y + card.h / 2 + 16)
+        ctx.fillText('→ 자동 해금됩니다', cx, card.y + card.h / 2 + 42)
         ctx.restore()
       }
     }

@@ -1,3 +1,16 @@
+// 스킬 이름 → 타입 뱃지 매핑
+const _SKILL_TYPE_BADGE = {
+  '긴급 수정':    { label: '공격', color: '#ff6644' },
+  '디버그':       { label: '공격', color: '#ff6644' },
+  '우선순위정리': { label: '공격', color: '#ff6644' },
+  '커피 한 잔':   { label: '이속↑', color: '#ffdd44' },
+  '피규어청소':   { label: '방어', color: '#44aaff' },
+  '강아지쓰다듬기': { label: '회복', color: '#ff88bb' },
+  '낮잠자기':     { label: '회복', color: '#ff88bb' },
+  '자동 저장':    { label: '패시브', color: '#aa88ff' },
+  '산책하기':     { label: '패시브', color: '#aa88ff' },
+}
+
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
   '긴급 수정':    'assets/custom/icons/skill_emergency_fix.png',
@@ -101,12 +114,12 @@ class HUD {
 
     // 출시 진행률
     ctx.fillStyle = '#333'
-    ctx.fillRect(520, 12, 140, 10)
+    ctx.fillRect(510, 12, 150, 10)
     ctx.fillStyle = '#44ffaa'
-    ctx.fillRect(520, 12, 140 * (GameState.releaseProgress / 100), 10)
-    ctx.fillStyle = '#aaa'
-    ctx.font = '11px "VT323", monospace'
-    ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 522, 34)
+    ctx.fillRect(510, 12, 150 * (GameState.releaseProgress / 100), 10)
+    ctx.fillStyle = '#ff4444'
+    ctx.font = 'bold 16px "VT323", monospace'
+    ctx.fillText(`출시 ${Math.floor(GameState.releaseProgress)}%`, 512, 36)
 
     // 점수
     ctx.fillStyle = '#FFD700'
@@ -156,10 +169,19 @@ class HUD {
           ctx.restore()
         }
 
+        // 스킬 타입 뱃지
+        const badge = _SKILL_TYPE_BADGE[state.name]
+        if (badge) {
+          ctx.fillStyle = badge.color + '33'
+          ctx.fillRect(sx + 38, sy + 2, 58, 11)
+          ctx.fillStyle = badge.color
+          ctx.font = 'bold 9px "VT323", monospace'
+          ctx.fillText(badge.label, sx + 40, sy + 11)
+        }
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
         ctx.font = '11px "VT323", monospace'
-        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
+        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 25)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {

@@ -270,7 +270,7 @@ class LevelUpManager {
 
     ctx.font = '18px "VT323", monospace'
     ctx.fillStyle = '#aaaaaa'
-    ctx.fillText('클릭하거나 1 / 2 / 3 키로 선택하세요', 400, 190)
+    ctx.fillText('클릭하거나 Q / W / E 키로 선택하세요', 400, 190)
 
     // 카드 3개
     this.choiceRects = []
@@ -316,11 +316,12 @@ class LevelUpManager {
         ctx.fillRect(iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
       }
 
-      // 번호 레이블 (좌상단)
+      // 키 레이블 (좌상단)
+      const cardKeys = ['Q', 'W', 'E']
       ctx.fillStyle = '#aaccff'
       ctx.font = 'bold 15px "VT323", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(`[${i + 1}]`, cx + 8, cy + 18)
+      ctx.fillText(`[${cardKeys[i]}]`, cx + 8, cy + 18)
 
       // 스킬 이름 (아이콘 아래 중앙)
       ctx.fillStyle = '#ffffff'
@@ -390,10 +391,10 @@ window.addEventListener('click', (e) => {
   _levelUpManager.handleClick(x, y)
 })
 
-// 키보드 1/2/3 선택
+// 키보드 Q/W/E 선택 (스킬 1/2/3/4와 충돌 없음)
 window.addEventListener('keydown', (e) => {
   if (!_levelUpManager.pendingLevelUp) return
-  if (e.code === 'Digit1') _levelUpManager.applyChoice(0)
-  if (e.code === 'Digit2') _levelUpManager.applyChoice(1)
-  if (e.code === 'Digit3') _levelUpManager.applyChoice(2)
+  if (e.code === 'KeyQ') _levelUpManager.applyChoice(0)
+  if (e.code === 'KeyW') _levelUpManager.applyChoice(1)
+  if (e.code === 'KeyE') _levelUpManager.applyChoice(2)
 })
