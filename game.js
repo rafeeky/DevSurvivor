@@ -61,12 +61,12 @@ window.inputKeys = inputKeys
 window.addEventListener('keydown', e => {
   inputKeys[e.code] = true
   if (
-    ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code) &&
+    ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].includes(e.code) &&
     GameState.screen === 'playing' &&
     !GameState.isPaused &&
     !window._levelUpManager?.pendingLevelUp
   ) {
-    const slot = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code)
+    const slot = ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].indexOf(e.code)
     Game.skillManager?.activateSkill(slot)
   }
 })
@@ -100,10 +100,10 @@ function _drawEnemyAnnouncement(ctx, ann) {
 
   // 배너 배경
   ctx.fillStyle = 'rgba(12, 4, 28, 0.9)'
-  ctx.fillRect(140, 72, 520, 100)
+  ctx.fillRect(20, 72, 760, 100)
   ctx.strokeStyle = '#cc2222'
   ctx.lineWidth = 2
-  ctx.strokeRect(140, 72, 520, 100)
+  ctx.strokeRect(20, 72, 760, 100)
 
   // 레이블
   ctx.fillStyle = '#ff6644'

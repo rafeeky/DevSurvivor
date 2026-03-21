@@ -4,7 +4,7 @@
 // ============================================================
 
 // Gold item render size
-const GOLD_ICON_SIZE = 44
+const GOLD_ICON_SIZE = 31  // 44 × 0.7
 
 // Preload gold images (explicit paths so asset validator can resolve them)
 const _goldImgs = {}
