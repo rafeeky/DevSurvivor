@@ -210,6 +210,55 @@ function convertRGBtoRGBA(inputPath, outputPath, tolerance = 30) {
   fs.writeFileSync(outputPath, out)
 }
 
+function brightenSprite(inputPath, outputPath, factor = 1.8) {
+  const buf  = fs.readFileSync(inputPath)
+  const w    = buf.readUInt32BE(16), h = buf.readUInt32BE(20)
+  const colorType = buf[25]
+  const bpp  = colorType === 6 ? 4 : 3
+  let idats  = [], off = 8
+  while (off < buf.length - 12) {
+    const len  = buf.readUInt32BE(off)
+    const type = buf.slice(off+4, off+8).toString()
+    if (type === 'IDAT') idats.push(buf.slice(off+8, off+8+len))
+    if (type === 'IEND') break
+    off += 12 + len
+  }
+  const raw   = zlib.inflateSync(Buffer.concat(idats))
+  const { pixels } = _pngDefilter(raw, w, bpp)
+
+  // RGB/RGBA → 밝기 보정 RGBA
+  const rgba = Buffer.alloc(w * h * 4)
+  for (let i = 0; i < w * h; i++) {
+    const si = i * bpp
+    const r = Math.min(255, Math.round(pixels[si]   * factor))
+    const g = Math.min(255, Math.round(pixels[si+1] * factor))
+    const b = Math.min(255, Math.round(pixels[si+2] * factor))
+    const a = bpp === 4 ? pixels[si+3] : 255
+    rgba[i*4] = r; rgba[i*4+1] = g; rgba[i*4+2] = b; rgba[i*4+3] = a
+  }
+
+  // RGBA PNG 인코딩 (filter=0 None)
+  const rowStride = w * 4
+  const rawOut = Buffer.alloc(h * (rowStride + 1))
+  for (let y = 0; y < h; y++) {
+    rawOut[y * (rowStride + 1)] = 0
+    rgba.copy(rawOut, y * (rowStride + 1) + 1, y * rowStride, (y+1) * rowStride)
+  }
+  const comp = zlib.deflateSync(rawOut, { level: 6 })
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8; ihdr[9] = 6  // RGBA
+
+  const out = Buffer.concat([
+    Buffer.from([0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A]),
+    _pngChunk('IHDR', ihdr),
+    _pngChunk('IDAT', comp),
+    _pngChunk('IEND', Buffer.alloc(0)),
+  ])
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+  fs.writeFileSync(outputPath, out)
+}
+
 // Tommy 스프라이트 변환 (sprite-pack-3 RGB → assets/custom/player/ RGBA)
 const SP3 = path.join(BASE, 'assets/packs/sprite-pack-3')
 const DST = path.join(BASE, 'assets/custom/player')
@@ -224,6 +273,19 @@ for (const { src, dst } of TOMMY_SPRITES) {
   try { convertRGBtoRGBA(src, dst); convCount++ } catch (e) { console.warn('⚠️ 변환 실패:', src, e.message) }
 }
 console.log(`✅ Tommy 스프라이트 변환 완료 (${convCount}/${TOMMY_SPRITES.length})`)
+
+// Alex 스프라이트 밝기 보정
+const ALEX_SRC = path.join(BASE, 'assets/characters')
+const ALEX_DST = path.join(BASE, 'assets/custom/player')
+const alexSprites = [
+  { src: `${ALEX_SRC}/Alex_idle_16x16.png`, dst: `${ALEX_DST}/alex_idle.png` },
+  { src: `${ALEX_SRC}/Alex_run_16x16.png`,  dst: `${ALEX_DST}/alex_run.png`  },
+]
+let alexCount = 0
+for (const { src, dst } of alexSprites) {
+  try { brightenSprite(src, dst, 1.8); alexCount++ } catch (e) { console.warn('⚠️ Alex 변환 실패:', src, e.message) }
+}
+if (alexCount > 0) console.log(`✅ Alex 스프라이트 밝기 보정 완료 (${alexCount}/2)`)
 
 // assets/ → docs/assets/ 동기화
 // (한글 경로 환경에서 fs.cpSync segfault 방지 → PowerShell 사용)
