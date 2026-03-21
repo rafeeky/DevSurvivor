@@ -14,12 +14,12 @@ const ENEMY_INTRO_DATA = {
 }
 
 const SPAWN_TIMELINE = [
-  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 1.2, maxEnemies: 10 },
-  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.0, maxEnemies: 8  },
-  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 1.8, maxEnemies: 10 },
-  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.5, maxEnemies: 12 },
-  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.0, maxEnemies: 8  },
-  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.0, maxEnemies: 10 },
+  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 0.6, maxEnemies: 12 },  // BoxBot 2×
+  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.5, maxEnemies: 8  },  // CartBot 80%
+  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 2.3, maxEnemies: 10 },  // CartBot 80%
+  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.9, maxEnemies: 12 },  // CartBot 80%
+  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.5, maxEnemies: 8  },  // CartBot 80%
+  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.5, maxEnemies: 10 },  // CartBot 80%
 ]
 
 class Spawner {

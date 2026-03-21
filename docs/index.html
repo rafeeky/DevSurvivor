@@ -126,7 +126,7 @@ window.ENEMY_SPRITE_CONFIGS = {
   BoxBot: {
     idle: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 384, fh: 1024, frames: 4, fps: 4 },
     walk: { src: 'assets/enemies/boxbot_walk.png',        fw: 256, fh: 1024, frames: 6, fps: 8 },
-    scale: 0.09,
+    scale: 0.108,
   },
   CartBot: {
     idle: { src: 'assets/enemies/GumBot_idle.png', fw: 32, fh: 32, frames: 4, fps: 4 },
@@ -861,6 +861,8 @@ class PCBot extends Enemy {
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0) return
+    deltaTime = Math.min(deltaTime, 0.1)
 
     const dx = player.x - this.x
     const dy = player.y - this.y
@@ -877,18 +879,28 @@ class PCBot extends Enemy {
       }
     }
 
-    // 오류탄 발사
+    // 오류탄 발사 (투사체 30개 이하일 때만)
     this.shootTimer += deltaTime
     if (this.shootTimer >= this.shootInterval) {
       this.shootTimer = 0
-      GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
+      if ((GameState.projectiles?.length || 0) < 30) {
+        GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
+      }
     }
 
-    // 스캔 빔 (5초마다 플레이어에게 레이저 조사 → 2초 지속 → 데미지)
+    // 스캔 빔 — 최대 사거리 220px
+    const MAX_BEAM_RANGE = 220
     this.scanTimer += deltaTime
     if (this.scanTimer >= this.scanInterval) {
       this.scanTimer = 0
-      this.scanBeam = { tx: player.x, ty: player.y, life: 2.0, maxLife: 2.0 }
+      if (dist > 0) {
+        const beamLen = Math.min(dist, MAX_BEAM_RANGE)
+        this.scanBeam = {
+          tx: this.x + (dx / dist) * beamLen,
+          ty: this.y + (dy / dist) * beamLen,
+          life: 2.0, maxLife: 2.0,
+        }
+      }
     }
     if (this.scanBeam) {
       this.scanBeam.life -= deltaTime
@@ -2247,12 +2259,12 @@ const ENEMY_INTRO_DATA = {
 }
 
 const SPAWN_TIMELINE = [
-  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 1.2, maxEnemies: 10 },
-  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.0, maxEnemies: 8  },
-  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 1.8, maxEnemies: 10 },
-  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.5, maxEnemies: 12 },
-  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.0, maxEnemies: 8  },
-  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.0, maxEnemies: 10 },
+  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 0.6, maxEnemies: 12 },  // BoxBot 2×
+  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.5, maxEnemies: 8  },  // CartBot 80%
+  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 2.3, maxEnemies: 10 },  // CartBot 80%
+  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.9, maxEnemies: 12 },  // CartBot 80%
+  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.5, maxEnemies: 8  },  // CartBot 80%
+  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.5, maxEnemies: 10 },  // CartBot 80%
 ]
 
 class Spawner {
@@ -2572,9 +2584,9 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 
 // ---------------------------------------------------------------------------
 // 경험치 커브 (GDD Part 5.1)
-// index = 레벨 (1~5), value = 해당 레벨 달성에 필요한 누적 경험치
+// index = 레벨 (1~8), value = 해당 레벨 달성에 필요한 누적 경험치
 // ---------------------------------------------------------------------------
-const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
+const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450, 650, 900, 1200]
 
 // ---------------------------------------------------------------------------
 // 레벨업 선택지 정의
@@ -3729,13 +3741,13 @@ class HUD {
     }
 
     // 레벨 & 경험치 바
-    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     ctx.fillStyle = '#ccaaff'
     ctx.font = 'bold 12px "VT323", monospace'
     ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
 
-    const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
+    const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450, 650, 900, 1200]
     const lvl = GameState.playerLevel
     const expNeeded = lvl < EXP_THRESHOLDS.length ? EXP_THRESHOLDS[lvl] : EXP_THRESHOLDS[EXP_THRESHOLDS.length - 1]
     const expCurrent = GameState.playerExp

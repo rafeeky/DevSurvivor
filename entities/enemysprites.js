@@ -12,7 +12,7 @@ window.ENEMY_SPRITE_CONFIGS = {
   BoxBot: {
     idle: { src: 'assets/custom/enemies/boxbot_idle.png', fw: 384, fh: 1024, frames: 4, fps: 4 },
     walk: { src: 'assets/enemies/boxbot_walk.png',        fw: 256, fh: 1024, frames: 6, fps: 8 },
-    scale: 0.09,
+    scale: 0.108,
   },
   CartBot: {
     idle: { src: 'assets/enemies/GumBot_idle.png', fw: 32, fh: 32, frames: 4, fps: 4 },

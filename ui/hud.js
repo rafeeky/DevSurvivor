@@ -223,13 +223,13 @@ class HUD {
     }
 
     // 레벨 & 경험치 바
-    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     ctx.fillStyle = '#ccaaff'
     ctx.font = 'bold 12px "VT323", monospace'
     ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
 
-    const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450]
+    const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450, 650, 900, 1200]
     const lvl = GameState.playerLevel
     const expNeeded = lvl < EXP_THRESHOLDS.length ? EXP_THRESHOLDS[lvl] : EXP_THRESHOLDS[EXP_THRESHOLDS.length - 1]
     const expCurrent = GameState.playerExp

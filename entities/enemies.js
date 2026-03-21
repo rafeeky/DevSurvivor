@@ -331,6 +331,8 @@ class PCBot extends Enemy {
 
   update(deltaTime, player) {
     if (!this.isAlive()) return
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0) return
+    deltaTime = Math.min(deltaTime, 0.1)
 
     const dx = player.x - this.x
     const dy = player.y - this.y
@@ -347,18 +349,28 @@ class PCBot extends Enemy {
       }
     }
 
-    // 오류탄 발사
+    // 오류탄 발사 (투사체 30개 이하일 때만)
     this.shootTimer += deltaTime
     if (this.shootTimer >= this.shootInterval) {
       this.shootTimer = 0
-      GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
+      if ((GameState.projectiles?.length || 0) < 30) {
+        GameState.projectiles.push(new ErrorBullet(this.x, this.y, player.x, player.y))
+      }
     }
 
-    // 스캔 빔 (5초마다 플레이어에게 레이저 조사 → 2초 지속 → 데미지)
+    // 스캔 빔 — 최대 사거리 220px
+    const MAX_BEAM_RANGE = 220
     this.scanTimer += deltaTime
     if (this.scanTimer >= this.scanInterval) {
       this.scanTimer = 0
-      this.scanBeam = { tx: player.x, ty: player.y, life: 2.0, maxLife: 2.0 }
+      if (dist > 0) {
+        const beamLen = Math.min(dist, MAX_BEAM_RANGE)
+        this.scanBeam = {
+          tx: this.x + (dx / dist) * beamLen,
+          ty: this.y + (dy / dist) * beamLen,
+          life: 2.0, maxLife: 2.0,
+        }
+      }
     }
     if (this.scanBeam) {
       this.scanBeam.life -= deltaTime
