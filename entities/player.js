@@ -42,6 +42,9 @@ class Player {
     this._animFrame  = 0
     this._isMoving   = false
     this._facingLeft = false  // 좌향 미러링
+    // hit/action 오버라이드 애니메이션
+    this._hitAnimTimer   = 0
+    this._actionAnimTimer = 0
   }
 
   // ── Computed properties ──
@@ -90,11 +93,18 @@ class Player {
     this.x += dx * this.speed * deltaTime
     this.y += dy * this.speed * deltaTime
 
+    // hit/action 타이머
+    if (this._hitAnimTimer   > 0) this._hitAnimTimer   -= deltaTime
+    if (this._actionAnimTimer > 0) this._actionAnimTimer -= deltaTime
+
     // 스프라이트 애니메이션 프레임 업데이트
     const charKey = window.GameState?.selectedCharacter || 'adam'
     const charCfg = window.CHAR_CONFIGS?.[charKey]
     if (charCfg) {
-      const anim = this._isMoving ? charCfg.walk : charCfg.idle
+      let anim
+      if (this._hitAnimTimer   > 0 && charCfg.hit)    anim = charCfg.hit
+      else if (this._actionAnimTimer > 0 && charCfg.action) anim = charCfg.action
+      else anim = this._isMoving ? charCfg.walk : charCfg.idle
       this._animTimer += deltaTime
       const frameDur = 1 / anim.fps
       while (this._animTimer >= frameDur) {
@@ -126,6 +136,12 @@ class Player {
     this.hp = Math.max(0, this.hp - actual)
     this.invincibleTimer = this.invincibleDuration
     this.flashTimer = 0.15
+    this._hitAnimTimer = 0.5  // hit 애니메이션 트리거
+  }
+
+  // 스킬 사용 시 action 애니메이션 트리거 (skills.js 등에서 호출)
+  triggerAction() {
+    this._actionAnimTimer = 0.6
   }
 
   // ── 회복 ──
@@ -213,15 +229,26 @@ class Player {
     const spr     = window.CHAR_SPRITES?.[charKey]
 
     if (cfg && spr) {
-      const anim = this._isMoving ? cfg.walk  : cfg.idle
-      const img  = this._isMoving ? spr.walk  : spr.idle
+      // 현재 재생할 애니메이션 & 이미지 결정
+      let animKey = 'idle'
+      if (this._hitAnimTimer   > 0 && cfg.hit)    animKey = 'hit'
+      else if (this._actionAnimTimer > 0 && cfg.action) animKey = 'action'
+      else if (this._isMoving) animKey = 'walk'
+
+      const anim = cfg[animKey] || cfg.idle
+      const img  = spr[animKey] || spr.idle
       if (img?.complete && img.naturalWidth > 0) {
-        const dw = anim.fw * cfg.scale
-        const dh = anim.fh * cfg.scale
+        // renderW/renderH 우선, 없으면 scale
+        const scale = cfg.scale || 1
+        const dw = cfg.renderW || Math.round(anim.fw * scale)
+        const dh = cfg.renderH || Math.round(anim.fh * scale)
+        const anchor = cfg.yAnchor ?? 0.75
         const sx = this._animFrame * anim.fw
         const rx = Math.round(x - dw / 2)
-        const ry = Math.round(y - dh * 0.75)
-        ctx.imageSmoothingEnabled = false
+        const ry = Math.round(y - dh * anchor)
+        const smooth = cfg.renderW != null  // 고해상도 스프라이트는 스무딩 ON
+        ctx.imageSmoothingEnabled = smooth
+        ctx.imageSmoothingQuality = smooth ? 'high' : 'low'
         if (this._facingLeft) {
           ctx.save()
           ctx.translate(rx + dw, ry)
@@ -231,7 +258,7 @@ class Player {
         } else {
           ctx.drawImage(img, sx, 0, anim.fw, anim.fh, rx, ry, dw, dh)
         }
-        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingEnabled = false
         ctx.restore()
         this._drawHPBar(ctx, x, y)
         return

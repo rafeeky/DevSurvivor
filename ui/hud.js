@@ -113,13 +113,8 @@ class HUD {
       ctx.fillRect(sx, sy, 100, 40)
       ctx.strokeRect(sx, sy, 100, 40)
 
-      // 키 레이블
-      ctx.fillStyle = '#888'
-      ctx.font = '10px monospace'
-      ctx.fillText(keys[i], sx + 4, sy + 13)
-
       if (!state.isEmpty) {
-        // 스킬 아이콘 (있으면)
+        // 스킬 아이콘 (있으면) — 키 레이블보다 먼저 그려서 레이블이 위에 오도록
         const icon = _getSkillIcon(state.name)
         if (icon?.complete && icon.naturalWidth > 0) {
           ctx.save()
@@ -156,6 +151,13 @@ class HUD {
           ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
+
+      // 키 레이블 — 항상 마지막에 그려 아이콘 위에 표시 (작은 배경 포함)
+      ctx.fillStyle = 'rgba(0,0,0,0.65)'
+      ctx.fillRect(sx + 2, sy + 2, 14, 13)
+      ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
+      ctx.font = 'bold 10px monospace'
+      ctx.fillText(keys[i], sx + 4, sy + 13)
     }
 
     // 빈 슬롯 힌트 (초반 안내)

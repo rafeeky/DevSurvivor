@@ -30,17 +30,20 @@
   <script>
 /**
  * entities/charsprites.js — 플레이어 캐릭터 스프라이트 설정 & 이미지 로더
- * 세 캐릭터: adam / alex / amelia (모두 16×16 프레임, Modern tiles 팩)
+ * player_m / player_f 커스텀 스프라이트 (384×768px 프레임, 4프레임 수평 배치)
+ * alex는 Modern Tiles 스프라이트 유지 (차별화)
  */
 
 window.CHAR_CONFIGS = {
   adam: {
     label: '아담',
     sublabel: '남 • 개발자',
-    idle: { src: 'assets/characters/Adam_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
-    walk: { src: 'assets/characters/Adam_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
-    scale: 3,
-    portrait: 'assets/custom/player/player_m.png',
+    idle:   { src: 'assets/custom/player/player_m_idle.png',   fw: 384, fh: 768, frames: 4, fps: 6 },
+    walk:   { src: 'assets/custom/player/player_m_walk.png',   fw: 384, fh: 768, frames: 4, fps: 8 },
+    action: { src: 'assets/custom/player/player_m_action.png', fw: 384, fh: 768, frames: 4, fps: 8 },
+    hit:    { src: 'assets/custom/player/player_m_hit.png',    fw: 384, fh: 768, frames: 4, fps: 10 },
+    renderW: 48, renderH: 80,
+    yAnchor: 0.92,
   },
   alex: {
     label: '알렉스',
@@ -48,15 +51,17 @@ window.CHAR_CONFIGS = {
     idle: { src: 'assets/characters/Alex_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
     walk: { src: 'assets/characters/Alex_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
-    portrait: 'assets/custom/player/player_m.png',
+    yAnchor: 0.75,
   },
   amelia: {
     label: '아멜리아',
     sublabel: '여 • 개발자',
-    idle: { src: 'assets/characters/Amelia_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
-    walk: { src: 'assets/characters/Amelia_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
-    scale: 3,
-    portrait: 'assets/custom/player/player_f.png',
+    idle:   { src: 'assets/custom/player/player_f_idle.png',   fw: 384, fh: 768, frames: 4, fps: 6 },
+    walk:   { src: 'assets/custom/player/player_f_walk.png',   fw: 384, fh: 768, frames: 4, fps: 8 },
+    action: { src: 'assets/custom/player/player_f_action.png', fw: 384, fh: 768, frames: 4, fps: 8 },
+    hit:    { src: 'assets/custom/player/player_f_hit.png',    fw: 384, fh: 768, frames: 4, fps: 10 },
+    renderW: 48, renderH: 80,
+    yAnchor: 0.92,
   },
 }
 
@@ -64,13 +69,15 @@ window.CHAR_CONFIGS = {
 window.CHAR_SPRITES = {}
 ;(function () {
   for (const [key, cfg] of Object.entries(window.CHAR_CONFIGS)) {
-    const idle = new Image()
-    idle.src = cfg.idle.src
-    const walk = new Image()
-    walk.src = cfg.walk.src
-    const portrait = new Image()
-    portrait.src = cfg.portrait
-    window.CHAR_SPRITES[key] = { idle, walk, portrait }
+    const entry = {}
+    for (const animKey of ['idle', 'walk', 'action', 'hit']) {
+      if (cfg[animKey]) {
+        const img = new Image()
+        img.src = cfg[animKey].src
+        entry[animKey] = img
+      }
+    }
+    window.CHAR_SPRITES[key] = entry
   }
 })()
 
@@ -172,6 +179,9 @@ class Player {
     this._animFrame  = 0
     this._isMoving   = false
     this._facingLeft = false  // 좌향 미러링
+    // hit/action 오버라이드 애니메이션
+    this._hitAnimTimer   = 0
+    this._actionAnimTimer = 0
   }
 
   // ── Computed properties ──
@@ -220,11 +230,18 @@ class Player {
     this.x += dx * this.speed * deltaTime
     this.y += dy * this.speed * deltaTime
 
+    // hit/action 타이머
+    if (this._hitAnimTimer   > 0) this._hitAnimTimer   -= deltaTime
+    if (this._actionAnimTimer > 0) this._actionAnimTimer -= deltaTime
+
     // 스프라이트 애니메이션 프레임 업데이트
     const charKey = window.GameState?.selectedCharacter || 'adam'
     const charCfg = window.CHAR_CONFIGS?.[charKey]
     if (charCfg) {
-      const anim = this._isMoving ? charCfg.walk : charCfg.idle
+      let anim
+      if (this._hitAnimTimer   > 0 && charCfg.hit)    anim = charCfg.hit
+      else if (this._actionAnimTimer > 0 && charCfg.action) anim = charCfg.action
+      else anim = this._isMoving ? charCfg.walk : charCfg.idle
       this._animTimer += deltaTime
       const frameDur = 1 / anim.fps
       while (this._animTimer >= frameDur) {
@@ -256,6 +273,12 @@ class Player {
     this.hp = Math.max(0, this.hp - actual)
     this.invincibleTimer = this.invincibleDuration
     this.flashTimer = 0.15
+    this._hitAnimTimer = 0.5  // hit 애니메이션 트리거
+  }
+
+  // 스킬 사용 시 action 애니메이션 트리거 (skills.js 등에서 호출)
+  triggerAction() {
+    this._actionAnimTimer = 0.6
   }
 
   // ── 회복 ──
@@ -343,15 +366,26 @@ class Player {
     const spr     = window.CHAR_SPRITES?.[charKey]
 
     if (cfg && spr) {
-      const anim = this._isMoving ? cfg.walk  : cfg.idle
-      const img  = this._isMoving ? spr.walk  : spr.idle
+      // 현재 재생할 애니메이션 & 이미지 결정
+      let animKey = 'idle'
+      if (this._hitAnimTimer   > 0 && cfg.hit)    animKey = 'hit'
+      else if (this._actionAnimTimer > 0 && cfg.action) animKey = 'action'
+      else if (this._isMoving) animKey = 'walk'
+
+      const anim = cfg[animKey] || cfg.idle
+      const img  = spr[animKey] || spr.idle
       if (img?.complete && img.naturalWidth > 0) {
-        const dw = anim.fw * cfg.scale
-        const dh = anim.fh * cfg.scale
+        // renderW/renderH 우선, 없으면 scale
+        const scale = cfg.scale || 1
+        const dw = cfg.renderW || Math.round(anim.fw * scale)
+        const dh = cfg.renderH || Math.round(anim.fh * scale)
+        const anchor = cfg.yAnchor ?? 0.75
         const sx = this._animFrame * anim.fw
         const rx = Math.round(x - dw / 2)
-        const ry = Math.round(y - dh * 0.75)
-        ctx.imageSmoothingEnabled = false
+        const ry = Math.round(y - dh * anchor)
+        const smooth = cfg.renderW != null  // 고해상도 스프라이트는 스무딩 ON
+        ctx.imageSmoothingEnabled = smooth
+        ctx.imageSmoothingQuality = smooth ? 'high' : 'low'
         if (this._facingLeft) {
           ctx.save()
           ctx.translate(rx + dw, ry)
@@ -361,7 +395,7 @@ class Player {
         } else {
           ctx.drawImage(img, sx, 0, anim.fw, anim.fh, rx, ry, dw, dh)
         }
-        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingEnabled = false
         ctx.restore()
         this._drawHPBar(ctx, x, y)
         return
@@ -2756,13 +2790,8 @@ class HUD {
       ctx.fillRect(sx, sy, 100, 40)
       ctx.strokeRect(sx, sy, 100, 40)
 
-      // 키 레이블
-      ctx.fillStyle = '#888'
-      ctx.font = '10px monospace'
-      ctx.fillText(keys[i], sx + 4, sy + 13)
-
       if (!state.isEmpty) {
-        // 스킬 아이콘 (있으면)
+        // 스킬 아이콘 (있으면) — 키 레이블보다 먼저 그려서 레이블이 위에 오도록
         const icon = _getSkillIcon(state.name)
         if (icon?.complete && icon.naturalWidth > 0) {
           ctx.save()
@@ -2799,6 +2828,13 @@ class HUD {
           ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
+
+      // 키 레이블 — 항상 마지막에 그려 아이콘 위에 표시 (작은 배경 포함)
+      ctx.fillStyle = 'rgba(0,0,0,0.65)'
+      ctx.fillRect(sx + 2, sy + 2, 14, 13)
+      ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
+      ctx.font = 'bold 10px monospace'
+      ctx.fillText(keys[i], sx + 4, sy + 13)
     }
 
     // 빈 슬롯 힌트 (초반 안내)
@@ -3015,42 +3051,45 @@ class Lobby {
 
       ctx.textAlign = 'center'
 
-      // 캐릭터 프리뷰 — portrait 이미지 우선, 없으면 sprite row0 폴백
-      const PREV = 96
-      const px = Math.round(cx - PREV / 2)
-      const py = card.y + 6
-      const portImg = spr?.portrait
-      if (portImg?.complete && portImg.naturalWidth > 0) {
-        // portrait 이미지 (1024×1024 → 96×96 스케일)
+      // 캐릭터 프리뷰 — idle 스프라이트 frame0, fit-width 크롭으로 portrait 효과
+      const portraitH = card.h - 28  // 이름/서브라벨 28px 확보
+      const portraitY = card.y + 2
+      const idleImg = spr?.idle
+      if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg?.idle) {
+        const fw = cfg.idle.fw
+        const fh = cfg.idle.fh
+        // 카드 너비에 맞춰 스케일 → 세로는 clip
+        const scaleToW = (card.w - 4) / fw
+        const dispW    = card.w - 4
+        const dispH    = fh * scaleToW        // 비율 유지 시 전체 높이
+        const drawX    = card.x + 2
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(card.x, card.y, card.w, portraitH)
+        ctx.clip()
         ctx.imageSmoothingEnabled = true
-        ctx.drawImage(portImg, 0, 0, portImg.naturalWidth, portImg.naturalHeight, px, py, PREV, PREV)
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, portraitY, dispW, dispH)
         ctx.imageSmoothingEnabled = false
+        ctx.restore()
       } else {
-        const idleImg = spr?.idle
-        if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg) {
-          // idle 스프라이트 row0 = 정면 (front-facing)
-          ctx.imageSmoothingEnabled = false
-          ctx.drawImage(idleImg, 0, 0, cfg.idle.fw, cfg.idle.fh, px, py, PREV, PREV)
-          ctx.imageSmoothingEnabled = true
-        } else {
-          // 로딩 전 플레이스홀더
-          ctx.fillStyle = '#1a2240'
-          ctx.fillRect(px, py, PREV, PREV)
-          ctx.fillStyle = '#334466'
-          ctx.font = '28px monospace'
-          ctx.fillText('?', cx, py + 52)
-        }
+        // 로딩 전 플레이스홀더
+        ctx.fillStyle = '#1a2240'
+        ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
+        ctx.fillStyle = '#334466'
+        ctx.font = '28px monospace'
+        ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
       ctx.font = `bold 12px monospace`
-      ctx.fillText(cfg?.label || card.key, cx, card.y + 112)
+      ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 14)
 
       // 서브라벨
       ctx.fillStyle = sel ? '#88aaff' : '#556677'
       ctx.font = '10px monospace'
-      ctx.fillText(cfg?.sublabel || '', cx, card.y + 126)
+      ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 2)
     }
 
     ctx.textAlign = 'left'

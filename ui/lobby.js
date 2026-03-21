@@ -158,42 +158,45 @@ class Lobby {
 
       ctx.textAlign = 'center'
 
-      // 캐릭터 프리뷰 — portrait 이미지 우선, 없으면 sprite row0 폴백
-      const PREV = 96
-      const px = Math.round(cx - PREV / 2)
-      const py = card.y + 6
-      const portImg = spr?.portrait
-      if (portImg?.complete && portImg.naturalWidth > 0) {
-        // portrait 이미지 (1024×1024 → 96×96 스케일)
+      // 캐릭터 프리뷰 — idle 스프라이트 frame0, fit-width 크롭으로 portrait 효과
+      const portraitH = card.h - 28  // 이름/서브라벨 28px 확보
+      const portraitY = card.y + 2
+      const idleImg = spr?.idle
+      if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg?.idle) {
+        const fw = cfg.idle.fw
+        const fh = cfg.idle.fh
+        // 카드 너비에 맞춰 스케일 → 세로는 clip
+        const scaleToW = (card.w - 4) / fw
+        const dispW    = card.w - 4
+        const dispH    = fh * scaleToW        // 비율 유지 시 전체 높이
+        const drawX    = card.x + 2
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(card.x, card.y, card.w, portraitH)
+        ctx.clip()
         ctx.imageSmoothingEnabled = true
-        ctx.drawImage(portImg, 0, 0, portImg.naturalWidth, portImg.naturalHeight, px, py, PREV, PREV)
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, portraitY, dispW, dispH)
         ctx.imageSmoothingEnabled = false
+        ctx.restore()
       } else {
-        const idleImg = spr?.idle
-        if (idleImg?.complete && idleImg.naturalWidth > 0 && cfg) {
-          // idle 스프라이트 row0 = 정면 (front-facing)
-          ctx.imageSmoothingEnabled = false
-          ctx.drawImage(idleImg, 0, 0, cfg.idle.fw, cfg.idle.fh, px, py, PREV, PREV)
-          ctx.imageSmoothingEnabled = true
-        } else {
-          // 로딩 전 플레이스홀더
-          ctx.fillStyle = '#1a2240'
-          ctx.fillRect(px, py, PREV, PREV)
-          ctx.fillStyle = '#334466'
-          ctx.font = '28px monospace'
-          ctx.fillText('?', cx, py + 52)
-        }
+        // 로딩 전 플레이스홀더
+        ctx.fillStyle = '#1a2240'
+        ctx.fillRect(card.x + 2, portraitY, card.w - 4, portraitH)
+        ctx.fillStyle = '#334466'
+        ctx.font = '28px monospace'
+        ctx.fillText('?', cx, portraitY + portraitH / 2 + 10)
       }
 
       // 이름
       ctx.fillStyle = sel ? '#ffffff' : '#aabbcc'
       ctx.font = `bold 12px monospace`
-      ctx.fillText(cfg?.label || card.key, cx, card.y + 112)
+      ctx.fillText(cfg?.label || card.key, cx, card.y + card.h - 14)
 
       // 서브라벨
       ctx.fillStyle = sel ? '#88aaff' : '#556677'
       ctx.font = '10px monospace'
-      ctx.fillText(cfg?.sublabel || '', cx, card.y + 126)
+      ctx.fillText(cfg?.sublabel || '', cx, card.y + card.h - 2)
     }
 
     ctx.textAlign = 'left'
