@@ -37,22 +37,22 @@ window.CHAR_CONFIGS = {
   adam: {
     label: '아담',
     sublabel: '남 • 개발자',
-    idle: { src: 'assets/Modern tiles_Free/Characters_free/Adam_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
-    walk: { src: 'assets/Modern tiles_Free/Characters_free/Adam_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
+    idle: { src: 'assets/characters/Adam_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
+    walk: { src: 'assets/characters/Adam_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
   },
   alex: {
     label: '알렉스',
     sublabel: '남 • 시니어',
-    idle: { src: 'assets/Modern tiles_Free/Characters_free/Alex_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
-    walk: { src: 'assets/Modern tiles_Free/Characters_free/Alex_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
+    idle: { src: 'assets/characters/Alex_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
+    walk: { src: 'assets/characters/Alex_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
   },
   amelia: {
     label: '아멜리아',
     sublabel: '여 • 개발자',
-    idle: { src: 'assets/Modern tiles_Free/Characters_free/Amelia_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
-    walk: { src: 'assets/Modern tiles_Free/Characters_free/Amelia_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
+    idle: { src: 'assets/characters/Amelia_idle_16x16.png', fw: 16, fh: 16, frames: 4, fps: 4 },
+    walk: { src: 'assets/characters/Amelia_run_16x16.png',  fw: 16, fh: 16, frames: 6, fps: 8 },
     scale: 3,
   },
 }
@@ -66,6 +66,56 @@ window.CHAR_SPRITES = {}
     const walk = new Image()
     walk.src = cfg.walk.src
     window.CHAR_SPRITES[key] = { idle, walk }
+  }
+})()
+
+  </script>
+
+  <!-- entities/enemysprites.js -->
+  <script>
+/**
+ * entities/enemysprites.js — 적 스프라이트 설정 & 이미지 로더
+ * Sprite Pack 3 → 5종 적 매핑
+ * BoxBot=GumBot / CartBot=Tommy / PCBot=RobotJ5 / MirrorBot=Twiggy / AIBot=Geralt
+ */
+
+window.ENEMY_SPRITE_CONFIGS = {
+  BoxBot: {
+    idle: { src: 'assets/enemies/GumBot_idle.png', fw: 32, fh: 32, frames: 4, fps: 4 },
+    walk: { src: 'assets/enemies/GumBot_walk.png', fw: 32, fh: 32, frames: 6, fps: 8 },
+    scale: 2,
+  },
+  CartBot: {
+    idle: { src: 'assets/enemies/Tommy_idle.png', fw: 32, fh: 32, frames: 4, fps: 4 },
+    walk: { src: 'assets/enemies/Tommy_run.png',  fw: 32, fh: 32, frames: 8, fps: 12 },
+    scale: 2,
+  },
+  PCBot: {
+    idle: { src: 'assets/enemies/RobotJ5_idle.png', fw: 32, fh: 32, frames: 5, fps: 4 },
+    walk: { src: 'assets/enemies/RobotJ5_walk.png', fw: 32, fh: 32, frames: 6, fps: 6 },
+    scale: 2,
+  },
+  MirrorBot: {
+    idle: { src: 'assets/enemies/Twiggy_idle.png', fw: 32, fh: 32, frames: 5, fps: 5 },
+    walk: { src: 'assets/enemies/Twiggy_run.png',  fw: 32, fh: 32, frames: 6, fps: 10 },
+    scale: 2,
+  },
+  AIBot: {
+    idle: { src: 'assets/enemies/Geralt_idle.png', fw: 32, fh: 32, frames: 2, fps: 2 },
+    walk: { src: 'assets/enemies/Geralt_run.png',  fw: 32, fh: 32, frames: 3, fps: 6 },
+    scale: 3,
+  },
+}
+
+// 이미지 사전 로드
+window.ENEMY_SPRITES = {}
+;(function () {
+  for (const [key, cfg] of Object.entries(window.ENEMY_SPRITE_CONFIGS)) {
+    const idle = new Image()
+    idle.src = cfg.idle.src
+    const walk = new Image()
+    walk.src = cfg.walk.src
+    window.ENEMY_SPRITES[key] = { idle, walk }
   }
 })()
 
@@ -405,6 +455,53 @@ class Enemy {
     this.collisionRadius = config.collisionRadius || 16
     this.collisionCooldown = 0
     this.alive = true
+    // 스프라이트 애니메이션 상태
+    this._animTimer = 0
+    this._animFrame = 0
+    this._isMoving = false
+    this._facingLeft = false
+  }
+
+  // 서브클래스 update() 후 호출 — 스프라이트 프레임 갱신
+  _updateAnim(deltaTime, isMoving) {
+    this._isMoving = isMoving
+    const cfg = window.ENEMY_SPRITE_CONFIGS?.[this.constructor.name]
+    if (!cfg) return
+    const anim = isMoving ? cfg.walk : cfg.idle
+    this._animTimer += deltaTime
+    const frameDur = 1 / anim.fps
+    if (this._animTimer >= frameDur) {
+      this._animTimer -= frameDur
+      this._animFrame = (this._animFrame + 1) % anim.frames
+    }
+  }
+
+  // 스프라이트 렌더 시도 → 성공 시 true 반환
+  _renderSprite(ctx) {
+    const key = this.constructor.name
+    const cfg = window.ENEMY_SPRITE_CONFIGS?.[key]
+    const spr = window.ENEMY_SPRITES?.[key]
+    if (!cfg || !spr) return false
+    const anim = this._isMoving ? cfg.walk : cfg.idle
+    const img  = this._isMoving ? spr.walk : spr.idle
+    if (!img?.complete || img.naturalWidth === 0) return false
+
+    const dw = anim.fw * cfg.scale
+    const dh = anim.fh * cfg.scale
+    const sx = this._animFrame * anim.fw
+    const px = Math.round(this.x - dw / 2)
+    const py = Math.round(this.y - dh * 0.75)
+
+    ctx.save()
+    if (this._facingLeft) {
+      ctx.scale(-1, 1)
+      ctx.translate(-2 * this.x, 0)
+    }
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, sx, 0, anim.fw, anim.fh, px, py, dw, dh)
+    ctx.imageSmoothingEnabled = true
+    ctx.restore()
+    return true
   }
 
   isAlive() { return this.alive && this.hp > 0 }
@@ -449,11 +546,14 @@ class BoxBot extends Enemy {
     if (dist > 0) {
       this.x += (dx / dist) * this.speed * deltaTime
       this.y += (dy / dist) * this.speed * deltaTime
+      this._facingLeft = dx < 0
     }
+    this._updateAnim(deltaTime, dist > 1)
   }
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 28); return }
     const x = this.x, y = this.y
     // 박스 본체
     ctx.fillStyle = '#C8AA7A'
@@ -536,12 +636,15 @@ class CartBot extends Enemy {
       if (dist > 0) {
         this.x += (dx / dist) * this.speed * deltaTime
         this.y += (dy / dist) * this.speed * deltaTime
+        this._facingLeft = dx < 0
       }
     }
+    this._updateAnim(deltaTime, true)
   }
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
     const x = this.x, y = this.y
     const dash = this.isDashing
     ctx.save()
@@ -626,10 +729,14 @@ class PCBot extends Enemy {
       if (!GameState.hazardZones) GameState.hazardZones = []
       GameState.hazardZones.push(new HazardZone(this.x, this.y))
     }
+
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, true)
   }
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 36); return }
     const x = this.x, y = this.y
     const t = Date.now()
     // 본체 (PC 타워)
@@ -754,6 +861,8 @@ class MirrorBot extends Enemy {
 
     this.prevPlayerX = player.x
     this.prevPlayerY = player.y
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, true)
   }
 
   _startDash(player) {
@@ -775,6 +884,7 @@ class MirrorBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
     const x = this.x, y = this.y
     const isDashing = this.dashPhase === 'dashing'
     ctx.save()
@@ -915,6 +1025,9 @@ class AIBot extends Enemy {
         }
       }
     }
+
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, true)
   }
 
   onKilled() {
@@ -926,6 +1039,7 @@ class AIBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 50); return }
     const x = this.x, y = this.y
     const halfHp = this.hp <= this.maxHp * 0.5
     const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'
@@ -1482,6 +1596,155 @@ if (window.Game && Game.player) {
     Game.registerSkillSystem(new SkillManager(e.detail.player))
   })
 }
+
+  </script>
+
+  <!-- systems/tilemap.js -->
+  <script>
+/**
+ * systems/tilemap.js — Modern tiles Room_Builder 타일맵 배경 렌더러
+ * 타일셋: assets/backgrounds/tileset_room.png (272×368, 17×23 tiles, 16px each)
+ * 캔버스: 800×600, 타일 스케일 2× → 32px 표시
+ *
+ * 타일 좌표 (col, row) — 0-indexed, tileset 기준
+ * Row_Builder 레이아웃 추정:
+ *   row 0: 빈 타일 / 벽 상단
+ *   row 1: 바닥 타일 (기본)
+ *   row 2: 바닥 타일 변형
+ *   row 3~: 벽/가구
+ */
+
+window.TilemapSystem = (() => {
+  const TILE = 16
+  const SCALE = 2
+  const TSIZE = TILE * SCALE  // 32px
+
+  // 캔버스 25×19 타일 (800/32=25, 600/32=18.75)
+  const COLS = 25
+  const ROWS = 19
+
+  // ─── 타일셋 좌표 상수 (col, row) ──────────────────────────
+  // Room_Builder_free_16x16.png 17열×23행
+  // 오피스 배경에 맞게 추정한 타일 좌표
+  const T = {
+    FLOOR:      [0, 1],   // 기본 바닥
+    FLOOR_ALT:  [1, 1],   // 바닥 변형
+    FLOOR_DARK: [2, 1],   // 어두운 바닥
+    WALL_TOP:   [0, 0],   // 상단 벽
+    WALL_SIDE:  [3, 0],   // 측면 벽
+    CORNER_TL:  [0, 2],   // 모서리
+    CORNER_TR:  [2, 2],
+    CORNER_BL:  [0, 4],
+    CORNER_BR:  [2, 4],
+    DESK:       [4, 3],   // 책상
+    PLANT:      [8, 2],   // 화분
+    CARPET:     [5, 1],   // 카펫
+  }
+
+  // ─── 타일맵 정의 (25×19) ──────────────────────────────────
+  // F=바닥, W=벽(상단), A=바닥변형, D=어두운바닥
+  // 상단 2행은 HUD가 가리므로 벽 처리
+  const F = 'F', A = 'A', D = 'D', W = 'W', C = 'C'  // C=카펫
+
+  const MAP = [
+    // row 0 (HUD 아래, y=0)
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    // row 1
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 2
+    [W,F,C,C,C,F,F,F,A,A,A,A,F,F,F,D,D,F,F,F,C,C,C,F,W],
+    // row 3
+    [W,F,C,C,C,F,F,F,A,A,A,A,F,F,F,D,D,F,F,F,C,C,C,F,W],
+    // row 4
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 5
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 6
+    [W,F,A,A,A,A,F,F,F,C,C,C,F,F,F,A,A,A,A,F,F,F,F,F,W],
+    // row 7
+    [W,F,A,A,A,A,F,F,F,C,C,C,F,F,F,A,A,A,A,F,F,F,F,F,W],
+    // row 8
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 9 (중간)
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 10
+    [W,F,D,D,F,F,F,A,A,A,A,F,F,F,C,C,C,F,F,F,D,D,F,F,W],
+    // row 11
+    [W,F,D,D,F,F,F,A,A,A,A,F,F,F,C,C,C,F,F,F,D,D,F,F,W],
+    // row 12
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 13
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 14
+    [W,F,C,C,C,F,F,F,A,A,A,F,F,F,F,D,D,F,F,F,C,C,C,F,W],
+    // row 15
+    [W,F,C,C,C,F,F,F,A,A,A,F,F,F,F,D,D,F,F,F,C,C,C,F,W],
+    // row 16
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 17 (HUD 바닥 근처)
+    [W,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,W],
+    // row 18
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+  ]
+
+  // 타일 코드 → tileset (col, row) 매핑
+  const TILE_LOOKUP = {
+    F: T.FLOOR,
+    A: T.FLOOR_ALT,
+    D: T.FLOOR_DARK,
+    W: T.WALL_TOP,
+    C: T.CARPET,
+  }
+
+  // ─── 타일셋 이미지 ─────────────────────────────────────────
+  const _img = new Image()
+  _img.src = 'assets/backgrounds/tileset_room.png'
+  let _loaded = false
+  _img.onload = () => { _loaded = true }
+
+  // ─── 오프스크린 캔버스 (첫 로드 후 한 번 렌더 → 이후 blit) ─
+  let _offscreen = null
+  let _offCtx = null
+  let _baked = false
+
+  function _bake() {
+    if (!_loaded) return
+    _offscreen = document.createElement('canvas')
+    _offscreen.width  = 800
+    _offscreen.height = 600
+    _offCtx = _offscreen.getContext('2d')
+    _offCtx.imageSmoothingEnabled = false
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const code = MAP[row]?.[col] ?? 'F'
+        const [tc, tr] = TILE_LOOKUP[code] ?? T.FLOOR
+        _offCtx.drawImage(
+          _img,
+          tc * TILE, tr * TILE, TILE, TILE,
+          col * TSIZE, row * TSIZE, TSIZE, TSIZE
+        )
+      }
+    }
+    _baked = true
+  }
+
+  // ─── 공개 API ─────────────────────────────────────────────
+  return {
+    render(ctx) {
+      if (!_baked) {
+        if (_loaded) _bake()
+        else {
+          // 폴백: 단색 배경
+          ctx.fillStyle = '#1a1a2a'
+          ctx.fillRect(0, 0, 800, 600)
+          return
+        }
+      }
+      ctx.drawImage(_offscreen, 0, 0)
+    },
+  }
+})()
 
   </script>
 
@@ -2253,6 +2516,30 @@ window.addEventListener('click', (e) => {
 
   <!-- ui/hud.js -->
   <script>
+// 스킬 이름 → 아이콘 파일 매핑
+const _SKILL_ICON_MAP = {
+  '긴급 수정':    'assets/custom/icons/skill_emergency_fix.png',
+  '디버그':       'assets/custom/icons/skill_debug.png',
+  '우선순위정리': 'assets/custom/icons/skill_priority_sort.png',
+  '커피 한 잔':   'assets/custom/icons/skill_coffee.png',
+  '피규어청소':   'assets/custom/icons/skill_figure_clean.png',
+  '강아지쓰다듬기': 'assets/custom/icons/skill_pet_dog.png',
+  '낮잠자기':     'assets/custom/icons/skill_nap.png',
+  '자동 저장':    'assets/custom/icons/skill_autosave.png',
+}
+// 지연 로드 캐시
+const _skillIconCache = {}
+function _getSkillIcon(name) {
+  const src = _SKILL_ICON_MAP[name]
+  if (!src) return null
+  if (!_skillIconCache[name]) {
+    const img = new Image()
+    img.src = src
+    _skillIconCache[name] = img
+  }
+  return _skillIconCache[name]
+}
+
 class HUD {
   render(ctx, gameTime) {
     if (GameState.screen !== 'playing' && GameState.screen !== 'paused') return
@@ -2348,17 +2635,29 @@ class HUD {
       ctx.fillText(keys[i], sx + 4, sy + 13)
 
       if (!state.isEmpty) {
+        // 스킬 아이콘 (있으면)
+        const icon = _getSkillIcon(state.name)
+        if (icon?.complete && icon.naturalWidth > 0) {
+          ctx.save()
+          ctx.globalAlpha = state.cooldownRemaining > 0 ? 0.35 : 0.85
+          ctx.imageSmoothingEnabled = true
+          ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, sx + 2, sy + 4, 32, 32)
+          ctx.globalAlpha = 1
+          ctx.imageSmoothingEnabled = false
+          ctx.restore()
+        }
+
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
         ctx.font = '11px monospace'
-        ctx.fillText(state.name.substring(0, 7), sx + 14, sy + 22)
+        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {
           ctx.fillStyle = '#ff8844'
           ctx.font = 'bold 13px monospace'
           ctx.textAlign = 'center'
-          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 50, sy + 36)
+          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 68, sy + 36)
           ctx.textAlign = 'left'
 
           // 쿨다운 진행 바
@@ -2370,7 +2669,7 @@ class HUD {
         } else {
           ctx.fillStyle = '#44ff88'
           ctx.font = '10px monospace'
-          ctx.fillText('READY', sx + 34, sy + 36)
+          ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
     }
@@ -3235,15 +3534,11 @@ window.addEventListener('keyup', e => { inputKeys[e.code] = false })
 // 배경 렌더링
 // ─────────────────────────────────────────
 function drawBackground(ctx) {
-  ctx.fillStyle = '#0d0d1a'
-  ctx.fillRect(0, 0, 800, 600)
-  ctx.strokeStyle = '#1a1a3e'
-  ctx.lineWidth = 1
-  for (let x = 0; x < 800; x += 40) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 600); ctx.stroke()
-  }
-  for (let y = 0; y < 600; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke()
+  if (window.TilemapSystem) {
+    window.TilemapSystem.render(ctx)
+  } else {
+    ctx.fillStyle = '#0d0d1a'
+    ctx.fillRect(0, 0, 800, 600)
   }
 }
 

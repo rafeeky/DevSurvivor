@@ -28,6 +28,53 @@ class Enemy {
     this.collisionRadius = config.collisionRadius || 16
     this.collisionCooldown = 0
     this.alive = true
+    // 스프라이트 애니메이션 상태
+    this._animTimer = 0
+    this._animFrame = 0
+    this._isMoving = false
+    this._facingLeft = false
+  }
+
+  // 서브클래스 update() 후 호출 — 스프라이트 프레임 갱신
+  _updateAnim(deltaTime, isMoving) {
+    this._isMoving = isMoving
+    const cfg = window.ENEMY_SPRITE_CONFIGS?.[this.constructor.name]
+    if (!cfg) return
+    const anim = isMoving ? cfg.walk : cfg.idle
+    this._animTimer += deltaTime
+    const frameDur = 1 / anim.fps
+    if (this._animTimer >= frameDur) {
+      this._animTimer -= frameDur
+      this._animFrame = (this._animFrame + 1) % anim.frames
+    }
+  }
+
+  // 스프라이트 렌더 시도 → 성공 시 true 반환
+  _renderSprite(ctx) {
+    const key = this.constructor.name
+    const cfg = window.ENEMY_SPRITE_CONFIGS?.[key]
+    const spr = window.ENEMY_SPRITES?.[key]
+    if (!cfg || !spr) return false
+    const anim = this._isMoving ? cfg.walk : cfg.idle
+    const img  = this._isMoving ? spr.walk : spr.idle
+    if (!img?.complete || img.naturalWidth === 0) return false
+
+    const dw = anim.fw * cfg.scale
+    const dh = anim.fh * cfg.scale
+    const sx = this._animFrame * anim.fw
+    const px = Math.round(this.x - dw / 2)
+    const py = Math.round(this.y - dh * 0.75)
+
+    ctx.save()
+    if (this._facingLeft) {
+      ctx.scale(-1, 1)
+      ctx.translate(-2 * this.x, 0)
+    }
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, sx, 0, anim.fw, anim.fh, px, py, dw, dh)
+    ctx.imageSmoothingEnabled = true
+    ctx.restore()
+    return true
   }
 
   isAlive() { return this.alive && this.hp > 0 }
@@ -72,11 +119,14 @@ class BoxBot extends Enemy {
     if (dist > 0) {
       this.x += (dx / dist) * this.speed * deltaTime
       this.y += (dy / dist) * this.speed * deltaTime
+      this._facingLeft = dx < 0
     }
+    this._updateAnim(deltaTime, dist > 1)
   }
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 28); return }
     const x = this.x, y = this.y
     // 박스 본체
     ctx.fillStyle = '#C8AA7A'
@@ -159,12 +209,15 @@ class CartBot extends Enemy {
       if (dist > 0) {
         this.x += (dx / dist) * this.speed * deltaTime
         this.y += (dy / dist) * this.speed * deltaTime
+        this._facingLeft = dx < 0
       }
     }
+    this._updateAnim(deltaTime, true)
   }
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
     const x = this.x, y = this.y
     const dash = this.isDashing
     ctx.save()
@@ -249,10 +302,14 @@ class PCBot extends Enemy {
       if (!GameState.hazardZones) GameState.hazardZones = []
       GameState.hazardZones.push(new HazardZone(this.x, this.y))
     }
+
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, true)
   }
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 36); return }
     const x = this.x, y = this.y
     const t = Date.now()
     // 본체 (PC 타워)
@@ -377,6 +434,8 @@ class MirrorBot extends Enemy {
 
     this.prevPlayerX = player.x
     this.prevPlayerY = player.y
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, true)
   }
 
   _startDash(player) {
@@ -398,6 +457,7 @@ class MirrorBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 32); return }
     const x = this.x, y = this.y
     const isDashing = this.dashPhase === 'dashing'
     ctx.save()
@@ -538,6 +598,9 @@ class AIBot extends Enemy {
         }
       }
     }
+
+    this._facingLeft = (player.x - this.x) < 0
+    this._updateAnim(deltaTime, true)
   }
 
   onKilled() {
@@ -549,6 +612,7 @@ class AIBot extends Enemy {
 
   render(ctx) {
     if (!this.isAlive()) return
+    if (this._renderSprite(ctx)) { _drawHpBar(ctx, this, 50); return }
     const x = this.x, y = this.y
     const halfHp = this.hp <= this.maxHp * 0.5
     const eyeColor = halfHp ? '#FF3C3C' : '#00FFFF'

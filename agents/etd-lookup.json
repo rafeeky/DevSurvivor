@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "description": "에이전트별 작업 단위 소요시간(분) 추정치. 작업 완료 시 EMA(α=0.3)로 갱신.",
+    "ema_alpha": 0.3,
+    "unit": "minutes",
+    "updated": "2026-03-21",
+    "how_to_update": "new_etd = alpha * actual + (1 - alpha) * old_etd  →  소수점 1자리 반올림"
+  },
+  "tong": {
+    "task-dispatch": { "etd": 5, "samples": 0 },
+    "milestone-planning": { "etd": 15, "samples": 0 },
+    "integration-review": { "etd": 10, "samples": 0 },
+    "asset-reorganize": { "etd": 20, "samples": 1, "last_actual": 25 },
+    "pipeline-setup": { "etd": 30, "samples": 1, "last_actual": 35 }
+  },
+  "raf": {
+    "new-entity-class": { "etd": 25, "samples": 0 },
+    "sprite-loader": { "etd": 20, "samples": 1, "last_actual": 20 },
+    "sprite-animation": { "etd": 15, "samples": 1, "last_actual": 15 },
+    "game-loop-change": { "etd": 10, "samples": 0 },
+    "interface-contract": { "etd": 10, "samples": 0 }
+  },
+  "marv": {
+    "enemy-class": { "etd": 30, "samples": 0 },
+    "spawn-system": { "etd": 20, "samples": 0 },
+    "combat-pattern": { "etd": 25, "samples": 0 },
+    "sprite-integration": { "etd": 20, "samples": 0 }
+  },
+  "haon": {
+    "skill-class": { "etd": 25, "samples": 0 },
+    "levelup-system": { "etd": 20, "samples": 0 },
+    "buff-system": { "etd": 15, "samples": 0 }
+  },
+  "mason": {
+    "ui-screen": { "etd": 20, "samples": 0 },
+    "hud-element": { "etd": 15, "samples": 0 },
+    "character-select-ui": { "etd": 25, "samples": 1, "last_actual": 25 },
+    "meta-system": { "etd": 20, "samples": 0 }
+  },
+  "milli": {
+    "gdd-sync": { "etd": 10, "samples": 0 },
+    "conflict-resolve": { "etd": 15, "samples": 0 }
+  },
+  "fleeky": {
+    "session-log": { "etd": 5, "samples": 0 },
+    "insight-report": { "etd": 10, "samples": 0 }
+  }
+}

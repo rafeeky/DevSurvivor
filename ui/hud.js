@@ -1,3 +1,27 @@
+// 스킬 이름 → 아이콘 파일 매핑
+const _SKILL_ICON_MAP = {
+  '긴급 수정':    'assets/custom/icons/skill_emergency_fix.png',
+  '디버그':       'assets/custom/icons/skill_debug.png',
+  '우선순위정리': 'assets/custom/icons/skill_priority_sort.png',
+  '커피 한 잔':   'assets/custom/icons/skill_coffee.png',
+  '피규어청소':   'assets/custom/icons/skill_figure_clean.png',
+  '강아지쓰다듬기': 'assets/custom/icons/skill_pet_dog.png',
+  '낮잠자기':     'assets/custom/icons/skill_nap.png',
+  '자동 저장':    'assets/custom/icons/skill_autosave.png',
+}
+// 지연 로드 캐시
+const _skillIconCache = {}
+function _getSkillIcon(name) {
+  const src = _SKILL_ICON_MAP[name]
+  if (!src) return null
+  if (!_skillIconCache[name]) {
+    const img = new Image()
+    img.src = src
+    _skillIconCache[name] = img
+  }
+  return _skillIconCache[name]
+}
+
 class HUD {
   render(ctx, gameTime) {
     if (GameState.screen !== 'playing' && GameState.screen !== 'paused') return
@@ -93,17 +117,29 @@ class HUD {
       ctx.fillText(keys[i], sx + 4, sy + 13)
 
       if (!state.isEmpty) {
+        // 스킬 아이콘 (있으면)
+        const icon = _getSkillIcon(state.name)
+        if (icon?.complete && icon.naturalWidth > 0) {
+          ctx.save()
+          ctx.globalAlpha = state.cooldownRemaining > 0 ? 0.35 : 0.85
+          ctx.imageSmoothingEnabled = true
+          ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, sx + 2, sy + 4, 32, 32)
+          ctx.globalAlpha = 1
+          ctx.imageSmoothingEnabled = false
+          ctx.restore()
+        }
+
         // 스킬 이름
         ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
         ctx.font = '11px monospace'
-        ctx.fillText(state.name.substring(0, 7), sx + 14, sy + 22)
+        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 17)
 
         // 쿨다운 숫자
         if (state.cooldownRemaining > 0) {
           ctx.fillStyle = '#ff8844'
           ctx.font = 'bold 13px monospace'
           ctx.textAlign = 'center'
-          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 50, sy + 36)
+          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 68, sy + 36)
           ctx.textAlign = 'left'
 
           // 쿨다운 진행 바
@@ -115,7 +151,7 @@ class HUD {
         } else {
           ctx.fillStyle = '#44ff88'
           ctx.font = '10px monospace'
-          ctx.fillText('READY', sx + 34, sy + 36)
+          ctx.fillText('READY', sx + 52, sy + 36)
         }
       }
     }

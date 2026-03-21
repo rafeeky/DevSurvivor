@@ -7,9 +7,11 @@ const BASE = __dirname
 // 로드 순서 (game.js는 별도 처리)
 const SCRIPTS = [
   'entities/charsprites.js',
+  'entities/enemysprites.js',
   'entities/player.js',
   'entities/enemies.js',
   'entities/skills.js',
+  'systems/tilemap.js',
   'systems/spawner.js',
   'systems/levelup.js',
   'systems/score.js',

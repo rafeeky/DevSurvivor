@@ -69,15 +69,11 @@ window.addEventListener('keyup', e => { inputKeys[e.code] = false })
 // 배경 렌더링
 // ─────────────────────────────────────────
 function drawBackground(ctx) {
-  ctx.fillStyle = '#0d0d1a'
-  ctx.fillRect(0, 0, 800, 600)
-  ctx.strokeStyle = '#1a1a3e'
-  ctx.lineWidth = 1
-  for (let x = 0; x < 800; x += 40) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 600); ctx.stroke()
-  }
-  for (let y = 0; y < 600; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke()
+  if (window.TilemapSystem) {
+    window.TilemapSystem.render(ctx)
+  } else {
+    ctx.fillStyle = '#0d0d1a'
+    ctx.fillRect(0, 0, 800, 600)
   }
 }
 
@@ -305,9 +301,11 @@ function _loop(now) {
 // ─────────────────────────────────────────
 ;(async () => {
   await tryImport('./entities/charsprites.js')
+  await tryImport('./entities/enemysprites.js')
   await tryImport('./entities/player.js')
   await tryImport('./entities/enemies.js')
   await tryImport('./entities/skills.js')
+  await tryImport('./systems/tilemap.js')
   await tryImport('./systems/spawner.js')
   await tryImport('./systems/levelup.js')
   await tryImport('./systems/score.js')
