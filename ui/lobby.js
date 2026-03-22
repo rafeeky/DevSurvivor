@@ -24,79 +24,118 @@ class Lobby {
   }
 
   _initUsernameInput() {
+    // ── 텍스트 입력창 ──
     const input = document.createElement('input')
     input.type = 'text'
     input.maxLength = 12
-    input.placeholder = '닉네임 입력 (최대 12자)'
+    input.placeholder = '닉네임 (한글·영어)'
     input.id = 'devsurvival-username-input'
     input.value = localStorage.getItem('devsurvival_username') || ''
     Object.assign(input.style, {
-      position:        'absolute',
-      zIndex:          '9999',
-      display:         'none',
-      fontSize:        '15px',
-      fontFamily:      '"VT323", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
-      color:           '#ffffff',
-      caretColor:      '#4488ff',
-      background:      'rgba(10,20,50,0.88)',
-      border:          '1.5px solid #4488ff',
-      borderRadius:    '4px',
-      padding:         '4px 8px',
-      outline:         'none',
-      boxShadow:       '0 0 8px rgba(68,136,255,0.5)',
-      letterSpacing:   '1px',
-      textAlign:       'center',
-      width:           '160px',
-      boxSizing:       'border-box',
+      position:     'absolute',
+      zIndex:       '9999',
+      display:      'none',
+      fontSize:     '16px',
+      fontFamily:   '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+      color:        '#ffffff',
+      caretColor:   '#4488ff',
+      background:   '#0a1432',
+      border:       '2px solid #4488ff',
+      borderRadius: '4px',
+      padding:      '6px 10px',
+      outline:      'none',
+      boxShadow:    '0 0 10px rgba(68,136,255,0.6)',
+      textAlign:    'center',
+      width:        '200px',
+      boxSizing:    'border-box',
     })
-    input.addEventListener('blur', () => {
-      let val = input.value.trim().slice(0, 12)
-      if (!val) val = ''
-      input.value = val
-      if (val) {
-        localStorage.setItem('devsurvival_username', val)
-        // 모달 모드였으면 게임 시작
-        if (this._usernameModalActive) {
-          this._usernameModalActive = false
-          this._hideUsernameInput()
-          Game.start()
-        }
+    // -webkit-text-fill-color: WebKit 계열 브라우저에서 color 대신 이 속성이 텍스트 색을 제어함
+    input.style.setProperty('-webkit-text-fill-color', '#ffffff')
+
+    // ── 확인 버튼 ──
+    const btn = document.createElement('button')
+    btn.textContent = '확인'
+    btn.id = 'devsurvival-username-btn'
+    Object.assign(btn.style, {
+      position:     'absolute',
+      zIndex:       '9999',
+      display:      'none',
+      fontSize:     '16px',
+      fontFamily:   '"VT323", "Malgun Gothic", sans-serif',
+      color:        '#aaddff',
+      background:   '#0d2040',
+      border:       '2px solid #3366cc',
+      borderRadius: '4px',
+      padding:      '4px 0',
+      cursor:       'pointer',
+      width:        '200px',
+      boxSizing:    'border-box',
+      outline:      'none',
+    })
+
+    const _confirm = () => {
+      const val = input.value.trim().slice(0, 12)
+      if (!val) { input.focus(); return }
+      localStorage.setItem('devsurvival_username', val)
+      if (this._usernameModalActive) {
+        this._usernameModalActive = false
+        this._hideUsernameInput()
+        Game.start()
       }
-    })
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') input.blur()
-    })
+    }
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _confirm() })
+    btn.addEventListener('click', _confirm)
+
     document.body.appendChild(input)
+    document.body.appendChild(btn)
     this._usernameInput = input
+    this._usernameBtn   = btn
   }
 
   _showUsernameInput() {
     const input = this._usernameInput
+    const btn   = this._usernameBtn
     if (!input) return
     const canvas = document.getElementById('gameCanvas')
     if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    // canvas 상에서 username input 박스 목표 위치 (canvas 좌표 기준: x=320, y=530)
+    const rect   = canvas.getBoundingClientRect()
     const scaleX = rect.width  / 800
     const scaleY = rect.height / 600
-    const inputW = 160 * scaleX
-    const inputH = 26  * scaleY
-    const canvasX = (800 / 2 - 80) * scaleX  // 중앙 정렬
-    const canvasY = 315 * scaleY
-    input.style.left    = (rect.left + window.scrollX + canvasX) + 'px'
-    input.style.top     = (rect.top  + window.scrollY + canvasY) + 'px'
-    input.style.width   = inputW + 'px'
-    input.style.height  = inputH + 'px'
-    input.style.fontSize = Math.max(10, Math.round(14 * scaleY)) + 'px'
-    // value는 처음 표시할 때만 설정 (매 프레임 리셋 방지)
+
+    const inputW = 200 * scaleX
+    const inputH = 36 * scaleY
+    const btnH   = 36 * scaleY
+    const gap    = 8  * scaleY
+    // 패널 중앙 x=400, 입력창 상단 y=302 (canvas 좌표)
+    const screenCX   = rect.left + window.scrollX + 400 * scaleX
+    const inputTop   = rect.top  + window.scrollY + 302 * scaleY
+
+    // value는 처음 표시할 때만 초기화 (매 프레임 리셋 방지)
     if (input.style.display === 'none') {
       input.value = localStorage.getItem('devsurvival_username') || ''
     }
+
+    const fs = Math.max(12, Math.round(15 * scaleY)) + 'px'
+    input.style.left    = (screenCX - inputW / 2) + 'px'
+    input.style.top     = inputTop + 'px'
+    input.style.width   = inputW + 'px'
+    input.style.height  = inputH + 'px'
+    input.style.fontSize = fs
     input.style.display = 'block'
+
+    if (btn) {
+      btn.style.left    = (screenCX - inputW / 2) + 'px'
+      btn.style.top     = (inputTop + inputH + gap) + 'px'
+      btn.style.width   = inputW + 'px'
+      btn.style.height  = btnH + 'px'
+      btn.style.fontSize = fs
+      btn.style.display = 'block'
+    }
   }
 
   _hideUsernameInput() {
     if (this._usernameInput) this._usernameInput.style.display = 'none'
+    if (this._usernameBtn)   this._usernameBtn.style.display   = 'none'
   }
 
   _select(key) {
@@ -275,17 +314,31 @@ class Lobby {
       ctx.fillText('시작하기를 누르면 닉네임을 입력할 수 있습니다', 400, 572)
     }
 
-    // 모달 모드: 반투명 오버레이 + 안내 텍스트
+    // 모달 모드: 반투명 오버레이 + 패널
     if (this._usernameModalActive) {
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'
+      // 오버레이
+      ctx.fillStyle = 'rgba(0,0,0,0.72)'
       ctx.fillRect(0, 0, 800, 600)
+
+      // 패널 (230,220) ~ (570,420)
+      ctx.fillStyle = '#0a1432'
+      ctx.strokeStyle = '#3366cc'
+      ctx.lineWidth = 2
+      ctx.fillRect(230, 220, 340, 200)
+      ctx.strokeRect(230, 220, 340, 200)
+
+      // 제목
       ctx.fillStyle = '#aaccff'
-      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.font = 'bold 24px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('닉네임을 입력하세요 (최대 12자)', 400, 270)
-      ctx.fillStyle = '#778899'
+      ctx.fillText('닉네임을 입력하세요', 400, 256)
+
+      // 부제 (입력창 y=302 바로 위, y=282 위치)
+      ctx.fillStyle = '#556677'
       ctx.font = '14px "VT323", monospace'
-      ctx.fillText('Enter 키로 확인', 400, 300)
+      ctx.fillText('한글·영어 · 최대 12자', 400, 280)
+
+      // DOM 입력창 + 확인 버튼은 y=302, 346 위치에 렌더됨 (DOM)
       this._showUsernameInput()  // 모달 위치 갱신
     }
 
