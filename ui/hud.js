@@ -51,6 +51,7 @@ class HUD {
     this._drawBottomBar(ctx)
     this._drawDangerOverlay(ctx, gameTime)
     this._drawSpeechBubble(ctx)
+    this._drawArrowGuide(ctx)
     this._drawUnlockNotification(ctx)
     this._drawGoldHUD(ctx)
     this._updateFlyingGolds(ctx, 1/60)
@@ -212,12 +213,14 @@ class HUD {
         }
       }
 
-      // 키 레이블 — 항상 마지막에 그려 아이콘 위에 표시 (3배 크기)
-      ctx.fillStyle = 'rgba(0,0,0,0.72)'
-      ctx.fillRect(sx, sy, 34, 28)
-      ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
-      ctx.font = 'bold 30px "VT323", monospace'
-      ctx.fillText(keys[i], sx + 4, sy + 26)
+      // 키 레이블 — 슬롯 전체 폭 스트립 (상단 고정, 항상 맨 위에 렌더)
+      ctx.fillStyle = 'rgba(0,0,0,0.82)'
+      ctx.fillRect(sx, sy, 100, 24)
+      ctx.fillStyle = state.isEmpty ? '#555' : '#e8e8ff'
+      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(keys[i], sx + 50, sy + 19)
+      ctx.textAlign = 'left'
     }
 
     // 빈 슬롯 힌트 (초반 안내)
@@ -306,6 +309,92 @@ class HUD {
     ctx.font = '15px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(bubble.text, bx + bw / 2, by + bh - 8)
+
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
+  }
+
+  _drawArrowGuide(ctx) {
+    const tut = GameState.arrowTutorial
+    if (!tut || tut.timer <= 0) return
+    tut.timer -= 1 / 60
+
+    const player = Game.player
+    if (!player) return
+
+    const alpha = tut.timer < 1.0 ? tut.timer : 1.0
+    const px = player.x - (window.Camera?.x || 0)
+    const py = player.y - (window.Camera?.y || 0)
+
+    // Panel dimensions
+    const pw = 88
+    const ph = 96
+    const bx = px + 48
+    const by = py - ph / 2
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Panel background
+    ctx.fillStyle = 'rgba(10,14,30,0.88)'
+    ctx.strokeStyle = '#4466aa'
+    ctx.lineWidth = 1.5
+    const r = 6
+    ctx.beginPath()
+    ctx.moveTo(bx + r, by)
+    ctx.lineTo(bx + pw - r, by)
+    ctx.quadraticCurveTo(bx + pw, by, bx + pw, by + r)
+    ctx.lineTo(bx + pw, by + ph - r)
+    ctx.quadraticCurveTo(bx + pw, by + ph, bx + pw - r, by + ph)
+    ctx.lineTo(bx + r, by + ph)
+    ctx.quadraticCurveTo(bx, by + ph, bx, by + ph - r)
+    ctx.lineTo(bx, by + r)
+    ctx.quadraticCurveTo(bx, by, bx + r, by)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    // Left tail pointer
+    ctx.fillStyle = 'rgba(10,14,30,0.88)'
+    ctx.strokeStyle = '#4466aa'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(bx, by + ph / 2 - 7)
+    ctx.lineTo(bx - 9, by + ph / 2)
+    ctx.lineTo(bx, by + ph / 2 + 7)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    // "방향키" label
+    ctx.fillStyle = '#aabbdd'
+    ctx.font = 'bold 12px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('방향키', bx + pw / 2, by + 15)
+
+    // Arrow cross layout: cx, cy = center of cross
+    const cx = bx + pw / 2
+    const cy = by + 56
+    const step = 24
+    const arrows = [
+      { char: '↑', dx: 0, dy: -step },
+      { char: '↓', dx: 0, dy: step },
+      { char: '←', dx: -step, dy: 0 },
+      { char: '→', dx: step, dy: 0 },
+    ]
+    ctx.font = 'bold 22px "VT323", monospace'
+    ctx.textAlign = 'center'
+    for (const a of arrows) {
+      // Key box
+      ctx.fillStyle = 'rgba(60,80,130,0.85)'
+      ctx.strokeStyle = '#6688cc'
+      ctx.lineWidth = 1
+      ctx.fillRect(cx + a.dx - 12, cy + a.dy - 14, 24, 22)
+      ctx.strokeRect(cx + a.dx - 12, cy + a.dy - 14, 24, 22)
+      ctx.fillStyle = '#e8eeff'
+      ctx.fillText(a.char, cx + a.dx, cy + a.dy + 3)
+    }
 
     ctx.textAlign = 'left'
     ctx.globalAlpha = 1

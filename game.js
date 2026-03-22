@@ -254,6 +254,8 @@ window.Game = {
       const picked = _BUBBLE_LINES.find(l => { r -= l.w; return r <= 0 }) || _BUBBLE_LINES[0]
       GameState.speechBubble = { text: picked.text, timer: 4.0, maxTimer: 4.0 }
     }
+    // 시작 방향키 튜토리얼 (말풍선과 동일 시간)
+    GameState.arrowTutorial = { timer: 4.0 }
 
     // 골드 드롭 리셋
     window.dropManager?.reset()
