@@ -166,7 +166,36 @@ function _pngChunk(type, data) {
   return Buffer.concat([len, td, crc])
 }
 
-function convertRGBtoRGBA(inputPath, outputPath, tolerance = 30) {
+// 내부 투명 픽셀 채우기 — BFS로 외부 투명 픽셀 표시 후, 내부만 인접 불투명 평균색으로 채움
+function fillTransparentHoles(rgba, w, h) {
+  const outside = new Uint8Array(w * h)
+  const queue = []; let qi = 0
+  const seed = (i) => { if (rgba[i*4+3] < 128 && !outside[i]) { outside[i] = 1; queue.push(i) } }
+  for (let x = 0; x < w; x++) { seed(x); seed((h-1)*w + x) }
+  for (let y = 1; y < h-1; y++) { seed(y*w); seed(y*w + w-1) }
+  while (qi < queue.length) {
+    const ci = queue[qi++], cx = ci % w, cy = (ci/w)|0
+    if (cy > 0   && !outside[ci-w] && rgba[(ci-w)*4+3] < 128) { outside[ci-w]=1; queue.push(ci-w) }
+    if (cy < h-1 && !outside[ci+w] && rgba[(ci+w)*4+3] < 128) { outside[ci+w]=1; queue.push(ci+w) }
+    if (cx > 0   && !outside[ci-1] && rgba[(ci-1)*4+3] < 128) { outside[ci-1]=1; queue.push(ci-1) }
+    if (cx < w-1 && !outside[ci+1] && rgba[(ci+1)*4+3] < 128) { outside[ci+1]=1; queue.push(ci+1) }
+  }
+  for (let i = 0; i < w * h; i++) {
+    if (rgba[i*4+3] < 128 && !outside[i]) {
+      const x = i % w, y = (i/w)|0
+      let r=0, g=0, b=0, cnt=0
+      for (let dy=-2; dy<=2; dy++) for (let dx=-2; dx<=2; dx++) {
+        const ny=y+dy, nx=x+dx
+        if (ny<0||ny>=h||nx<0||nx>=w) continue
+        const ni=ny*w+nx
+        if (rgba[ni*4+3]>=128) { r+=rgba[ni*4]; g+=rgba[ni*4+1]; b+=rgba[ni*4+2]; cnt++ }
+      }
+      if (cnt>0) { rgba[i*4]=(r/cnt)|0; rgba[i*4+1]=(g/cnt)|0; rgba[i*4+2]=(b/cnt)|0; rgba[i*4+3]=255 }
+    }
+  }
+}
+
+function convertRGBtoRGBA(inputPath, outputPath, tolerance = 30, fillHoles = false) {
   const buf  = fs.readFileSync(inputPath)
   const w    = buf.readUInt32BE(16), h = buf.readUInt32BE(20)
   const bpp  = buf[25] === 6 ? 4 : 3
@@ -189,6 +218,9 @@ function convertRGBtoRGBA(inputPath, outputPath, tolerance = 30) {
     const a = (r >= 255-tolerance && g >= 255-tolerance && b >= 255-tolerance) ? 0 : 255
     rgba[i*4] = r; rgba[i*4+1] = g; rgba[i*4+2] = b; rgba[i*4+3] = a
   }
+
+  // 내부 투명 픽셀 채우기 (fillHoles=true 인 스프라이트만)
+  if (fillHoles) fillTransparentHoles(rgba, w, h)
 
   // RGBA PNG 인코딩 (filter=0 None)
   const rowStride = w * 4
@@ -272,7 +304,7 @@ const TOMMY_SPRITES = [
 ]
 let convCount = 0
 for (const { src, dst } of TOMMY_SPRITES) {
-  try { convertRGBtoRGBA(src, dst); convCount++ } catch (e) { console.warn('⚠️ 변환 실패:', src, e.message) }
+  try { convertRGBtoRGBA(src, dst, 30, true); convCount++ } catch (e) { console.warn('⚠️ 변환 실패:', src, e.message) }
 }
 console.log(`✅ Tommy 스프라이트 변환 완료 (${convCount}/${TOMMY_SPRITES.length})`)
 
