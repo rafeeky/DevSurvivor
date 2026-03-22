@@ -299,6 +299,7 @@ window.Game = {
     }
 
     _lastTime = performance.now()
+    window.GameAudio?.stopBGM()
     window.GameAudio?.startBGM()
   },
 

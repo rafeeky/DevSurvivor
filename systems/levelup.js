@@ -5,13 +5,13 @@
 // skillId → 아이콘 파일 매핑
 const _LU_ICON_BY_ID = {
   '긴급수정':    'assets/custom/icons/games.png',
-  '디버그':      'assets/custom/icons/alien-pixelated-shape-of-a-digital-game.png',
+  '디버그':      'assets/custom/icons/bug.png',
   '우선순위정리':'assets/custom/icons/music.png',
   '커피':        'assets/custom/icons/cup.png',
   '피규어청소':  'assets/custom/icons/slaughter.png',
-  '강아지':      'assets/custom/icons/cat.png',
+  '강아지':      'assets/custom/icons/golden-retriever.png',
   '낮잠':        'assets/custom/icons/sleeping.png',
-  '자동저장':    'assets/custom/icons/save.png',
+  '자동저장':    'assets/custom/icons/autosave.png',
   '산책':        'assets/custom/icons/misty.png',
   'hp강화':      'assets/custom/icons/love-always-wins.png',
   'speed강화':   'assets/custom/icons/shoes.png',

@@ -74,7 +74,6 @@
     },
     // 로비 BGM: music_title.mp3
     startLobbyBGM() {
-      if (_bgmActive) return
       _bgmActive = true
       try {
         _currentBGM = new Audio('assets/sounds/music_title.mp3')
@@ -85,7 +84,6 @@
     },
     // 게임 BGM: music_play.mp3
     startBGM() {
-      if (_bgmActive) return
       _bgmActive = true
       try {
         _currentBGM = new Audio('assets/sounds/music_play.mp3')
@@ -93,6 +91,12 @@
         _currentBGM.volume = 0.5
         _currentBGM.play().catch(() => {})
       } catch(e) {}
+    },
+    // autoplay 차단 해제 후 재시도
+    resumeBGMIfNeeded() {
+      if (_currentBGM && _currentBGM.paused) {
+        _currentBGM.play().catch(() => {})
+      }
     },
     stopBGM() {
       _bgmActive = false

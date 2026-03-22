@@ -14,13 +14,13 @@ const _SKILL_TYPE_BADGE = {
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
   '긴급 패치':  'assets/custom/icons/games.png',
-  '디버그':     'assets/custom/icons/alien-pixelated-shape-of-a-digital-game.png',
+  '디버그':     'assets/custom/icons/bug.png',
   '고성방가':   'assets/custom/icons/music.png',
   '커피 한 잔': 'assets/custom/icons/cup.png',
   '멘탈관리':   'assets/custom/icons/slaughter.png',
-  '쓰다듬기':   'assets/custom/icons/cat.png',
+  '쓰다듬기':   'assets/custom/icons/golden-retriever.png',
   '낮잠자기':   'assets/custom/icons/sleeping.png',
-  '자동 저장':  'assets/custom/icons/save.png',
+  '자동 저장':  'assets/custom/icons/autosave.png',
   '산책하기':   'assets/custom/icons/misty.png',
 }
 // 지연 로드 캐시

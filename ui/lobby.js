@@ -104,6 +104,8 @@ class Lobby {
   _bindClick() {
     window.addEventListener('click', (e) => {
       if (GameState.screen !== 'lobby') return
+      // autoplay 차단 해제 후 BGM 재시도
+      if (this._lobbyBgmPlaying) window.GameAudio?.resumeBGMIfNeeded?.()
       const canvas = document.getElementById('gameCanvas')
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()
@@ -148,9 +150,10 @@ class Lobby {
       }
       return
     }
-    // 로비 BGM 시작 (처음 진입 시 1회)
+    // 로비 BGM 시작 (진입 시 — 게임 BGM 정지 후 재시작)
     if (!this._lobbyBgmPlaying) {
       this._lobbyBgmPlaying = true
+      window.GameAudio?.stopBGM()
       window.GameAudio?.startLobbyBGM()
     }
 
@@ -200,15 +203,6 @@ class Lobby {
     ctx.fillStyle = '#ff4444'
     ctx.font = 'bold 16px "VT323", monospace'
     ctx.fillText(`출시 포인트: ${pts}`, 510, 161)
-
-    // gold_4 보유량 표시 (뱀파이어 해금 재화)
-    const g4 = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
-    if (g4 > 0 || window.MetaManager?.isUnlocked('vampir')) {
-      ctx.fillStyle = '#aa44ff'
-      ctx.font = '12px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText(`gold_4 × ${g4}  (뱀파이어 해금: gold_4 1개)`, 400, 175)
-    }
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
@@ -380,6 +374,7 @@ class Lobby {
         }
         ctx.imageSmoothingEnabled = fw > 16
         ctx.imageSmoothingQuality = fw > 16 ? 'high' : 'low'
+        if (card.key === 'vampir') ctx.globalCompositeOperation = 'screen'
         ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, drawY, dispW, dispH)
         ctx.imageSmoothingEnabled = false
         ctx.restore()

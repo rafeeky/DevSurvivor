@@ -438,6 +438,7 @@ class Player {
         const smooth = cfg.renderW != null  // 고해상도 스프라이트는 스무딩 ON
         ctx.imageSmoothingEnabled = smooth
         ctx.imageSmoothingQuality = smooth ? 'high' : 'low'
+        if (charKey === 'vampir') ctx.globalCompositeOperation = 'screen'
         if (this._facingLeft) {
           ctx.save()
           ctx.translate(rx + dw, ry)
@@ -2553,13 +2554,13 @@ window.dropManager = _dropManager
 // skillId → 아이콘 파일 매핑
 const _LU_ICON_BY_ID = {
   '긴급수정':    'assets/custom/icons/games.png',
-  '디버그':      'assets/custom/icons/alien-pixelated-shape-of-a-digital-game.png',
+  '디버그':      'assets/custom/icons/bug.png',
   '우선순위정리':'assets/custom/icons/music.png',
   '커피':        'assets/custom/icons/cup.png',
   '피규어청소':  'assets/custom/icons/slaughter.png',
-  '강아지':      'assets/custom/icons/cat.png',
+  '강아지':      'assets/custom/icons/golden-retriever.png',
   '낮잠':        'assets/custom/icons/sleeping.png',
-  '자동저장':    'assets/custom/icons/save.png',
+  '자동저장':    'assets/custom/icons/autosave.png',
   '산책':        'assets/custom/icons/misty.png',
   'hp강화':      'assets/custom/icons/love-always-wins.png',
   'speed강화':   'assets/custom/icons/shoes.png',
@@ -3134,7 +3135,6 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
     },
     // 로비 BGM: music_title.mp3
     startLobbyBGM() {
-      if (_bgmActive) return
       _bgmActive = true
       try {
         _currentBGM = new Audio('assets/sounds/music_title.mp3')
@@ -3145,7 +3145,6 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
     },
     // 게임 BGM: music_play.mp3
     startBGM() {
-      if (_bgmActive) return
       _bgmActive = true
       try {
         _currentBGM = new Audio('assets/sounds/music_play.mp3')
@@ -3153,6 +3152,12 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
         _currentBGM.volume = 0.5
         _currentBGM.play().catch(() => {})
       } catch(e) {}
+    },
+    // autoplay 차단 해제 후 재시도
+    resumeBGMIfNeeded() {
+      if (_currentBGM && _currentBGM.paused) {
+        _currentBGM.play().catch(() => {})
+      }
     },
     stopBGM() {
       _bgmActive = false
@@ -3720,13 +3725,13 @@ const _SKILL_TYPE_BADGE = {
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
   '긴급 패치':  'assets/custom/icons/games.png',
-  '디버그':     'assets/custom/icons/alien-pixelated-shape-of-a-digital-game.png',
+  '디버그':     'assets/custom/icons/bug.png',
   '고성방가':   'assets/custom/icons/music.png',
   '커피 한 잔': 'assets/custom/icons/cup.png',
   '멘탈관리':   'assets/custom/icons/slaughter.png',
-  '쓰다듬기':   'assets/custom/icons/cat.png',
+  '쓰다듬기':   'assets/custom/icons/golden-retriever.png',
   '낮잠자기':   'assets/custom/icons/sleeping.png',
-  '자동 저장':  'assets/custom/icons/save.png',
+  '자동 저장':  'assets/custom/icons/autosave.png',
   '산책하기':   'assets/custom/icons/misty.png',
 }
 // 지연 로드 캐시
@@ -4455,6 +4460,8 @@ class Lobby {
   _bindClick() {
     window.addEventListener('click', (e) => {
       if (GameState.screen !== 'lobby') return
+      // autoplay 차단 해제 후 BGM 재시도
+      if (this._lobbyBgmPlaying) window.GameAudio?.resumeBGMIfNeeded?.()
       const canvas = document.getElementById('gameCanvas')
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()
@@ -4499,9 +4506,10 @@ class Lobby {
       }
       return
     }
-    // 로비 BGM 시작 (처음 진입 시 1회)
+    // 로비 BGM 시작 (진입 시 — 게임 BGM 정지 후 재시작)
     if (!this._lobbyBgmPlaying) {
       this._lobbyBgmPlaying = true
+      window.GameAudio?.stopBGM()
       window.GameAudio?.startLobbyBGM()
     }
 
@@ -4551,15 +4559,6 @@ class Lobby {
     ctx.fillStyle = '#ff4444'
     ctx.font = 'bold 16px "VT323", monospace'
     ctx.fillText(`출시 포인트: ${pts}`, 510, 161)
-
-    // gold_4 보유량 표시 (뱀파이어 해금 재화)
-    const g4 = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
-    if (g4 > 0 || window.MetaManager?.isUnlocked('vampir')) {
-      ctx.fillStyle = '#aa44ff'
-      ctx.font = '12px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText(`gold_4 × ${g4}  (뱀파이어 해금: gold_4 1개)`, 400, 175)
-    }
 
     // 캐릭터 선택 헤더
     ctx.fillStyle = '#556677'
@@ -4731,6 +4730,7 @@ class Lobby {
         }
         ctx.imageSmoothingEnabled = fw > 16
         ctx.imageSmoothingQuality = fw > 16 ? 'high' : 'low'
+        if (card.key === 'vampir') ctx.globalCompositeOperation = 'screen'
         ctx.drawImage(idleImg, 0, 0, fw, fh, drawX, drawY, dispW, dispH)
         ctx.imageSmoothingEnabled = false
         ctx.restore()
@@ -5751,6 +5751,7 @@ window.Game = {
     }
 
     _lastTime = performance.now()
+    window.GameAudio?.stopBGM()
     window.GameAudio?.startBGM()
   },
 

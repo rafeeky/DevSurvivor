@@ -270,6 +270,7 @@ class Player {
         const smooth = cfg.renderW != null  // 고해상도 스프라이트는 스무딩 ON
         ctx.imageSmoothingEnabled = smooth
         ctx.imageSmoothingQuality = smooth ? 'high' : 'low'
+        if (charKey === 'vampir') ctx.globalCompositeOperation = 'screen'
         if (this._facingLeft) {
           ctx.save()
           ctx.translate(rx + dw, ry)
