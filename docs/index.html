@@ -3510,6 +3510,7 @@ window.addEventListener('click', (e) => {
     loadingbar:   'assets/ui/loadingbar.png',
     bulb:         'assets/ui/bulb.png',
     granteddenied:'assets/ui/granteddenied.png',
+    winloose:     'assets/ui/PNG/Win_loose.png',
   }
 
   const _imgs = {}
@@ -3625,6 +3626,36 @@ window.addEventListener('click', (e) => {
     const i = Math.max(0, Math.min(3, index))
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIRating(ctx, count, x, y, w, h)
+  //   Win_loose.png (448×416) 하단 별 클러스터 스트립 (y≈374)
+  //   count: 1~3 = 금별 ★ 개수, 0 = 빈 별 (X 상태)
+  //   별 클러스터 (★★★ / ★★☆ / ★☆☆) 순서로 배치
+  // ─────────────────────────────────────────────────────────────
+  const _WL_SY = 374, _WL_SH = 42, _WL_SW = 80
+
+  window.drawUIRating = function (ctx, count, x, y, w, h) {
+    const img = _imgs.winloose
+    // 폴백: 캔버스 별 드로잉
+    const _fallback = () => {
+      ctx.font = `${Math.round(h * 0.85)}px "VT323", monospace`
+      ctx.textAlign = 'center'
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < count ? '#FFD700' : '#2a2a44'
+        ctx.fillText('★', x + w / 6 + i * (w / 3), y + h * 0.82)
+      }
+      ctx.textAlign = 'left'
+    }
+    if (!img?.complete || img.naturalWidth === 0) { _fallback(); return }
+
+    // Win_loose.png 하단 스트립: x=0 → 3-star, x=80 → 2-star, x=160 → 1-star, x=240 → 0-star
+    const clampedCount = Math.max(0, Math.min(3, count))
+    const srcX = (3 - clampedCount) * _WL_SW
+    ctx.imageSmoothingEnabled = false
+    // 성공적으로 그렸는지 체크 — 단순히 그리고 폴백은 숨김
+    ctx.drawImage(img, srcX, _WL_SY, _WL_SW, _WL_SH, x, y, w, h)
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -3790,6 +3821,12 @@ class HUD {
     ctx.fillStyle = '#fff'
     ctx.font = '11px "VT323", monospace'
     ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 26)
+
+    // bulb 상태 표시등 (HP 구간별 색상: 0=red, 1=yellow, 2=green)
+    if (window.drawUIBulb) {
+      const bulbIdx = hpRatio < 0.3 ? 0 : hpRatio < 0.6 ? 1 : 2
+      drawUIBulb(ctx, bulbIdx, 200, 13, 20)
+    }
 
     // 보호막 아이콘
     if (player.shields > 0) {
@@ -4554,6 +4591,10 @@ class Lobby {
     ctx.fillStyle = rpGrad
     ctx.fillRect(488, 0, 312, 600)
 
+    // CRT 모니터 데코 (monitor.png 312×255 — 우측 패널 너비와 정확히 일치)
+    // 타이틀 텍스트(y=76, y=128)가 모니터 스크린 내부에 위치함
+    if (window.drawUIMonitor) drawUIMonitor(ctx, 488, 0, 312, 255)
+
     // 하단 컨트롤 바
     ctx.fillStyle = 'rgba(0,0,0,0.65)'
     ctx.fillRect(0, 572, 800, 28)
@@ -4845,9 +4886,9 @@ window._lobby = _lobby
   <script>
 class Result {
   constructor() {
-    this._winRestartRect  = { x: 78,  y: 478, w: 120, h: 44 }
-    this._winMenuRect     = { x: 340, y: 478, w: 120, h: 44 }
-    this._winUpgradeRect  = { x: 602, y: 478, w: 120, h: 44 }
+    this._winRestartRect  = { x: 78,  y: 492, w: 120, h: 44 }
+    this._winMenuRect     = { x: 340, y: 492, w: 120, h: 44 }
+    this._winUpgradeRect  = { x: 602, y: 492, w: 120, h: 44 }
     this._loseRestartRect = { x: 78,  y: 382, w: 120, h: 44 }
     this._loseMenuRect    = { x: 340, y: 382, w: 120, h: 44 }
     this._loseUpgradeRect = { x: 602, y: 382, w: 120, h: 44 }
@@ -4996,15 +5037,33 @@ class Result {
     ctx.save()
     ctx.globalAlpha = btnAlpha
 
+    // 별점 계산 (처치 수 + 출시 진행률 기준)
+    const _kills = GameState.killCount || 0
+    const _prog  = GameState.releaseProgress || 0
+    const _stars = _kills >= 80 || _prog >= 100 ? 3
+                 : _kills >= 40 || _prog >= 60  ? 2 : 1
+
+    // 별점 표시 (Win_loose.png 별 클러스터 또는 폴백 캔버스 ★)
+    if (window.drawUIRating) {
+      drawUIRating(ctx, _stars, 280, 398, 240, 42)
+    } else {
+      ctx.textAlign = 'center'
+      ctx.font = '28px "VT323", monospace'
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < _stars ? '#FFD700' : '#2a2a44'
+        ctx.fillText('★', 316 + i * 64, 430)
+      }
+    }
+
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
     ctx.font = 'bold 17px "VT323", monospace'
-    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 432)
+    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 452)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
     ctx.font = '12px "VT323", monospace'
-    ctx.fillText(`(누적: ${total}pt)`, 400, 454)
+    ctx.fillText(`(누적: ${total}pt)`, 400, 468)
 
     const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
     if (window.drawUIPanel) {

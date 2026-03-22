@@ -132,6 +132,12 @@ class HUD {
     ctx.font = '11px "VT323", monospace'
     ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 26)
 
+    // bulb 상태 표시등 (HP 구간별 색상: 0=red, 1=yellow, 2=green)
+    if (window.drawUIBulb) {
+      const bulbIdx = hpRatio < 0.3 ? 0 : hpRatio < 0.6 ? 1 : 2
+      drawUIBulb(ctx, bulbIdx, 200, 13, 20)
+    }
+
     // 보호막 아이콘
     if (player.shields > 0) {
       ctx.fillStyle = '#44aaff'

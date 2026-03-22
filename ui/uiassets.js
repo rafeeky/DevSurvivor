@@ -18,6 +18,7 @@
     loadingbar:   'assets/ui/loadingbar.png',
     bulb:         'assets/ui/bulb.png',
     granteddenied:'assets/ui/granteddenied.png',
+    winloose:     'assets/ui/PNG/Win_loose.png',
   }
 
   const _imgs = {}
@@ -133,6 +134,36 @@
     const i = Math.max(0, Math.min(3, index))
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIRating(ctx, count, x, y, w, h)
+  //   Win_loose.png (448×416) 하단 별 클러스터 스트립 (y≈374)
+  //   count: 1~3 = 금별 ★ 개수, 0 = 빈 별 (X 상태)
+  //   별 클러스터 (★★★ / ★★☆ / ★☆☆) 순서로 배치
+  // ─────────────────────────────────────────────────────────────
+  const _WL_SY = 374, _WL_SH = 42, _WL_SW = 80
+
+  window.drawUIRating = function (ctx, count, x, y, w, h) {
+    const img = _imgs.winloose
+    // 폴백: 캔버스 별 드로잉
+    const _fallback = () => {
+      ctx.font = `${Math.round(h * 0.85)}px "VT323", monospace`
+      ctx.textAlign = 'center'
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < count ? '#FFD700' : '#2a2a44'
+        ctx.fillText('★', x + w / 6 + i * (w / 3), y + h * 0.82)
+      }
+      ctx.textAlign = 'left'
+    }
+    if (!img?.complete || img.naturalWidth === 0) { _fallback(); return }
+
+    // Win_loose.png 하단 스트립: x=0 → 3-star, x=80 → 2-star, x=160 → 1-star, x=240 → 0-star
+    const clampedCount = Math.max(0, Math.min(3, count))
+    const srcX = (3 - clampedCount) * _WL_SW
+    ctx.imageSmoothingEnabled = false
+    // 성공적으로 그렸는지 체크 — 단순히 그리고 폴백은 숨김
+    ctx.drawImage(img, srcX, _WL_SY, _WL_SW, _WL_SH, x, y, w, h)
   }
 
   // ─────────────────────────────────────────────────────────────

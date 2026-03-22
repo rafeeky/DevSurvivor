@@ -235,6 +235,10 @@ class Lobby {
     ctx.fillStyle = rpGrad
     ctx.fillRect(488, 0, 312, 600)
 
+    // CRT 모니터 데코 (monitor.png 312×255 — 우측 패널 너비와 정확히 일치)
+    // 타이틀 텍스트(y=76, y=128)가 모니터 스크린 내부에 위치함
+    if (window.drawUIMonitor) drawUIMonitor(ctx, 488, 0, 312, 255)
+
     // 하단 컨트롤 바
     ctx.fillStyle = 'rgba(0,0,0,0.65)'
     ctx.fillRect(0, 572, 800, 28)

@@ -1,8 +1,8 @@
 class Result {
   constructor() {
-    this._winRestartRect  = { x: 78,  y: 478, w: 120, h: 44 }
-    this._winMenuRect     = { x: 340, y: 478, w: 120, h: 44 }
-    this._winUpgradeRect  = { x: 602, y: 478, w: 120, h: 44 }
+    this._winRestartRect  = { x: 78,  y: 492, w: 120, h: 44 }
+    this._winMenuRect     = { x: 340, y: 492, w: 120, h: 44 }
+    this._winUpgradeRect  = { x: 602, y: 492, w: 120, h: 44 }
     this._loseRestartRect = { x: 78,  y: 382, w: 120, h: 44 }
     this._loseMenuRect    = { x: 340, y: 382, w: 120, h: 44 }
     this._loseUpgradeRect = { x: 602, y: 382, w: 120, h: 44 }
@@ -151,15 +151,33 @@ class Result {
     ctx.save()
     ctx.globalAlpha = btnAlpha
 
+    // 별점 계산 (처치 수 + 출시 진행률 기준)
+    const _kills = GameState.killCount || 0
+    const _prog  = GameState.releaseProgress || 0
+    const _stars = _kills >= 80 || _prog >= 100 ? 3
+                 : _kills >= 40 || _prog >= 60  ? 2 : 1
+
+    // 별점 표시 (Win_loose.png 별 클러스터 또는 폴백 캔버스 ★)
+    if (window.drawUIRating) {
+      drawUIRating(ctx, _stars, 280, 398, 240, 42)
+    } else {
+      ctx.textAlign = 'center'
+      ctx.font = '28px "VT323", monospace'
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < _stars ? '#FFD700' : '#2a2a44'
+        ctx.fillText('★', 316 + i * 64, 430)
+      }
+    }
+
     const earned = GameState.lastEarnedPoints || 0
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
     ctx.font = 'bold 17px "VT323", monospace'
-    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 432)
+    ctx.fillText(`출시 포인트 +${earned} 🪙 획득!`, 400, 452)
     const total = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#88ffaa'
     ctx.font = '12px "VT323", monospace'
-    ctx.fillText(`(누적: ${total}pt)`, 400, 454)
+    ctx.fillText(`(누적: ${total}pt)`, 400, 468)
 
     const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
     if (window.drawUIPanel) {
