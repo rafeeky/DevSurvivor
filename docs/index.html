@@ -3131,29 +3131,32 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
     playGameOver() {
       [440, 330, 220, 110].forEach((f, i) => _playTone(f, 'sawtooth', 0.3, 0.18, i * 0.15))
     },
-    // 로비 BGM: 전자음 베이스라인 + 멜로디 조합 (BPM 140)
+    // 로비 BGM: 긴박하고 드라마틱 (BPM 160)
     startLobbyBGM() {
       if (_bgmActive) return
       _bgmActive = true
       const ctx = _getCtx()
-      // 전자음 베이스라인 + 멜로디 조합
-      // BPM: 140 (더 빠름), 패턴: 2bar
+      // BPM 160 - 빠른 전자음 베이스 + 긴장감 있는 멜로디
       const basePattern = [
-        [110, 0.214], [110, 0.107], [147, 0.214], [165, 0.107],
-        [110, 0.214], [130, 0.107], [110, 0.214], [98, 0.214],
+        [110, 0.188], [110, 0.094], [165, 0.094], [147, 0.188],
+        [110, 0.094], [165, 0.094], [196, 0.188], [165, 0.188],
+        [110, 0.188], [110, 0.094], [147, 0.094], [123, 0.188],
+        [110, 0.094], [98, 0.094], [110, 0.375], [0, 0.188],
       ]
       const melody = [
-        [440, 0.214], [494, 0.107], [523, 0.214], [587, 0.214],
-        [523, 0.107], [494, 0.107], [440, 0.428], [0, 0.214],
-        [392, 0.214], [440, 0.107], [494, 0.214], [440, 0.214],
-        [392, 0.107], [349, 0.107], [392, 0.428], [0, 0.214],
+        [659, 0.188], [0, 0.094], [659, 0.094], [698, 0.188],
+        [659, 0.188], [0, 0.094], [587, 0.094], [659, 0.375],
+        [523, 0.188], [0, 0.094], [523, 0.094], [587, 0.188],
+        [523, 0.188], [494, 0.094], [440, 0.094], [494, 0.375],
+        [587, 0.188], [0, 0.094], [587, 0.094], [659, 0.188],
+        [587, 0.188], [0, 0.094], [523, 0.094], [587, 0.375],
+        [440, 0.188], [494, 0.188], [523, 0.188], [587, 0.188],
+        [659, 0.375], [0, 0.188], [659, 0.188], [0, 0.188],
       ]
       const totalDur = melody.reduce((s,[,d]) => s + d, 0)
-
       function scheduleLoop(startTime) {
         if (!_bgmActive) return
         let t = startTime
-        // 베이스라인 (2번 반복)
         for (let r = 0; r < 2; r++) {
           basePattern.forEach(([freq, dur]) => {
             if (!freq) { t += dur; return }
@@ -3163,8 +3166,8 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
               const gain = ctx2.createGain()
               osc.type = 'sawtooth'
               osc.frequency.value = freq
-              gain.gain.setValueAtTime(0.06, t)
-              gain.gain.setValueAtTime(0.06, t + dur * 0.8)
+              gain.gain.setValueAtTime(0.07, t)
+              gain.gain.setValueAtTime(0.07, t + dur * 0.75)
               gain.gain.linearRampToValueAtTime(0, t + dur)
               osc.connect(gain); gain.connect(ctx2.destination)
               osc.start(t); osc.stop(t + dur)
@@ -3173,7 +3176,6 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
             t += dur
           })
         }
-        // 멜로디
         let mt = startTime
         melody.forEach(([freq, dur]) => {
           if (freq > 0) {
@@ -3183,8 +3185,8 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
               const gain = ctx2.createGain()
               osc.type = 'square'
               osc.frequency.value = freq
-              gain.gain.setValueAtTime(0.05, mt)
-              gain.gain.setValueAtTime(0.05, mt + dur * 0.7)
+              gain.gain.setValueAtTime(0.06, mt)
+              gain.gain.setValueAtTime(0.06, mt + dur * 0.6)
               gain.gain.linearRampToValueAtTime(0, mt + dur)
               osc.connect(gain); gain.connect(ctx2.destination)
               osc.start(mt); osc.stop(mt + dur)
@@ -3197,40 +3199,45 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
       }
       scheduleLoop(ctx.currentTime + 0.1)
     },
-    // BGM: 반복 멜로디 루프 (8비트 스타일, 게임용)
+    // BGM: 느리고 편안한 8비트 분위기 (BPM 90)
     startBGM() {
       if (_bgmActive) return
       _bgmActive = true
       const ctx = _getCtx()
-      // 멜로디 패턴: [freq, duration]
+      // BPM 90 - 느리고 편안한 8비트 분위기
       const melody = [
-        [220,0.25],[247,0.25],[262,0.25],[294,0.5],
-        [330,0.25],[294,0.25],[262,0.25],[247,0.5],
-        [220,0.25],[262,0.25],[330,0.25],[392,0.5],
-        [330,0.25],[262,0.25],[247,0.25],[220,1.0],
+        [262, 0.5], [294, 0.5], [330, 0.5], [349, 0.5],
+        [392, 1.0], [0, 0.5],
+        [330, 0.5], [294, 0.5], [262, 0.5], [294, 0.5],
+        [330, 1.0], [0, 0.5],
+        [262, 0.5], [330, 0.5], [392, 0.5], [440, 0.5],
+        [494, 1.0], [0, 0.5],
+        [440, 0.5], [392, 0.5], [330, 0.5], [294, 0.5],
+        [262, 1.5], [0, 0.5],
       ]
       const totalDur = melody.reduce((s,[,d]) => s + d, 0)
       function scheduleMelody(startTime) {
         if (!_bgmActive) return
         let t = startTime
         melody.forEach(([freq, dur]) => {
-          try {
-            const osc = ctx.createOscillator()
-            const gain = ctx.createGain()
-            osc.type = 'square'
-            osc.frequency.value = freq
-            gain.gain.setValueAtTime(0.04, t)
-            gain.gain.setValueAtTime(0.04, t + dur * 0.7)
-            gain.gain.linearRampToValueAtTime(0.0, t + dur)
-            osc.connect(gain)
-            gain.connect(ctx.destination)
-            osc.start(t)
-            osc.stop(t + dur)
-            _bgmNodes.push({ osc, gain })
-          } catch(e) {}
+          if (freq > 0) {
+            try {
+              const osc = ctx.createOscillator()
+              const gain = ctx.createGain()
+              osc.type = 'triangle'
+              osc.frequency.value = freq
+              gain.gain.setValueAtTime(0.05, t)
+              gain.gain.setValueAtTime(0.05, t + dur * 0.75)
+              gain.gain.linearRampToValueAtTime(0.0, t + dur)
+              osc.connect(gain)
+              gain.connect(ctx.destination)
+              osc.start(t)
+              osc.stop(t + dur)
+              _bgmNodes.push({ osc, gain })
+            } catch(e) {}
+          }
           t += dur
         })
-        // 루프 예약
         setTimeout(() => scheduleMelody(ctx.currentTime + 0.05), (totalDur - 0.5) * 1000)
       }
       scheduleMelody(ctx.currentTime + 0.05)
@@ -3491,11 +3498,11 @@ const MetaManager = {
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.imageSmoothingEnabled = true
         ctx.globalAlpha = 1.0
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconBoxX + 2, iconBoxY + 2, iconBoxSize - 4, iconBoxSize - 4)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize)
       }
       ctx.restore()
 
-      const textX = bx + 4 + iconBoxSize + 8
+      const textX = bx + 4 + iconBoxSize + 24
 
       // 이름
       ctx.fillStyle = '#ddeeff'
@@ -4459,7 +4466,7 @@ class Lobby {
     input.value = localStorage.getItem('devsurvival_username') || ''
     Object.assign(input.style, {
       position:        'absolute',
-      zIndex:          '10',
+      zIndex:          '9999',
       display:         'none',
       fontSize:        '15px',
       fontFamily:      '"VT323", monospace',
@@ -4554,7 +4561,7 @@ class Lobby {
           // username 미설정 → 모달 모드 진입
           this._usernameModalActive = true
           this._showUsernameInput()
-          if (this._usernameInput) this._usernameInput.focus()
+          setTimeout(() => { if (this._usernameInput) this._usernameInput.focus() }, 80)
         }
         return
       }
@@ -4608,7 +4615,7 @@ class Lobby {
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 200px monospace'
+    ctx.font = 'bold 44px "VT323", monospace'
     ctx.fillText('DEV', 400, 62)
     ctx.fillStyle = '#ffffff'
     ctx.fillText('SURVIVOR', 400, 116)

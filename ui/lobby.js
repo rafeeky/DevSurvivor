@@ -32,7 +32,7 @@ class Lobby {
     input.value = localStorage.getItem('devsurvival_username') || ''
     Object.assign(input.style, {
       position:        'absolute',
-      zIndex:          '10',
+      zIndex:          '9999',
       display:         'none',
       fontSize:        '15px',
       fontFamily:      '"VT323", monospace',
@@ -127,7 +127,7 @@ class Lobby {
           // username 미설정 → 모달 모드 진입
           this._usernameModalActive = true
           this._showUsernameInput()
-          if (this._usernameInput) this._usernameInput.focus()
+          setTimeout(() => { if (this._usernameInput) this._usernameInput.focus() }, 80)
         }
         return
       }
@@ -181,7 +181,7 @@ class Lobby {
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 200px monospace'
+    ctx.font = 'bold 44px "VT323", monospace'
     ctx.fillText('DEV', 400, 62)
     ctx.fillStyle = '#ffffff'
     ctx.fillText('SURVIVOR', 400, 116)
