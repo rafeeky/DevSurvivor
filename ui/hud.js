@@ -1,26 +1,27 @@
 // 스킬 이름 → 타입 뱃지 매핑
 const _SKILL_TYPE_BADGE = {
-  '긴급 수정':    { label: '공격', color: '#ff6644' },
-  '디버그':       { label: '공격', color: '#ff6644' },
-  '우선순위정리': { label: '공격', color: '#ff6644' },
-  '커피 한 잔':   { label: '이속↑', color: '#ffdd44' },
-  '피규어청소':   { label: '방어', color: '#44aaff' },
-  '강아지쓰다듬기': { label: '회복', color: '#ff88bb' },
-  '낮잠자기':     { label: '회복', color: '#ff88bb' },
-  '자동 저장':    { label: '패시브', color: '#aa88ff' },
-  '산책하기':     { label: '패시브', color: '#aa88ff' },
+  '긴급 패치':   { label: '공격', color: '#ff6644' },
+  '디버그':      { label: '공격', color: '#ff6644' },
+  '고성방가':    { label: '공격', color: '#ff6644' },
+  '커피 한 잔':  { label: '이속↑', color: '#ffdd44' },
+  '멘탈관리':    { label: '방어', color: '#44aaff' },
+  '쓰다듬기':    { label: '회복', color: '#ff88bb' },
+  '낮잠자기':    { label: '회복', color: '#ff88bb' },
+  '자동 저장':   { label: '패시브', color: '#aa88ff' },
+  '산책하기':    { label: '패시브', color: '#aa88ff' },
 }
 
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
-  '긴급 수정':    'assets/custom/icons/skill_emergency_fix.png',
-  '디버그':       'assets/custom/icons/skill_debug.png',
-  '우선순위정리': 'assets/custom/icons/skill_priority_sort.png',
-  '커피 한 잔':   'assets/custom/icons/skill_coffee.png',
-  '피규어청소':   'assets/custom/icons/skill_figure_clean.png',
-  '강아지쓰다듬기': 'assets/custom/icons/skill_pet_dog.png',
-  '낮잠자기':     'assets/custom/icons/skill_nap.png',
-  '자동 저장':    'assets/custom/icons/skill_autosave.png',
+  '긴급 패치':  'assets/custom/icons/skill_emergency_fix.png',
+  '디버그':     'assets/custom/icons/skill_debug.png',
+  '고성방가':   'assets/custom/icons/skill_sing.png',
+  '커피 한 잔': 'assets/custom/icons/skill_coffee.png',
+  '멘탈관리':   'assets/custom/icons/skill_mental.png',
+  '쓰다듬기':   'assets/custom/icons/skill_pet_dog.png',
+  '낮잠자기':   'assets/custom/icons/skill_nap.png',
+  '자동 저장':  'assets/custom/icons/skill_autosave.png',
+  '산책하기':   'assets/custom/icons/skill_walk.png',
 }
 // 지연 로드 캐시
 const _skillIconCache = {}
@@ -201,6 +202,17 @@ class HUD {
           ctx.fillStyle = '#44ff88'
           ctx.font = '10px "VT323", monospace'
           ctx.fillText('READY', sx + 52, sy + 36)
+        }
+        // LV 표시 (우하단)
+        if (!state.isEmpty) {
+          const lv = state.level || 1
+          const lvLabel = lv >= 3 ? 'LV.MAX' : `LV.${lv}`
+          const lvColor = lv >= 3 ? '#FFD700' : lv >= 2 ? '#aaddff' : '#667799'
+          ctx.fillStyle = lvColor
+          ctx.font = 'bold 8px "VT323", monospace'
+          ctx.textAlign = 'right'
+          ctx.fillText(lvLabel, sx + 98, sy + 14)
+          ctx.textAlign = 'left'
         }
       }
 

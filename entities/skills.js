@@ -135,7 +135,7 @@ class SkillManager {
     this.skillDefs = {
       // ── 기존 스킬 ──
       '긴급수정': {
-        name: '긴급 수정',
+        name: '긴급 패치',
         type: 'active',
         cooldown: 5,
         level: 1,
@@ -150,7 +150,7 @@ class SkillManager {
       },
       // ── M4 액티브 스킬 ──
       '우선순위정리': {
-        name: '우선순위정리',
+        name: '고성방가',
         type: 'active',
         cooldown: 6,
         level: 1,
@@ -164,14 +164,14 @@ class SkillManager {
         activate: (sm) => sm._coffee(),
       },
       '피규어청소': {
-        name: '피규어청소',
+        name: '멘탈관리',
         type: 'active',
         cooldown: 12,
         level: 1,
         activate: (sm) => sm._cleanFigure(),
       },
       '강아지': {
-        name: '강아지쓰다듬기',
+        name: '쓰다듬기',
         type: 'active',
         cooldown: 15,
         level: 1,
@@ -219,7 +219,7 @@ class SkillManager {
       this.napTimer -= deltaTime
       if (this.napTimer <= 0) {
         this.napTimer = 0
-        const healAmt = Math.floor(this.player.maxHp * 0.5 * (GameState.healMultiplier || 1))
+        const healAmt = Math.floor(this.player.maxHp * (this._napHealRatio || 0.5) * (GameState.healMultiplier || 1))
         this.player.heal(healAmt)
         addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 50, color: '#88ff88', life: 0.6, maxLife: 0.6 })
       }
@@ -255,7 +255,7 @@ class SkillManager {
 
   upgradeSkill(skillId) {
     const def = this.skillDefs[skillId]
-    if (def) def.level = Math.min(4, (def.level || 1) + 1)
+    if (def) def.level = Math.min(3, (def.level || 1) + 1)
   }
 
   getSkillState(slot) {
@@ -335,8 +335,12 @@ class SkillManager {
   // 우선순위 정리: 전방 부채꼴(120°) 160px, 피해 30, 넉백 100px, 쿨 7초
   _prioritySort() {
     const p = this.player
-    const radius = 160
-    const damage = Math.floor(30 * (GameState.skillDamageMult || 1))
+    const def = this.skillDefs['우선순위정리']
+    let damage = 30
+    let radius = 160
+    if (def.level >= 2) damage += 15
+    if (def.level >= 3) { radius += 20; if (def.cooldown > 4) def.cooldown = 4 }
+    damage = Math.floor(damage * (GameState.skillDamageMult || 1))
     const knockbackDist = 100
     const halfAngle = Math.PI / 3   // ±60° = 총 120°
 
@@ -377,9 +381,15 @@ class SkillManager {
   // 커피 한 잔: 이동속도 +40% (5초), 현재 쿨다운 20% 단축, 쿨 20초
   _coffee() {
     const p = this.player
-    p.applyBuff('speed', 1.4, 5)
+    const def = this.skillDefs['커피']
+    let speedMult = 1.4
+    let duration = 5
+    let cdReduction = 0.8
+    if (def.level >= 2) { speedMult = 1.6; cdReduction = 0.75 }
+    if (def.level >= 3) { duration = 8; cdReduction = Math.min(cdReduction, 0.65) }
+    p.applyBuff('speed', speedMult, duration)
     for (let i = 0; i < 4; i++) {
-      if (this.cooldowns[i] > 0) this.cooldowns[i] *= 0.8
+      if (this.cooldowns[i] > 0) this.cooldowns[i] *= cdReduction
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
@@ -390,16 +400,27 @@ class SkillManager {
   // 피규어 청소하기: 받는 피해 -40% (4초), 주변 150px 적 넉백 120px, 쿨 12초
   _cleanFigure() {
     const p = this.player
-    p.applyBuff('damageReduction', 0.4, 4)
+    const def = this.skillDefs['피규어청소']
+    let reduction = 0.4
+    let dur = 4
+    let knockbackRange = 150
+    let knockbackDist = 120
+    if (def.level >= 2) { reduction = 0.5; dur = 5 }
+    if (def.level >= 3) {
+      knockbackRange = 210
+      const healAmt = Math.floor(p.maxHp * 0.10 * (GameState.healMultiplier || 1))
+      p.heal(healAmt)
+    }
+    p.applyBuff('damageReduction', reduction, dur)
 
     for (const enemy of GameState.enemies) {
       if (!enemy.isAlive()) continue
       const dx = enemy.x - p.x
       const dy = enemy.y - p.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist <= 150 && dist > 0) {
-        enemy.x = Math.max(20, Math.min(780, enemy.x + (dx / dist) * 120))
-        enemy.y = Math.max(20, Math.min(580, enemy.y + (dy / dist) * 120))
+      if (dist <= knockbackRange && dist > 0) {
+        enemy.x = Math.max(20, Math.min(780, enemy.x + (dx / dist) * knockbackDist))
+        enemy.y = Math.max(20, Math.min(580, enemy.y + (dy / dist) * knockbackDist))
       }
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 150, color: '#aaddff', life: 0.5, maxLife: 0.5 })
@@ -411,7 +432,14 @@ class SkillManager {
   // 강아지 쓰다듬기: 최대 HP 25% 회복, 쿨 15초 (20→15 밸런스 조정)
   _petDog() {
     const p = this.player
-    const healAmt = Math.floor(p.maxHp * 0.25 * (GameState.healMultiplier || 1))
+    const def = this.skillDefs['강아지']
+    let healRatio = 0.25
+    if (def.level >= 2) healRatio = 0.35
+    if (def.level >= 3) {
+      p.addShield(1)
+      addEffect({ type: 'circle', x: p.x, y: p.y, radius: 32, color: '#44aaff', life: 0.4, maxLife: 0.4 })
+    }
+    const healAmt = Math.floor(p.maxHp * healRatio * (GameState.healMultiplier || 1))
     p.heal(healAmt)
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
@@ -422,8 +450,14 @@ class SkillManager {
   // 낮잠자기: 이동 1.5초 정지 후 HP 50% 회복, 쿨 30초
   _nap() {
     if (this.napTimer > 0) return
-    this.player.applyBuff('speed', 0, 1.5)
-    this.napTimer = 1.5
+    const def = this.skillDefs['낮잠']
+    let waitTime = 1.5
+    let healRatio = 0.5
+    if (def.level >= 2) healRatio = 0.65
+    if (def.level >= 3) waitTime = 1.0
+    this._napHealRatio = healRatio
+    this.player.applyBuff('speed', 0, waitTime)
+    this.napTimer = waitTime
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
     addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
     addEffect({ type: 'sprite', img: _VFX.nebula, x: this.player.x, y: this.player.y, fw: 100, fh: 100, fps: 18, totalFrames: 27, size: 90, life: 1.5, maxLife: 1.5 })

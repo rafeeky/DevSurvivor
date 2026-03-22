@@ -6,12 +6,13 @@
 const _LU_ICON_BY_ID = {
   '긴급수정':    'assets/custom/icons/skill_emergency_fix.png',
   '디버그':      'assets/custom/icons/skill_debug.png',
-  '우선순위정리':'assets/custom/icons/skill_priority_sort.png',
+  '우선순위정리':'assets/custom/icons/skill_sing.png',       // 변경: priority_sort → sing
   '커피':        'assets/custom/icons/skill_coffee.png',
-  '피규어청소':  'assets/custom/icons/skill_figure_clean.png',
+  '피규어청소':  'assets/custom/icons/skill_mental.png',     // 변경: figure_clean → mental
   '강아지':      'assets/custom/icons/skill_pet_dog.png',
   '낮잠':        'assets/custom/icons/skill_nap.png',
   '자동저장':    'assets/custom/icons/skill_autosave.png',
+  '산책':        'assets/custom/icons/skill_walk.png',       // 신규 추가
 }
 const _luIconCache = {}
 function _getLUIcon(skillId) {
@@ -57,8 +58,8 @@ const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450, 650, 900, 1200]
 const LEVEL_UP_CHOICES = {
   // 신규 스킬
   '긴급수정_신규': {
-    label: '긴급 수정',
-    desc: '주변 범위 공격 (반경 120px, 피해 40)',
+    label: '긴급 패치',
+    desc: '주변 범위 공격 (반경 120px, 피해 40) [LV.1]',
     type: 'newSkill',
     skillId: '긴급수정',
   },
@@ -70,16 +71,46 @@ const LEVEL_UP_CHOICES = {
   },
   // 기존 스킬 강화
   '긴급수정_강화': {
-    label: '긴급 수정 강화',
-    desc: '피해 +20 / 범위 +40px / 쿨다운 감소',
+    label: '긴급 패치 강화',
+    desc: 'LV.2: 피해+20 / LV.MAX: 범위+40px',
     type: 'upgradeSkill',
     skillId: '긴급수정',
   },
   '디버그_강화': {
     label: '디버그 강화',
-    desc: '피해 +30 / 관통(2명) / 쿨다운 감소',
+    desc: 'LV.2: 피해+30 / LV.MAX: 2명 관통',
     type: 'upgradeSkill',
     skillId: '디버그',
+  },
+  '우선순위정리_강화': {
+    label: '고성방가 강화',
+    desc: 'LV.2: 피해+15 / LV.MAX: 범위+20px·쿨 4초',
+    type: 'upgradeSkill',
+    skillId: '우선순위정리',
+  },
+  '커피_강화': {
+    label: '커피 한 잔 강화',
+    desc: 'LV.2: 속도+60%·쿨감소↑ / LV.MAX: 지속 8초',
+    type: 'upgradeSkill',
+    skillId: '커피',
+  },
+  '피규어청소_강화': {
+    label: '멘탈관리 강화',
+    desc: 'LV.2: 피해감소 50%·5초 / LV.MAX: 넉백범위+60px·HP+10%',
+    type: 'upgradeSkill',
+    skillId: '피규어청소',
+  },
+  '강아지_강화': {
+    label: '쓰다듬기 강화',
+    desc: 'LV.2: HP 35% 회복 / LV.MAX: 보호막 +1',
+    type: 'upgradeSkill',
+    skillId: '강아지',
+  },
+  '낮잠_강화': {
+    label: '낮잠자기 강화',
+    desc: 'LV.2: HP 65% 회복 / LV.MAX: 정지 1초로 단축',
+    type: 'upgradeSkill',
+    skillId: '낮잠',
   },
   // 기본 능력 강화
   'hp강화': {
@@ -96,8 +127,8 @@ const LEVEL_UP_CHOICES = {
   },
   // M4 액티브 스킬
   '우선순위정리_신규': {
-    label: '우선순위 정리',
-    desc: '전방 부채꼴 160px, 피해 30, 넉백 100px, 쿨 7초',
+    label: '고성방가',
+    desc: '전방 부채꼴 160px, 피해 30, 넉백 100px [LV.1]',
     type: 'newSkill',
     skillId: '우선순위정리',
   },
@@ -108,14 +139,14 @@ const LEVEL_UP_CHOICES = {
     skillId: '커피',
   },
   '피규어청소_신규': {
-    label: '피규어 청소하기',
-    desc: '피해 감소 40% (4초) + 주변 적 넉백, 쿨 12초',
+    label: '멘탈관리',
+    desc: '피해 감소 40% (4초) + 주변 적 넉백 [LV.1]',
     type: 'newSkill',
     skillId: '피규어청소',
   },
   '강아지_신규': {
-    label: '강아지 쓰다듬기',
-    desc: '최대 HP 25% 즉시 회복, 쿨 20초',
+    label: '쓰다듬기',
+    desc: '최대 HP 25% 즉시 회복 [LV.1]',
     type: 'newSkill',
     skillId: '강아지',
   },
@@ -187,9 +218,36 @@ class LevelUpManager {
       if (!ownedSlots.includes('낮잠'))        choices.push(LEVEL_UP_CHOICES['낮잠_신규'])
     }
 
-    // 보유 스킬 강화 선택지
-    if (ownedSlots.includes('긴급수정')) choices.push(LEVEL_UP_CHOICES['긴급수정_강화'])
-    if (ownedSlots.includes('디버그'))   choices.push(LEVEL_UP_CHOICES['디버그_강화'])
+    // 보유 스킬 강화 선택지 (레벨 3 미만인 경우만)
+    const sm2 = Game.skillManager
+    if (ownedSlots.includes('긴급수정')) {
+      const lv = sm2?.skillDefs?.['긴급수정']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['긴급수정_강화'])
+    }
+    if (ownedSlots.includes('디버그')) {
+      const lv = sm2?.skillDefs?.['디버그']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['디버그_강화'])
+    }
+    if (ownedSlots.includes('우선순위정리')) {
+      const lv = sm2?.skillDefs?.['우선순위정리']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['우선순위정리_강화'])
+    }
+    if (ownedSlots.includes('커피')) {
+      const lv = sm2?.skillDefs?.['커피']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['커피_강화'])
+    }
+    if (ownedSlots.includes('피규어청소')) {
+      const lv = sm2?.skillDefs?.['피규어청소']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['피규어청소_강화'])
+    }
+    if (ownedSlots.includes('강아지')) {
+      const lv = sm2?.skillDefs?.['강아지']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['강아지_강화'])
+    }
+    if (ownedSlots.includes('낮잠')) {
+      const lv = sm2?.skillDefs?.['낮잠']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['낮잠_강화'])
+    }
 
     // 미보유 패시브 스킬
     if (!activePassives.includes('자동저장')) choices.push(LEVEL_UP_CHOICES['자동저장_신규'])
