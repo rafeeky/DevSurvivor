@@ -12,7 +12,9 @@ const _LU_ICON_BY_ID = {
   '강아지':      'assets/custom/icons/skill_pet_dog.png',
   '낮잠':        'assets/custom/icons/skill_nap.png',
   '자동저장':    'assets/custom/icons/skill_autosave.png',
-  '산책':        'assets/custom/icons/skill_walk.png',       // 신규 추가
+  '산책':        'assets/custom/icons/skill_walk.png',
+  'hp강화':      'assets/custom/icons/upgrade_heart.png',
+  'speed강화':   'assets/custom/icons/upgrade_speed.png',
 }
 const _luIconCache = {}
 function _getLUIcon(skillId) {
@@ -117,12 +119,14 @@ const LEVEL_UP_CHOICES = {
     label: 'HP +15',
     desc: '최대 체력이 15 증가합니다',
     type: 'statBoost',
+    iconId: 'hp강화',
     apply: (player) => { player.maxHp += 15; player.hp = Math.min(player.hp + 15, player.maxHp) },
   },
   'speed강화': {
     label: '이동속도 +20',
     desc: '이동 속도가 20px/s 증가합니다',
     type: 'statBoost',
+    iconId: 'speed강화',
     apply: (player) => { player.baseSpeed += 20 },
   },
   // M4 액티브 스킬
@@ -349,24 +353,25 @@ class LevelUpManager {
       }
 
       // ── 상단 아이콘 박스 (카드 상단 중앙) ────────────────────────────
-      const icon = _getLUIcon(c.skillId)
+      const _iconKey = c.skillId || c.iconId
+      const icon = _getLUIcon(_iconKey)
       const iconSize = 80
       const iconX = cx + (cardW - iconSize) / 2
       const iconY = cy + 22
       // 박스 배경
       ctx.fillStyle = 'rgba(10,20,55,0.9)'
       ctx.fillRect(iconX, iconY, iconSize, iconSize)
-      ctx.strokeStyle = c.skillId ? '#4488cc' : '#2a3a55'
+      ctx.strokeStyle = _iconKey ? '#4488cc' : '#2a3a55'
       ctx.lineWidth = 1.5
       ctx.strokeRect(iconX, iconY, iconSize, iconSize)
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.imageSmoothingEnabled = true
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX, iconY, iconSize, iconSize)
         ctx.imageSmoothingEnabled = false
-      } else if (c.skillId) {
+      } else if (_iconKey) {
         // 로딩 중 플레이스홀더
         ctx.fillStyle = 'rgba(68,102,170,0.25)'
-        ctx.fillRect(iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
+        ctx.fillRect(iconX, iconY, iconSize, iconSize)
       }
 
       // 키 레이블 (좌상단)
@@ -417,19 +422,6 @@ class LevelUpManager {
       }
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
-
-      // 카드 하단 화살표 버튼 힌트 (ui-pack-4 Arrows)
-      if (window.drawUIArrow) {
-        const arrowY = cy + cardH + 6
-        const arrowSize = 20
-        // 왼쪽 카드 → 왼쪽 화살표, 오른쪽 카드 → 오른쪽 화살표, 가운데는 양쪽
-        if (i === 0) drawUIArrow(ctx, 'right', 'purple', cx + cardW - arrowSize - 4, arrowY, arrowSize)
-        if (i === 1) {
-          drawUIArrow(ctx, 'left',  'purple', cx + 4,             arrowY, arrowSize)
-          drawUIArrow(ctx, 'right', 'purple', cx + cardW - arrowSize - 4, arrowY, arrowSize)
-        }
-        if (i === 2) drawUIArrow(ctx, 'left', 'purple', cx + 4, arrowY, arrowSize)
-      }
     }
 
     ctx.textAlign = 'left'

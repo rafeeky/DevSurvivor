@@ -286,8 +286,7 @@ class SkillManager {
     let radius = 120
     let damage = 40
     if (def.level >= 2) damage += 20
-    if (def.level >= 3) radius += 40
-    if (def.level >= 4 && def.cooldown > 3) def.cooldown = 3
+    if (def.level >= 3) { radius += 40; if (def.cooldown > 3) def.cooldown = 3 }
     damage = Math.floor(damage * (GameState.skillDamageMult || 1))
 
     for (const enemy of GameState.enemies) {
@@ -312,8 +311,7 @@ class SkillManager {
     let damage = 70
     let targetCount = 1
     if (def.level >= 2) damage += 30
-    if (def.level >= 3) targetCount = 2
-    if (def.level >= 4 && def.cooldown > 1.5) def.cooldown = 1.5
+    if (def.level >= 3) { targetCount = 2; if (def.cooldown > 1.5) def.cooldown = 1.5 }
     damage = Math.floor(damage * (GameState.skillDamageMult || 1))
 
     const alive = GameState.enemies.filter(e => e.isAlive())

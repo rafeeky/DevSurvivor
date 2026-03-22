@@ -198,10 +198,6 @@ class HUD {
           const ratio = 1 - state.cooldownRemaining / state.cooldownMax
           ctx.fillStyle = '#4488ff'
           ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
-        } else {
-          ctx.fillStyle = '#44ff88'
-          ctx.font = '10px "VT323", monospace'
-          ctx.fillText('READY', sx + 52, sy + 36)
         }
         // LV 표시 (우하단)
         if (!state.isEmpty) {
@@ -216,12 +212,12 @@ class HUD {
         }
       }
 
-      // 키 레이블 — 항상 마지막에 그려 아이콘 위에 표시 (작은 배경 포함)
-      ctx.fillStyle = 'rgba(0,0,0,0.65)'
-      ctx.fillRect(sx + 2, sy + 2, 14, 13)
+      // 키 레이블 — 항상 마지막에 그려 아이콘 위에 표시 (3배 크기)
+      ctx.fillStyle = 'rgba(0,0,0,0.72)'
+      ctx.fillRect(sx, sy, 34, 28)
       ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
-      ctx.font = 'bold 10px "VT323", monospace'
-      ctx.fillText(keys[i], sx + 4, sy + 13)
+      ctx.font = 'bold 30px "VT323", monospace'
+      ctx.fillText(keys[i], sx + 4, sy + 26)
     }
 
     // 빈 슬롯 힌트 (초반 안내)
