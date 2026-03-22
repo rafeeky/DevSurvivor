@@ -220,11 +220,18 @@ const MetaManager = {
       const canBuy = !maxed && pts >= cost
 
       // 카드 배경
-      ctx.fillStyle = '#111827'
-      ctx.strokeStyle = maxed ? '#44aa44' : canBuy ? '#4466aa' : '#2a2a4a'
-      ctx.lineWidth = 1.5
-      ctx.fillRect(bx, by, colW, rowH - 6)
-      ctx.strokeRect(bx, by, colW, rowH - 6)
+      if (window.drawUIPanel) {
+        drawUIPanel(ctx, bx, by, colW, rowH - 6)
+      } else {
+        ctx.fillStyle = '#111827'
+        ctx.fillRect(bx, by, colW, rowH - 6)
+      }
+      // 상태 강조선 (MAX=초록 / 구매가능=파랑)
+      if (maxed || canBuy) {
+        ctx.strokeStyle = maxed ? '#44aa44' : '#4466aa'
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(bx, by, colW, rowH - 6)
+      }
 
       // 아이콘 (좌측 — 56×56 박스로 확대)
       const icon = this._getIcon(upg.name)
@@ -303,41 +310,30 @@ const MetaManager = {
     this._nextRect = null
 
     if (this._page > 0) {
-      ctx.fillStyle = '#1a2a4a'
-      ctx.strokeStyle = '#4466aa'
-      ctx.lineWidth = 1.5
-      ctx.fillRect(190, navY, 140, 36)
-      ctx.strokeRect(190, navY, 140, 36)
-      ctx.fillStyle = '#88aaff'
-      ctx.font = '13px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('◀ 이전', 260, navY + 23)
+      if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
+      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
+      if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
+      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('이전', 258, navY + 23)
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
     }
 
     if (this._page < totalPages - 1) {
-      ctx.fillStyle = '#1a2a4a'
-      ctx.strokeStyle = '#4466aa'
-      ctx.lineWidth = 1.5
-      ctx.fillRect(470, navY, 140, 36)
-      ctx.strokeRect(470, navY, 140, 36)
-      ctx.fillStyle = '#88aaff'
-      ctx.font = '13px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('다음 ▶', 540, navY + 23)
+      if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
+      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
+      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('다음', 542, navY + 23)
+      if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
-    ctx.fillStyle = '#0d1a0d'
-    ctx.strokeStyle = '#44aa44'
-    ctx.lineWidth = 2
-    ctx.fillRect(300, 492, 200, 44)
-    ctx.strokeRect(300, 492, 200, 44)
+    if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
+    else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 16px "VT323", monospace'
+    ctx.font = 'bold 20px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 돌아가기 ]', 400, 520)
+    ctx.fillText('돌아가기', 400, 520)
     ctx.textAlign = 'left'
   },
 

@@ -87,6 +87,18 @@ class Result {
     ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
     ctx.restore()
 
+    // ① ACCESS GRANTED 애니메이션 배너 (0.3s 이후 페이드인)
+    if (window.drawUIGranted) {
+      const gdAlpha = Math.min(1, Math.max(0, (elapsed - 0.3) / 0.4))
+      if (gdAlpha > 0) {
+        ctx.save()
+        ctx.globalAlpha = gdAlpha * 0.92
+        // 스탯 박스 내부 헤더 (y=148~168) 위치에 터미널 배너
+        drawUIGranted(ctx, true, Math.max(0, elapsed - 0.3), 188, 148, 424, 24)
+        ctx.restore()
+      }
+    }
+
     // ② 스탯 박스 페이드인 (0.4s ~ 0.9s)
     const statsAlpha = Math.min(1, Math.max(0, (elapsed - 0.4) / 0.5))
     ctx.save()
@@ -217,7 +229,7 @@ class Result {
 
     // 5. 결과 패널 (1.2초 이후 페이드인)
     const panelAlpha = Math.min(1, Math.max(0, (elapsed - 1.2) / 0.5))
-    if (panelAlpha > 0) this._drawLosePanel(ctx, panelAlpha)
+    if (panelAlpha > 0) this._drawLosePanel(ctx, panelAlpha, Math.max(0, elapsed - 1.2))
   }
 
   _drawCollapsedPlayer(ctx, cx, cy, alpha) {
@@ -275,7 +287,7 @@ class Result {
     ctx.restore()
   }
 
-  _drawLosePanel(ctx, alpha) {
+  _drawLosePanel(ctx, alpha, panelElapsed = 0) {
     const causes = [
       'BoxBot의 공격을 막지 못했습니다.',
       '야근 누적으로 체력이 바닥났습니다.',
@@ -338,6 +350,11 @@ class Result {
     ctx.fillStyle = '#220008'
     ctx.fillRect(px, py, pw, 40)
 
+    // ACCESS DENIED 애니메이션 (헤더 우측 액센트)
+    if (window.drawUIGranted) {
+      drawUIGranted(ctx, false, panelElapsed, px + pw - 90, py + 4, 82, 32)
+    }
+
     // 헤더 텍스트 (red glow)
     ctx.save()
     ctx.shadowColor = '#ff2233'
@@ -345,7 +362,7 @@ class Result {
     ctx.fillStyle = '#ff4455'
     ctx.font = 'bold 19px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
+    ctx.fillText('프로젝트 취소 — AI 승리', 340, py + 26)
     ctx.restore()
 
     // 원인

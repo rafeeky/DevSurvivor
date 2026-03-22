@@ -135,6 +135,28 @@
     ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // drawUIGranted(ctx, isWin, elapsed, x, y, w, h)
+  //   granteddenied.png (7200×145) ACCESS 애니메이션 스트립
+  //   isWin=true  → 좌측 절반 (0~3600) ACCESS GRANTED
+  //   isWin=false → 우측 절반 (3600~7200) ACCESS DENIED
+  //   elapsed: 재생 경과 시간(초) — 0부터 시작
+  //   24프레임 × 150px/프레임, 12fps 재생
+  // ─────────────────────────────────────────────────────────────
+  const _GD_HALF   = 3600
+  const _GD_FW     = 150   // 프레임 너비
+  const _GD_FRAMES = 24
+  const _GD_FPS    = 12
+
+  window.drawUIGranted = function (ctx, isWin, elapsed, x, y, w, h) {
+    const img = _imgs.granteddenied
+    if (!img?.complete || img.naturalWidth === 0) return
+    const frame = Math.min(Math.floor(elapsed * _GD_FPS), _GD_FRAMES - 1)
+    const srcX  = (isWin ? 0 : _GD_HALF) + frame * _GD_FW
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, srcX, 0, _GD_FW, 145, x, y, w, h)
+  }
+
   // 외부 참조용 이미지 맵 노출
   window._UIImgs = _imgs
 })()

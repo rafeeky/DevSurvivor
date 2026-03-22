@@ -3329,11 +3329,18 @@ const MetaManager = {
       const canBuy = !maxed && pts >= cost
 
       // 카드 배경
-      ctx.fillStyle = '#111827'
-      ctx.strokeStyle = maxed ? '#44aa44' : canBuy ? '#4466aa' : '#2a2a4a'
-      ctx.lineWidth = 1.5
-      ctx.fillRect(bx, by, colW, rowH - 6)
-      ctx.strokeRect(bx, by, colW, rowH - 6)
+      if (window.drawUIPanel) {
+        drawUIPanel(ctx, bx, by, colW, rowH - 6)
+      } else {
+        ctx.fillStyle = '#111827'
+        ctx.fillRect(bx, by, colW, rowH - 6)
+      }
+      // 상태 강조선 (MAX=초록 / 구매가능=파랑)
+      if (maxed || canBuy) {
+        ctx.strokeStyle = maxed ? '#44aa44' : '#4466aa'
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(bx, by, colW, rowH - 6)
+      }
 
       // 아이콘 (좌측 — 56×56 박스로 확대)
       const icon = this._getIcon(upg.name)
@@ -3412,41 +3419,30 @@ const MetaManager = {
     this._nextRect = null
 
     if (this._page > 0) {
-      ctx.fillStyle = '#1a2a4a'
-      ctx.strokeStyle = '#4466aa'
-      ctx.lineWidth = 1.5
-      ctx.fillRect(190, navY, 140, 36)
-      ctx.strokeRect(190, navY, 140, 36)
-      ctx.fillStyle = '#88aaff'
-      ctx.font = '13px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('◀ 이전', 260, navY + 23)
+      if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
+      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
+      if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
+      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('이전', 258, navY + 23)
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
     }
 
     if (this._page < totalPages - 1) {
-      ctx.fillStyle = '#1a2a4a'
-      ctx.strokeStyle = '#4466aa'
-      ctx.lineWidth = 1.5
-      ctx.fillRect(470, navY, 140, 36)
-      ctx.strokeRect(470, navY, 140, 36)
-      ctx.fillStyle = '#88aaff'
-      ctx.font = '13px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('다음 ▶', 540, navY + 23)
+      if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
+      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
+      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('다음', 542, navY + 23)
+      if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
-    ctx.fillStyle = '#0d1a0d'
-    ctx.strokeStyle = '#44aa44'
-    ctx.lineWidth = 2
-    ctx.fillRect(300, 492, 200, 44)
-    ctx.strokeRect(300, 492, 200, 44)
+    if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
+    else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
     ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 16px "VT323", monospace'
+    ctx.font = 'bold 20px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('[ 돌아가기 ]', 400, 520)
+    ctx.fillText('돌아가기', 400, 520)
     ctx.textAlign = 'left'
   },
 
@@ -3629,6 +3625,28 @@ window.addEventListener('click', (e) => {
     const i = Math.max(0, Math.min(3, index))
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIGranted(ctx, isWin, elapsed, x, y, w, h)
+  //   granteddenied.png (7200×145) ACCESS 애니메이션 스트립
+  //   isWin=true  → 좌측 절반 (0~3600) ACCESS GRANTED
+  //   isWin=false → 우측 절반 (3600~7200) ACCESS DENIED
+  //   elapsed: 재생 경과 시간(초) — 0부터 시작
+  //   24프레임 × 150px/프레임, 12fps 재생
+  // ─────────────────────────────────────────────────────────────
+  const _GD_HALF   = 3600
+  const _GD_FW     = 150   // 프레임 너비
+  const _GD_FRAMES = 24
+  const _GD_FPS    = 12
+
+  window.drawUIGranted = function (ctx, isWin, elapsed, x, y, w, h) {
+    const img = _imgs.granteddenied
+    if (!img?.complete || img.naturalWidth === 0) return
+    const frame = Math.min(Math.floor(elapsed * _GD_FPS), _GD_FRAMES - 1)
+    const srcX  = (isWin ? 0 : _GD_HALF) + frame * _GD_FW
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, srcX, 0, _GD_FW, 145, x, y, w, h)
   }
 
   // 외부 참조용 이미지 맵 노출
@@ -4914,6 +4932,18 @@ class Result {
     ctx.fillText('3분간의 사투 끝에 드디어 서버에 올라갔다.', 400, 124)
     ctx.restore()
 
+    // ① ACCESS GRANTED 애니메이션 배너 (0.3s 이후 페이드인)
+    if (window.drawUIGranted) {
+      const gdAlpha = Math.min(1, Math.max(0, (elapsed - 0.3) / 0.4))
+      if (gdAlpha > 0) {
+        ctx.save()
+        ctx.globalAlpha = gdAlpha * 0.92
+        // 스탯 박스 내부 헤더 (y=148~168) 위치에 터미널 배너
+        drawUIGranted(ctx, true, Math.max(0, elapsed - 0.3), 188, 148, 424, 24)
+        ctx.restore()
+      }
+    }
+
     // ② 스탯 박스 페이드인 (0.4s ~ 0.9s)
     const statsAlpha = Math.min(1, Math.max(0, (elapsed - 0.4) / 0.5))
     ctx.save()
@@ -5044,7 +5074,7 @@ class Result {
 
     // 5. 결과 패널 (1.2초 이후 페이드인)
     const panelAlpha = Math.min(1, Math.max(0, (elapsed - 1.2) / 0.5))
-    if (panelAlpha > 0) this._drawLosePanel(ctx, panelAlpha)
+    if (panelAlpha > 0) this._drawLosePanel(ctx, panelAlpha, Math.max(0, elapsed - 1.2))
   }
 
   _drawCollapsedPlayer(ctx, cx, cy, alpha) {
@@ -5102,7 +5132,7 @@ class Result {
     ctx.restore()
   }
 
-  _drawLosePanel(ctx, alpha) {
+  _drawLosePanel(ctx, alpha, panelElapsed = 0) {
     const causes = [
       'BoxBot의 공격을 막지 못했습니다.',
       '야근 누적으로 체력이 바닥났습니다.',
@@ -5165,6 +5195,11 @@ class Result {
     ctx.fillStyle = '#220008'
     ctx.fillRect(px, py, pw, 40)
 
+    // ACCESS DENIED 애니메이션 (헤더 우측 액센트)
+    if (window.drawUIGranted) {
+      drawUIGranted(ctx, false, panelElapsed, px + pw - 90, py + 4, 82, 32)
+    }
+
     // 헤더 텍스트 (red glow)
     ctx.save()
     ctx.shadowColor = '#ff2233'
@@ -5172,7 +5207,7 @@ class Result {
     ctx.fillStyle = '#ff4455'
     ctx.font = 'bold 19px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
+    ctx.fillText('프로젝트 취소 — AI 승리', 340, py + 26)
     ctx.restore()
 
     // 원인
