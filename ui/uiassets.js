@@ -270,4 +270,117 @@
 
   // 외부 참조용 이미지 맵 노출
   window._UIImgs = _imgs
+
+  // ─────────────────────────────────────────────────────────────
+  // drawCyberpunkBtn(ctx, x, y, w, h, label, style)
+  //   사이버펑크 픽셀 아트 버튼 — 순수 캔버스
+  //   style: 'primary'(초록) | 'blue'(파랑) | 'danger'(빨강) | 'dim'(회색)
+  // ─────────────────────────────────────────────────────────────
+  const _CP_BTN = {
+    primary: { fill: '#1a7a38', hi:  '#22aa4e', lo: '#0f4a22', text: '#ffffff', shadow: 'rgba(34,180,80,0.45)' },
+    blue:    { fill: '#1a3a7a', hi:  '#2255bb', lo: '#0f244a', text: '#cce0ff', shadow: 'rgba(50,120,220,0.35)' },
+    danger:  { fill: '#7a1a1a', hi:  '#bb2222', lo: '#4a0f0f', text: '#ffffff', shadow: 'rgba(200,40,40,0.45)' },
+    dim:     { fill: '#1e2740', hi:  '#2d3d60', lo: '#141c30', text: '#778899', shadow: 'transparent' },
+  }
+
+  window.drawCyberpunkBtn = function (ctx, x, y, w, h, label, style = 'blue') {
+    const c = _CP_BTN[style] || _CP_BTN.blue
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+
+    // 배경 fill
+    ctx.fillStyle = c.fill
+    ctx.fillRect(x, y, w, h)
+
+    // 하이라이트 (상단 1px, 좌측 1px)
+    ctx.fillStyle = c.hi
+    ctx.fillRect(x, y, w, 2)
+    ctx.fillRect(x, y, 2, h)
+
+    // 쉐도우 (하단 2px, 우측 2px)
+    ctx.fillStyle = c.lo
+    ctx.fillRect(x, y + h - 2, w, 2)
+    ctx.fillRect(x + w - 2, y, 2, h)
+
+    // 코너 노치 (픽셀 아트 특유의 깎인 모서리)
+    const nc = 4
+    ctx.fillStyle = '#080e1e'
+    ctx.fillRect(x, y, nc, nc)               // TL
+    ctx.fillRect(x + w - nc, y, nc, nc)       // TR
+    ctx.fillRect(x, y + h - nc, nc, nc)       // BL
+    ctx.fillRect(x + w - nc, y + h - nc, nc, nc) // BR
+
+    // 텍스트
+    if (label) {
+      if (c.shadow !== 'transparent') {
+        ctx.shadowColor = c.shadow
+        ctx.shadowBlur  = 8
+      }
+      ctx.fillStyle  = c.text
+      ctx.font       = `bold ${Math.round(h * 0.5)}px "VT323", monospace`
+      ctx.textAlign  = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(label, x + w / 2, y + h / 2 + 1)
+      ctx.shadowBlur = 0
+      ctx.textBaseline = 'alphabetic'
+    }
+    ctx.restore()
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawCyberpunkPanel(ctx, x, y, w, h, title)
+  //   사이버펑크 패널 — 이중 테두리 + 코너 마크 + 선택적 타이틀 헤더
+  // ─────────────────────────────────────────────────────────────
+  window.drawCyberpunkPanel = function (ctx, x, y, w, h, title) {
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+
+    // 패널 배경
+    ctx.fillStyle = '#0e1628'
+    ctx.fillRect(x, y, w, h)
+
+    // 외곽 테두리
+    ctx.strokeStyle = '#2a3d66'
+    ctx.lineWidth = 2
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2)
+
+    // 내곽 테두리 (2px 안쪽)
+    ctx.strokeStyle = '#1a2844'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x + 4, y + 4, w - 8, h - 8)
+
+    // 코너 마크 (L자형)
+    const ml = 10
+    ctx.strokeStyle = '#4466aa'
+    ctx.lineWidth = 2
+    const corners = [[x+2,y+2],[x+w-2,y+2],[x+2,y+h-2],[x+w-2,y+h-2]]
+    const dirs     = [[1,1],   [-1,1],    [1,-1],    [-1,-1]]
+    for (let i = 0; i < 4; i++) {
+      const [cx2, cy2] = corners[i]
+      const [dx, dy]   = dirs[i]
+      ctx.beginPath()
+      ctx.moveTo(cx2 + dx * ml, cy2)
+      ctx.lineTo(cx2, cy2)
+      ctx.lineTo(cx2, cy2 + dy * ml)
+      ctx.stroke()
+    }
+
+    // 타이틀 헤더 스트립
+    if (title) {
+      const th = 24
+      ctx.fillStyle = '#162040'
+      ctx.fillRect(x + 5, y + 5, w - 10, th)
+      ctx.strokeStyle = '#2a3d66'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x + 5, y + 5, w - 10, th)
+      ctx.fillStyle  = '#ffffff'
+      ctx.font       = 'bold 16px "VT323", monospace'
+      ctx.textAlign  = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(title.toUpperCase(), x + w / 2, y + 5 + th / 2)
+      ctx.textBaseline = 'alphabetic'
+    }
+
+    ctx.restore()
+  }
 })()

@@ -333,24 +333,15 @@ class Lobby {
   }
 
   _drawVikingBtn(ctx, r, label, textColor, isPrimary) {
-    // 배경
+    if (window.drawCyberpunkBtn) {
+      drawCyberpunkBtn(ctx, r.x, r.y, r.w, r.h, label, isPrimary ? 'primary' : 'blue')
+      return
+    }
+    // 폴백
     ctx.fillStyle = isPrimary ? 'rgba(18,22,38,0.94)' : 'rgba(12,14,24,0.88)'
     ctx.strokeStyle = isPrimary ? '#3d5588' : '#252a3c'
     ctx.lineWidth = isPrimary ? 1.5 : 1
-    ctx.beginPath()
-    ctx.roundRect(r.x, r.y, r.w, r.h, 4)
-    ctx.fill()
-    ctx.stroke()
-    // 상단 미묘한 하이라이트 선
-    if (isPrimary) {
-      ctx.strokeStyle = 'rgba(100,140,220,0.25)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(r.x + 6, r.y + 1)
-      ctx.lineTo(r.x + r.w - 6, r.y + 1)
-      ctx.stroke()
-    }
-    // 텍스트
+    ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 4); ctx.fill(); ctx.stroke()
     ctx.fillStyle = textColor
     ctx.font = isPrimary ? 'bold 28px "VT323", monospace' : 'bold 20px "VT323", monospace'
     ctx.textAlign = 'center'

@@ -3448,7 +3448,9 @@ const MetaManager = {
       const canBuy = !maxed && pts >= cost
 
       // 카드 배경
-      if (window.drawUIPanel) {
+      if (window.drawCyberpunkPanel) {
+        drawCyberpunkPanel(ctx, bx, by, colW, rowH - 6)
+      } else if (window.drawUIPanel) {
         drawUIPanel(ctx, bx, by, colW, rowH - 6)
       } else {
         ctx.fillStyle = '#111827'
@@ -3456,9 +3458,9 @@ const MetaManager = {
       }
       // 상태 강조선 (MAX=초록 / 구매가능=파랑)
       if (maxed || canBuy) {
-        ctx.strokeStyle = maxed ? '#44aa44' : '#4466aa'
-        ctx.lineWidth = 1.5
-        ctx.strokeRect(bx, by, colW, rowH - 6)
+        ctx.strokeStyle = maxed ? '#22aa44' : '#2255bb'
+        ctx.lineWidth = 2
+        ctx.strokeRect(bx + 1, by + 1, colW - 2, rowH - 8)
       }
 
       // 아이콘 (좌측 — 56×56 박스로 확대)
@@ -3504,28 +3506,26 @@ const MetaManager = {
 
       // 구매 버튼 또는 MAX
       if (maxed) {
-        ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 14px "VT323", monospace'
+        ctx.fillStyle = '#22aa44'
+        ctx.font = 'bold 16px "VT323", monospace'
         ctx.textAlign = 'right'
-        ctx.fillText('MAX', bx + colW - 8, by + 90)
+        ctx.fillText('■ MAX', bx + colW - 8, by + 92)
         this._buyRects.push(null)
       } else {
         const btnX = bx + colW - 116
         const btnY = by + 68
-        const btnW = 108, btnH = 32
-        ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
-        ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
-        ctx.lineWidth = 1
-        ctx.fillRect(btnX, btnY, btnW, btnH)
-        ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '13px "VT323", monospace'
-        ctx.textAlign = 'center'
-        if (canBuy) {
-          ctx.fillStyle = '#ffffff'
-          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 21)
+        const btnW = 108, btnH = 34
+        if (window.drawCyberpunkBtn) {
+          drawCyberpunkBtn(ctx, btnX, btnY, btnW, btnH, canBuy ? `구매 ${cost}pt` : `부족 ${cost}pt`, canBuy ? 'primary' : 'dim')
         } else {
-          ctx.fillStyle = '#4a5568'
-          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
+          ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
+          ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
+          ctx.lineWidth = 1
+          ctx.fillRect(btnX, btnY, btnW, btnH)
+          ctx.strokeRect(btnX, btnY, btnW, btnH)
+          ctx.font = '13px "VT323", monospace'; ctx.textAlign = 'center'
+          ctx.fillStyle = canBuy ? '#ffffff' : '#4a5568'
+          ctx.fillText(canBuy ? `구매 ${cost}pt` : `부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
         }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
       }
@@ -3538,30 +3538,34 @@ const MetaManager = {
     this._nextRect = null
 
     if (this._page > 0) {
-      if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
-      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
-      if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
-      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-      ctx.fillText('이전', 258, navY + 23)
+      if (window.drawCyberpunkBtn) drawCyberpunkBtn(ctx, 190, navY, 140, 36, '◀  이전', 'blue')
+      else {
+        if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
+        else { ctx.fillStyle = '#1a2a4a'; ctx.fillRect(190, navY, 140, 36) }
+        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+        ctx.fillText('이전', 258, navY + 23)
+      }
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
     }
 
     if (this._page < totalPages - 1) {
-      if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
-      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
-      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-      ctx.fillText('다음', 542, navY + 23)
-      if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
+      if (window.drawCyberpunkBtn) drawCyberpunkBtn(ctx, 470, navY, 140, 36, '다음  ▶', 'blue')
+      else {
+        if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
+        else { ctx.fillStyle = '#1a2a4a'; ctx.fillRect(470, navY, 140, 36) }
+        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+        ctx.fillText('다음', 542, navY + 23)
+      }
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
-    if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
-    else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
-    ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 20px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('돌아가기', 400, 520)
+    if (window.drawCyberpunkBtn) drawCyberpunkBtn(ctx, 300, 492, 200, 44, '돌아가기', 'dim')
+    else {
+      ctx.fillStyle = '#0d1a0d'; ctx.fillRect(300, 492, 200, 44)
+      ctx.fillStyle = '#88ff88'; ctx.font = 'bold 20px "VT323", monospace'
+      ctx.textAlign = 'center'; ctx.fillText('돌아가기', 400, 520)
+    }
     ctx.textAlign = 'left'
   },
 
@@ -3881,6 +3885,119 @@ window.addEventListener('click', (e) => {
 
   // 외부 참조용 이미지 맵 노출
   window._UIImgs = _imgs
+
+  // ─────────────────────────────────────────────────────────────
+  // drawCyberpunkBtn(ctx, x, y, w, h, label, style)
+  //   사이버펑크 픽셀 아트 버튼 — 순수 캔버스
+  //   style: 'primary'(초록) | 'blue'(파랑) | 'danger'(빨강) | 'dim'(회색)
+  // ─────────────────────────────────────────────────────────────
+  const _CP_BTN = {
+    primary: { fill: '#1a7a38', hi:  '#22aa4e', lo: '#0f4a22', text: '#ffffff', shadow: 'rgba(34,180,80,0.45)' },
+    blue:    { fill: '#1a3a7a', hi:  '#2255bb', lo: '#0f244a', text: '#cce0ff', shadow: 'rgba(50,120,220,0.35)' },
+    danger:  { fill: '#7a1a1a', hi:  '#bb2222', lo: '#4a0f0f', text: '#ffffff', shadow: 'rgba(200,40,40,0.45)' },
+    dim:     { fill: '#1e2740', hi:  '#2d3d60', lo: '#141c30', text: '#778899', shadow: 'transparent' },
+  }
+
+  window.drawCyberpunkBtn = function (ctx, x, y, w, h, label, style = 'blue') {
+    const c = _CP_BTN[style] || _CP_BTN.blue
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+
+    // 배경 fill
+    ctx.fillStyle = c.fill
+    ctx.fillRect(x, y, w, h)
+
+    // 하이라이트 (상단 1px, 좌측 1px)
+    ctx.fillStyle = c.hi
+    ctx.fillRect(x, y, w, 2)
+    ctx.fillRect(x, y, 2, h)
+
+    // 쉐도우 (하단 2px, 우측 2px)
+    ctx.fillStyle = c.lo
+    ctx.fillRect(x, y + h - 2, w, 2)
+    ctx.fillRect(x + w - 2, y, 2, h)
+
+    // 코너 노치 (픽셀 아트 특유의 깎인 모서리)
+    const nc = 4
+    ctx.fillStyle = '#080e1e'
+    ctx.fillRect(x, y, nc, nc)               // TL
+    ctx.fillRect(x + w - nc, y, nc, nc)       // TR
+    ctx.fillRect(x, y + h - nc, nc, nc)       // BL
+    ctx.fillRect(x + w - nc, y + h - nc, nc, nc) // BR
+
+    // 텍스트
+    if (label) {
+      if (c.shadow !== 'transparent') {
+        ctx.shadowColor = c.shadow
+        ctx.shadowBlur  = 8
+      }
+      ctx.fillStyle  = c.text
+      ctx.font       = `bold ${Math.round(h * 0.5)}px "VT323", monospace`
+      ctx.textAlign  = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(label, x + w / 2, y + h / 2 + 1)
+      ctx.shadowBlur = 0
+      ctx.textBaseline = 'alphabetic'
+    }
+    ctx.restore()
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawCyberpunkPanel(ctx, x, y, w, h, title)
+  //   사이버펑크 패널 — 이중 테두리 + 코너 마크 + 선택적 타이틀 헤더
+  // ─────────────────────────────────────────────────────────────
+  window.drawCyberpunkPanel = function (ctx, x, y, w, h, title) {
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+
+    // 패널 배경
+    ctx.fillStyle = '#0e1628'
+    ctx.fillRect(x, y, w, h)
+
+    // 외곽 테두리
+    ctx.strokeStyle = '#2a3d66'
+    ctx.lineWidth = 2
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2)
+
+    // 내곽 테두리 (2px 안쪽)
+    ctx.strokeStyle = '#1a2844'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x + 4, y + 4, w - 8, h - 8)
+
+    // 코너 마크 (L자형)
+    const ml = 10
+    ctx.strokeStyle = '#4466aa'
+    ctx.lineWidth = 2
+    const corners = [[x+2,y+2],[x+w-2,y+2],[x+2,y+h-2],[x+w-2,y+h-2]]
+    const dirs     = [[1,1],   [-1,1],    [1,-1],    [-1,-1]]
+    for (let i = 0; i < 4; i++) {
+      const [cx2, cy2] = corners[i]
+      const [dx, dy]   = dirs[i]
+      ctx.beginPath()
+      ctx.moveTo(cx2 + dx * ml, cy2)
+      ctx.lineTo(cx2, cy2)
+      ctx.lineTo(cx2, cy2 + dy * ml)
+      ctx.stroke()
+    }
+
+    // 타이틀 헤더 스트립
+    if (title) {
+      const th = 24
+      ctx.fillStyle = '#162040'
+      ctx.fillRect(x + 5, y + 5, w - 10, th)
+      ctx.strokeStyle = '#2a3d66'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x + 5, y + 5, w - 10, th)
+      ctx.fillStyle  = '#ffffff'
+      ctx.font       = 'bold 16px "VT323", monospace'
+      ctx.textAlign  = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(title.toUpperCase(), x + w / 2, y + 5 + th / 2)
+      ctx.textBaseline = 'alphabetic'
+    }
+
+    ctx.restore()
+  }
 })()
 
   </script>
@@ -4888,24 +5005,15 @@ class Lobby {
   }
 
   _drawVikingBtn(ctx, r, label, textColor, isPrimary) {
-    // 배경
+    if (window.drawCyberpunkBtn) {
+      drawCyberpunkBtn(ctx, r.x, r.y, r.w, r.h, label, isPrimary ? 'primary' : 'blue')
+      return
+    }
+    // 폴백
     ctx.fillStyle = isPrimary ? 'rgba(18,22,38,0.94)' : 'rgba(12,14,24,0.88)'
     ctx.strokeStyle = isPrimary ? '#3d5588' : '#252a3c'
     ctx.lineWidth = isPrimary ? 1.5 : 1
-    ctx.beginPath()
-    ctx.roundRect(r.x, r.y, r.w, r.h, 4)
-    ctx.fill()
-    ctx.stroke()
-    // 상단 미묘한 하이라이트 선
-    if (isPrimary) {
-      ctx.strokeStyle = 'rgba(100,140,220,0.25)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(r.x + 6, r.y + 1)
-      ctx.lineTo(r.x + r.w - 6, r.y + 1)
-      ctx.stroke()
-    }
-    // 텍스트
+    ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 4); ctx.fill(); ctx.stroke()
     ctx.fillStyle = textColor
     ctx.font = isPrimary ? 'bold 28px "VT323", monospace' : 'bold 20px "VT323", monospace'
     ctx.textAlign = 'center'
@@ -5265,10 +5373,10 @@ class Result {
     ctx.fillText(`(누적: ${total}pt)`, 400, 468)
 
     const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
-      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    if (window.drawCyberpunkBtn) {
+      drawCyberpunkBtn(ctx, r.x, r.y, r.w, r.h, '다시 도전', 'primary')
+      drawCyberpunkBtn(ctx, m.x, m.y, m.w, m.h, '메뉴', 'dim')
+      drawCyberpunkBtn(ctx, u.x, u.y, u.w, u.h, '업그레이드', 'blue')
     } else {
       ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
@@ -5276,13 +5384,11 @@ class Result {
       ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
+      ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
+      ctx.fillStyle = '#ccaaff'; ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
+      ctx.fillStyle = '#88ff88'; ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
-    ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
-    ctx.fillStyle = '#ccaaff'
-    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
-    ctx.fillStyle = '#88ff88'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
 
     ctx.restore()
@@ -5523,10 +5629,10 @@ class Result {
 
     // 버튼
     const r = this._loseRestartRect, m = this._loseMenuRect, u = this._loseUpgradeRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
-      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    if (window.drawCyberpunkBtn) {
+      drawCyberpunkBtn(ctx, r.x, r.y, r.w, r.h, '재도전', 'blue')
+      drawCyberpunkBtn(ctx, m.x, m.y, m.w, m.h, '메뉴', 'dim')
+      drawCyberpunkBtn(ctx, u.x, u.y, u.w, u.h, '업그레이드', 'primary')
     } else {
       ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
@@ -5534,13 +5640,11 @@ class Result {
       ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
+      ctx.fillStyle = '#ccaaff'; ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
+      ctx.fillStyle = '#88ff88'; ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
-    ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
-    ctx.fillStyle = '#ccaaff'
-    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
-    ctx.fillStyle = '#88ff88'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 
     ctx.restore()
   }

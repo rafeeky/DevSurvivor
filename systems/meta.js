@@ -220,7 +220,9 @@ const MetaManager = {
       const canBuy = !maxed && pts >= cost
 
       // 카드 배경
-      if (window.drawUIPanel) {
+      if (window.drawCyberpunkPanel) {
+        drawCyberpunkPanel(ctx, bx, by, colW, rowH - 6)
+      } else if (window.drawUIPanel) {
         drawUIPanel(ctx, bx, by, colW, rowH - 6)
       } else {
         ctx.fillStyle = '#111827'
@@ -228,9 +230,9 @@ const MetaManager = {
       }
       // 상태 강조선 (MAX=초록 / 구매가능=파랑)
       if (maxed || canBuy) {
-        ctx.strokeStyle = maxed ? '#44aa44' : '#4466aa'
-        ctx.lineWidth = 1.5
-        ctx.strokeRect(bx, by, colW, rowH - 6)
+        ctx.strokeStyle = maxed ? '#22aa44' : '#2255bb'
+        ctx.lineWidth = 2
+        ctx.strokeRect(bx + 1, by + 1, colW - 2, rowH - 8)
       }
 
       // 아이콘 (좌측 — 56×56 박스로 확대)
@@ -276,28 +278,26 @@ const MetaManager = {
 
       // 구매 버튼 또는 MAX
       if (maxed) {
-        ctx.fillStyle = '#44aa44'
-        ctx.font = 'bold 14px "VT323", monospace'
+        ctx.fillStyle = '#22aa44'
+        ctx.font = 'bold 16px "VT323", monospace'
         ctx.textAlign = 'right'
-        ctx.fillText('MAX', bx + colW - 8, by + 90)
+        ctx.fillText('■ MAX', bx + colW - 8, by + 92)
         this._buyRects.push(null)
       } else {
         const btnX = bx + colW - 116
         const btnY = by + 68
-        const btnW = 108, btnH = 32
-        ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
-        ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
-        ctx.lineWidth = 1
-        ctx.fillRect(btnX, btnY, btnW, btnH)
-        ctx.strokeRect(btnX, btnY, btnW, btnH)
-        ctx.font = '13px "VT323", monospace'
-        ctx.textAlign = 'center'
-        if (canBuy) {
-          ctx.fillStyle = '#ffffff'
-          ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 21)
+        const btnW = 108, btnH = 34
+        if (window.drawCyberpunkBtn) {
+          drawCyberpunkBtn(ctx, btnX, btnY, btnW, btnH, canBuy ? `구매 ${cost}pt` : `부족 ${cost}pt`, canBuy ? 'primary' : 'dim')
         } else {
-          ctx.fillStyle = '#4a5568'
-          ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
+          ctx.fillStyle = canBuy ? '#1e3a6e' : '#1a1a2a'
+          ctx.strokeStyle = canBuy ? '#4488ff' : '#444466'
+          ctx.lineWidth = 1
+          ctx.fillRect(btnX, btnY, btnW, btnH)
+          ctx.strokeRect(btnX, btnY, btnW, btnH)
+          ctx.font = '13px "VT323", monospace'; ctx.textAlign = 'center'
+          ctx.fillStyle = canBuy ? '#ffffff' : '#4a5568'
+          ctx.fillText(canBuy ? `구매 ${cost}pt` : `부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
         }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
       }
@@ -310,30 +310,34 @@ const MetaManager = {
     this._nextRect = null
 
     if (this._page > 0) {
-      if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
-      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
-      if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
-      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-      ctx.fillText('이전', 258, navY + 23)
+      if (window.drawCyberpunkBtn) drawCyberpunkBtn(ctx, 190, navY, 140, 36, '◀  이전', 'blue')
+      else {
+        if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
+        else { ctx.fillStyle = '#1a2a4a'; ctx.fillRect(190, navY, 140, 36) }
+        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+        ctx.fillText('이전', 258, navY + 23)
+      }
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
     }
 
     if (this._page < totalPages - 1) {
-      if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
-      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
-      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-      ctx.fillText('다음', 542, navY + 23)
-      if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
+      if (window.drawCyberpunkBtn) drawCyberpunkBtn(ctx, 470, navY, 140, 36, '다음  ▶', 'blue')
+      else {
+        if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
+        else { ctx.fillStyle = '#1a2a4a'; ctx.fillRect(470, navY, 140, 36) }
+        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+        ctx.fillText('다음', 542, navY + 23)
+      }
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
-    if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
-    else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
-    ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 20px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('돌아가기', 400, 520)
+    if (window.drawCyberpunkBtn) drawCyberpunkBtn(ctx, 300, 492, 200, 44, '돌아가기', 'dim')
+    else {
+      ctx.fillStyle = '#0d1a0d'; ctx.fillRect(300, 492, 200, 44)
+      ctx.fillStyle = '#88ff88'; ctx.font = 'bold 20px "VT323", monospace'
+      ctx.textAlign = 'center'; ctx.fillText('돌아가기', 400, 520)
+    }
     ctx.textAlign = 'left'
   },
 
