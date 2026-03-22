@@ -1598,7 +1598,7 @@ function updateAndRenderEffects(ctx, deltaTime) {
     } else if (e.type === 'float') {
       const floatY = e.y - (1 - alpha) * 36
       ctx.fillStyle = e.color
-      ctx.font = e.font || 'bold 10px "Press Start 2P", monospace'
+      ctx.font = e.font || 'bold 14px monospace'
       ctx.textAlign = 'center'
       ctx.shadowColor = e.color
       ctx.shadowBlur = 6
@@ -1904,7 +1904,7 @@ class SkillManager {
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 10px "Press Start 2P", monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 16px monospace' })
     addEffect({ type: 'sprite', img: _VFX.brightfire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 110, life: 0.83, maxLife: 0.83 })
   }
 
@@ -1954,7 +1954,7 @@ class SkillManager {
     p.heal(healAmt)
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 12px "Press Start 2P", monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 18px monospace' })
     addEffect({ type: 'sprite', img: _VFX.bluefire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 100, life: 0.83, maxLife: 0.83 })
   }
 
@@ -1970,7 +1970,7 @@ class SkillManager {
     this.player.applyBuff('speed', 0, waitTime)
     this.napTimer = waitTime
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
-    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 12px "Press Start 2P", monospace' })
+    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
     addEffect({ type: 'sprite', img: _VFX.nebula, x: this.player.x, y: this.player.y, fw: 100, fh: 100, fps: 18, totalFrames: 27, size: 90, life: 1.5, maxLife: 1.5 })
   }
 }
@@ -3105,6 +3105,125 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
 
   </script>
 
+  <!-- systems/audio.js -->
+  <script>
+;(function () {
+  let _ctx = null
+  let _bgmNodes = []
+  let _bgmActive = false
+  let _currentBGM = null
+
+  function _getCtx() {
+    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)()
+    if (_ctx.state === 'suspended') _ctx.resume()
+    return _ctx
+  }
+
+  function _playTone(freq, type, duration, gainVal, startDelay = 0) {
+    try {
+      const ctx = _getCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = type
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(gainVal, ctx.currentTime + startDelay)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startDelay + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(ctx.currentTime + startDelay)
+      osc.stop(ctx.currentTime + startDelay + duration)
+    } catch(e) {}
+  }
+
+  function _playNoise(duration, gainVal) {
+    try {
+      const ctx = _getCtx()
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate)
+      const d = buf.getChannelData(0)
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length)
+      const src = ctx.createBufferSource()
+      src.buffer = buf
+      const gain = ctx.createGain()
+      gain.gain.setValueAtTime(gainVal, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration)
+      src.connect(gain)
+      gain.connect(ctx.destination)
+      src.start()
+    } catch(e) {}
+  }
+
+  const GameAudio = {
+    // 플레이어 피격음: 짧은 노이즈 + 낮은 톤
+    playHit() {
+      _playNoise(0.12, 0.25)
+      _playTone(180, 'sawtooth', 0.15, 0.12)
+    },
+    // 적 처치음: 상승 톤 2개
+    playKill() {
+      _playTone(330, 'square', 0.08, 0.1)
+      _playTone(440, 'square', 0.08, 0.1, 0.06)
+    },
+    // 레벨업: 밝은 아르페지오
+    playLevelUp() {
+      [330, 392, 494, 659].forEach((f, i) => _playTone(f, 'sine', 0.18, 0.18, i * 0.07))
+    },
+    // 보스 등장: 드라마틱 저음 + 노이즈
+    playBossIntro() {
+      _playNoise(0.5, 0.4)
+      _playTone(80, 'sawtooth', 1.2, 0.3)
+      _playTone(60, 'square', 1.5, 0.2, 0.1)
+    },
+    // 승리: 밝은 팡파레
+    playWin() {
+      [523, 659, 784, 1047].forEach((f, i) => _playTone(f, 'sine', 0.3, 0.2, i * 0.1))
+    },
+    // 패배: 하강 음
+    playGameOver() {
+      [440, 330, 220, 110].forEach((f, i) => _playTone(f, 'sawtooth', 0.3, 0.18, i * 0.15))
+    },
+    // 로비 BGM: music_title.mp3
+    startLobbyBGM() {
+      _bgmActive = true
+      try {
+        _currentBGM = new Audio('assets/sounds/music_title.mp3')
+        _currentBGM.loop = true
+        _currentBGM.volume = 0.6
+        _currentBGM.play().catch(() => {})
+      } catch(e) {}
+    },
+    // 게임 BGM: music_play.mp3
+    startBGM() {
+      _bgmActive = true
+      try {
+        _currentBGM = new Audio('assets/sounds/music_play.mp3')
+        _currentBGM.loop = true
+        _currentBGM.volume = 0.5
+        _currentBGM.play().catch(() => {})
+      } catch(e) {}
+    },
+    // autoplay 차단 해제 후 재시도
+    resumeBGMIfNeeded() {
+      if (_currentBGM && _currentBGM.paused) {
+        _currentBGM.play().catch(() => {})
+      }
+    },
+    stopBGM() {
+      _bgmActive = false
+      if (_currentBGM) {
+        _currentBGM.pause()
+        _currentBGM.currentTime = 0
+        _currentBGM = null
+      }
+      _bgmNodes.forEach(n => { try { n.osc.stop(); } catch(e) {} })
+      _bgmNodes = []
+    },
+  }
+
+  window.GameAudio = GameAudio
+})()
+
+  </script>
+
   <!-- systems/meta.js -->
   <script>
 // systems/meta.js — GDD Part 6.3 출시 포인트 & Part 6.4 메타 업그레이드
@@ -3419,31 +3538,37 @@ const MetaManager = {
     this._nextRect = null
 
     if (this._page > 0) {
-      if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
-      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
-      if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
-      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-      ctx.fillText('이전', 258, navY + 23)
+      if (window.drawUIButtonFrame) drawUIButtonFrame(ctx, 190, navY, 140, 36, '◀ 이전', '#aaccff')
+      else {
+        if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
+        else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
+        if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
+        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+        ctx.fillText('이전', 258, navY + 23)
+      }
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
     }
 
     if (this._page < totalPages - 1) {
-      if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
-      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
-      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-      ctx.fillText('다음', 542, navY + 23)
-      if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
+      if (window.drawUIButtonFrame) drawUIButtonFrame(ctx, 470, navY, 140, 36, '다음 ▶', '#aaccff')
+      else {
+        if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
+        else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
+        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+        ctx.fillText('다음', 542, navY + 23)
+        if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
+      }
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
-    if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
-    else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
-    ctx.fillStyle = '#88ff88'
-    ctx.font = 'bold 20px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('돌아가기', 400, 520)
-    ctx.textAlign = 'left'
+    if (window.drawUIButtonFrame) drawUIButtonFrame(ctx, 300, 492, 200, 44, '돌아가기', '#88ff88')
+    else {
+      if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
+      else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
+      ctx.fillStyle = '#88ff88'; ctx.font = 'bold 20px "VT323", monospace'
+      ctx.textAlign = 'center'; ctx.fillText('돌아가기', 400, 520); ctx.textAlign = 'left'
+    }
   },
 
   handleClick(x, y) {
@@ -3511,6 +3636,8 @@ window.addEventListener('click', (e) => {
     bulb:         'assets/ui/bulb.png',
     granteddenied:'assets/ui/granteddenied.png',
     winloose:     'assets/ui/PNG/Win_loose.png',
+    mainmenu:     'assets/ui/PNG/Main_menu.png',
+    buttons:      'assets/ui/PNG/Buttons.png',
   }
 
   const _imgs = {}
@@ -3626,6 +3753,84 @@ window.addEventListener('click', (e) => {
     const i = Math.max(0, Math.min(3, index))
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIMainMenuBtn(ctx, btnIdx, x, y, w, h, label, textColor, isPrimary)
+  //   Main_menu.png (496×176) col1 버튼 스프라이트
+  //   btnIdx: 0=RESUME, 1=RESTART, 2=SETTINGS, 3=LEVELS…  (y=34+idx*16, h=11)
+  //   버튼 스프라이트 → 배경으로 스케일, label 텍스트 위에 그림
+  // ─────────────────────────────────────────────────────────────
+  const _MM_BTN_X = 96, _MM_BTN_W = 80, _MM_BTN_H = 11, _MM_BTN_Y0 = 34, _MM_STEP = 16
+
+  window.drawUIMainMenuBtn = function (ctx, btnIdx, x, y, w, h, label, textColor, isPrimary) {
+    const img = _imgs.mainmenu
+    const srcY = _MM_BTN_Y0 + (btnIdx || 0) * _MM_STEP
+
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    if (img?.complete && img.naturalWidth > 0) {
+      // 버튼 스프라이트를 반투명 배경으로 사용
+      ctx.globalAlpha = 0.72
+      ctx.drawImage(img, _MM_BTN_X, srcY, _MM_BTN_W, _MM_BTN_H, x, y, w, h)
+      ctx.globalAlpha = 1
+    } else {
+      // 폴백
+      ctx.fillStyle = isPrimary ? 'rgba(18,22,38,0.94)' : 'rgba(12,14,24,0.88)'
+      ctx.strokeStyle = isPrimary ? '#3d5588' : '#252a3c'
+      ctx.lineWidth = isPrimary ? 1.5 : 1
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 4); ctx.fill(); ctx.stroke()
+    }
+    // 텍스트 오버레이
+    if (label) {
+      ctx.shadowColor = isPrimary ? 'rgba(100,160,255,0.6)' : 'transparent'
+      ctx.shadowBlur  = isPrimary ? 6 : 0
+      ctx.fillStyle   = textColor || (isPrimary ? '#e8eeff' : '#aaccff')
+      ctx.font        = isPrimary ? 'bold 28px "VT323", monospace' : 'bold 20px "VT323", monospace'
+      ctx.textAlign   = 'center'
+      ctx.fillText(label, x + w / 2, y + h / 2 + (isPrimary ? 9 : 7))
+    }
+    ctx.restore()
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIButtonFrame(ctx, x, y, w, h, label, textColor)
+  //   Buttons.png (400×528) 와이드 버튼 프레임
+  //   y=363-381 (h=18) 행 — 투명 내부, 테두리만 있는 프레임
+  //   배경은 caller가 미리 그림 (fillRect 등)
+  // ─────────────────────────────────────────────────────────────
+  const _BF_SY = 363, _BF_SH = 19, _BF_SW = 399
+
+  window.drawUIButtonFrame = function (ctx, x, y, w, h, label, textColor) {
+    const img = _imgs.buttons
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    if (img?.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, 0, _BF_SY, _BF_SW, _BF_SH, x, y, w, h)
+    }
+    if (label) {
+      ctx.fillStyle = textColor || '#ffffff'
+      ctx.font = 'bold 18px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(label, x + w / 2, y + h / 2 + 6)
+    }
+    ctx.restore()
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIMainMenuPanel(ctx, x, y, w, h)
+  //   Main_menu.png (496×176) col0 (x=0-79) 전체 패널 배경
+  //   버튼 목록이 포함된 나무/픽셀 아트 메뉴 패널
+  // ─────────────────────────────────────────────────────────────
+  window.drawUIMainMenuPanel = function (ctx, x, y, w, h) {
+    const img = _imgs.mainmenu
+    if (!img?.complete || img.naturalWidth === 0) return
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.globalAlpha = 0.55
+    ctx.drawImage(img, 0, 0, 80, 176, x, y, w, h)
+    ctx.globalAlpha = 1
+    ctx.restore()
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -4369,9 +4574,9 @@ class Lobby {
       { key: 'amelia', x: 175, y: 142, w: 153, h: 330 },
       { key: 'vampir', x: 342, y: 142, w: 153, h: 330 },
     ]
-    this.startBtnRect   = { x: 510, y: 216, w: 275, h: 54 }
-    this.upgradeBtnRect = { x: 510, y: 284, w: 275, h: 46 }
-    this.renameBtnRect  = { x: 510, y: 408, w: 275, h: 34 }
+    this.startBtnRect   = { x: 510, y: 276, w: 275, h: 54 }
+    this.upgradeBtnRect = { x: 510, y: 348, w: 275, h: 46 }
+    this.renameBtnRect  = { x: 510, y: 460, w: 275, h: 34 }
     this._usernameInput = null
     this._usernameModalActive = false
     this._renameMode = false
@@ -4599,11 +4804,30 @@ class Lobby {
     ctx.fillStyle = 'rgba(0,0,0,0.65)'
     ctx.fillRect(0, 572, 800, 28)
 
-    // ── 3. 캐릭터 선택 헤더 ──────────────────────────────────────────
-    ctx.fillStyle = 'rgba(70,95,130,0.8)'
+    // ── 3. 좌상단 부제 & 통계 (우측 패널에서 이동) ────────────────────
+    ctx.textAlign = 'left'
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.fillRect(0, 0, 487, 52)
+
+    ctx.fillStyle = 'rgba(155,170,200,0.85)'
     ctx.font = '13px "VT323", monospace'
+    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 10, 18)
+
+    const _best = parseInt(localStorage.getItem('devsurvival_best') || '0')
+    const _pts  = window.MetaManager ? MetaManager.loadPoints() : 0
+    ctx.fillStyle = '#FFD700'
+    ctx.font = '13px "VT323", monospace'
+    ctx.fillText(`최고 기록: ${_best.toLocaleString()}점`, 10, 36)
+    ctx.fillStyle = '#77bbff'
+    ctx.fillText(`출시 포인트: ${_pts}`, 200, 36)
+
+    // ── 4. 캐릭터 선택 헤더 ──────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(0, 52, 487, 24)
+    ctx.fillStyle = '#8aa8cc'
+    ctx.font = 'bold 15px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('─── 캐릭터 선택 ───', 251, 136)
+    ctx.fillText('— 캐릭터 선택 —', 243, 68)
 
     // ── 4. 캐릭터 카드 (좌측) ────────────────────────────────────────
     this._drawCharCards(ctx)
@@ -4624,42 +4848,40 @@ class Lobby {
     ctx.font = 'bold 48px "VT323", monospace'
     ctx.fillText('SURVIVOR', tx, 128)
 
-    // 타이틀 하단 구분선
-    ctx.strokeStyle = 'rgba(80,110,190,0.4)'
-    ctx.lineWidth = 1
-    ctx.beginPath(); ctx.moveTo(514, 140); ctx.lineTo(792, 140); ctx.stroke()
+    // ── 6. 메인메뉴 패널 (monitor 하단) ─────────────────────────────
+    if (window.drawUIMainMenuPanel) {
+      drawUIMainMenuPanel(ctx, 488, 255, 312, 320)
+    } else {
+      ctx.fillStyle = 'rgba(8,12,28,0.88)'
+      ctx.fillRect(488, 255, 312, 320)
+    }
 
-    // 부제
-    ctx.fillStyle = 'rgba(155,170,200,0.75)'
-    ctx.font = '13px "VT323", monospace'
-    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', tx, 158)
+    // ── 7. 버튼 스택 (Main_menu.png) ─────────────────────────────────
+    if (window.drawUIMainMenuBtn) {
+      drawUIMainMenuBtn(ctx, 0, this.startBtnRect.x, this.startBtnRect.y, this.startBtnRect.w, this.startBtnRect.h, '▷  시작하기  ◁', '#e8eeff', true)
+      drawUIMainMenuBtn(ctx, 1, this.upgradeBtnRect.x, this.upgradeBtnRect.y, this.upgradeBtnRect.w, this.upgradeBtnRect.h, '업그레이드', '#aaccff', false)
+    } else {
+      this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
+      this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
+    }
 
-    // 통계
-    const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
-    const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
-    ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "VT323", monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, tx, 177)
-    ctx.fillStyle = '#77bbff'
-    ctx.fillText(`출시 포인트: ${pts}`, tx, 194)
-
-    // ── 6. 버튼 스택 (Viking Survivors 스타일) ────────────────────────
-    this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
-    this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
-
-    // ── 7. 닉네임 영역 ──────────────────────────────────────────────
+    // ── 8. 닉네임 영역 ──────────────────────────────────────────────
     const uname = localStorage.getItem('devsurvival_username') || null
     if (uname) {
       ctx.fillStyle = '#5577aa'
       ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`👤  ${uname}`, tx, 384)
-      this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
+      ctx.fillText(`👤  ${uname}`, tx, 444)
+      if (window.drawUIMainMenuBtn) {
+        drawUIMainMenuBtn(ctx, 2, this.renameBtnRect.x, this.renameBtnRect.y, this.renameBtnRect.w, this.renameBtnRect.h, '닉네임 변경', '#6688aa', false)
+      } else {
+        this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
+      }
     } else {
       ctx.fillStyle = '#3d5066'
       ctx.font = '12px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('시작하기를 누르면 닉네임을 입력합니다', tx, 384)
+      ctx.fillText('시작하기를 누르면 닉네임을 입력합니다', tx, 444)
     }
 
     // ── 8. 조작 안내 (하단) ──────────────────────────────────────────
@@ -4963,7 +5185,7 @@ class Result {
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 24px "Press Start 2P", monospace'
+    ctx.font = 'bold 56px monospace'
     ctx.shadowColor = '#FFD700'
     ctx.shadowBlur = 24
     ctx.fillText('배포 성공!', 400, 94)
@@ -5066,10 +5288,10 @@ class Result {
     ctx.fillText(`(누적: ${total}pt)`, 400, 468)
 
     const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
-      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    if (window.drawUIButtonFrame) {
+      drawUIButtonFrame(ctx, r.x, r.y, r.w, r.h, '다시 도전', '#ffffff')
+      drawUIButtonFrame(ctx, m.x, m.y, m.w, m.h, '메뉴', '#ccaaff')
+      drawUIButtonFrame(ctx, u.x, u.y, u.w, u.h, '업그레이드', '#88ff88')
     } else {
       ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
@@ -5077,13 +5299,13 @@ class Result {
       ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
+      ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
+      ctx.fillStyle = '#ccaaff'
+      ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
+      ctx.fillStyle = '#88ff88'
+      ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
-    ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
-    ctx.fillStyle = '#ccaaff'
-    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
-    ctx.fillStyle = '#88ff88'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
 
     ctx.restore()
@@ -5119,10 +5341,10 @@ class Result {
     ctx.save()
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
-    ctx.font = 'bold 32px "Press Start 2P", monospace'
+    ctx.font = 'bold 128px monospace'
     ctx.fillStyle = '#6b0000'
     ctx.fillText('AI', 400, 172)
-    ctx.font = 'bold 32px "Press Start 2P", monospace'
+    ctx.font = 'bold 82px monospace'
     ctx.fillStyle = '#b81010'
     ctx.fillText('승  리', 400, 266)
     ctx.restore()
@@ -5324,10 +5546,10 @@ class Result {
 
     // 버튼
     const r = this._loseRestartRect, m = this._loseMenuRect, u = this._loseUpgradeRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
-      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    if (window.drawUIButtonFrame) {
+      drawUIButtonFrame(ctx, r.x, r.y, r.w, r.h, '재도전', '#ffffff')
+      drawUIButtonFrame(ctx, m.x, m.y, m.w, m.h, '메뉴', '#ccaaff')
+      drawUIButtonFrame(ctx, u.x, u.y, u.w, u.h, '업그레이드', '#88ff88')
     } else {
       ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
@@ -5335,13 +5557,13 @@ class Result {
       ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
+      ctx.fillStyle = '#ccaaff'
+      ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
+      ctx.fillStyle = '#88ff88'
+      ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
-    ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
-    ctx.fillStyle = '#ccaaff'
-    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
-    ctx.fillStyle = '#88ff88'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 
     ctx.restore()
   }
@@ -5546,15 +5768,15 @@ class VirtualJoystick {
       if (skill) {
         // 키 레이블 (위쪽 작게)
         ctx.fillStyle = '#aaccff'
-        ctx.font = 'bold 8px "Press Start 2P", monospace'
+        ctx.font = 'bold 10px monospace'
         ctx.fillText(btn.label, btn.x, btn.y - 9)
         // 스킬 이름 앞 3자 (아래쪽)
         ctx.fillStyle = cd > 0 ? '#778899' : '#ffffff'
-        ctx.font = 'bold 8px "Press Start 2P", monospace'
+        ctx.font = 'bold 11px monospace'
         ctx.fillText(skill.slice(0, 3), btn.x, btn.y + 7)
       } else {
         ctx.fillStyle = '#555'
-        ctx.font = 'bold 10px "Press Start 2P", monospace'
+        ctx.font = 'bold 14px monospace'
         ctx.fillText(btn.label, btn.x, btn.y)
       }
     }
@@ -5575,6 +5797,13 @@ window._joystick = new VirtualJoystick()
  * Integration Lead (메인 에이전트) 통합 버전
  */
 
+async function tryImport(path) {
+  try {
+    await import(path)
+  } catch (e) {
+    console.warn(`[game.js] optional module not found: ${path}`)
+  }
+}
 
 // ─────────────────────────────────────────
 // 전역 상태
@@ -6136,11 +6365,28 @@ function _loop(now) {
 // ─────────────────────────────────────────
 // 부트스트랩
 // ─────────────────────────────────────────
+;(async () => {
+  await tryImport('./entities/charsprites.js')
+  await tryImport('./entities/enemysprites.js')
+  await tryImport('./entities/player.js')
+  await tryImport('./entities/enemies.js')
+  await tryImport('./entities/skills.js')
+  await tryImport('./systems/tilemap.js')
+  await tryImport('./systems/spawner.js')
+  await tryImport('./systems/levelup.js')
+  await tryImport('./systems/score.js')
+  await tryImport('./systems/drops.js')
+  await tryImport('./systems/meta.js')
+  await tryImport('./ui/hud.js')
+  await tryImport('./ui/lobby.js')
+  await tryImport('./ui/result.js')
+  await tryImport('./ui/joystick.js')
 
-// 모든 모듈 이미 로드됨 — 동기 초기화
-window.dispatchEvent(new Event('gameReady'))
-Game.init()
+  // 모든 모듈 로드 완료 → gameReady 이벤트 발송
+  window.dispatchEvent(new Event('gameReady'))
 
+  Game.init()
+})()
 
   </script>
 

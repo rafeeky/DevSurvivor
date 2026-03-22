@@ -180,10 +180,10 @@ class Result {
     ctx.fillText(`(누적: ${total}pt)`, 400, 468)
 
     const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
-      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    if (window.drawUIButtonFrame) {
+      drawUIButtonFrame(ctx, r.x, r.y, r.w, r.h, '다시 도전', '#ffffff')
+      drawUIButtonFrame(ctx, m.x, m.y, m.w, m.h, '메뉴', '#ccaaff')
+      drawUIButtonFrame(ctx, u.x, u.y, u.w, u.h, '업그레이드', '#88ff88')
     } else {
       ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
@@ -191,13 +191,13 @@ class Result {
       ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
+      ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
+      ctx.fillStyle = '#ccaaff'
+      ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
+      ctx.fillStyle = '#88ff88'
+      ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
-    ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
-    ctx.fillStyle = '#ccaaff'
-    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
-    ctx.fillStyle = '#88ff88'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
 
     ctx.restore()
@@ -438,10 +438,10 @@ class Result {
 
     // 버튼
     const r = this._loseRestartRect, m = this._loseMenuRect, u = this._loseUpgradeRect
-    if (window.drawUIPanel) {
-      drawUIPanel(ctx, r.x, r.y, r.w, r.h)
-      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
-      drawUIPanel(ctx, u.x, u.y, u.w, u.h)
+    if (window.drawUIButtonFrame) {
+      drawUIButtonFrame(ctx, r.x, r.y, r.w, r.h, '재도전', '#ffffff')
+      drawUIButtonFrame(ctx, m.x, m.y, m.w, m.h, '메뉴', '#ccaaff')
+      drawUIButtonFrame(ctx, u.x, u.y, u.w, u.h, '업그레이드', '#88ff88')
     } else {
       ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
@@ -449,13 +449,13 @@ class Result {
       ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
+      ctx.fillStyle = '#ccaaff'
+      ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
+      ctx.fillStyle = '#88ff88'
+      ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
-    ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
-    ctx.fillStyle = '#ccaaff'
-    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
-    ctx.fillStyle = '#88ff88'
-    ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 
     ctx.restore()
   }

@@ -19,6 +19,8 @@
     bulb:         'assets/ui/bulb.png',
     granteddenied:'assets/ui/granteddenied.png',
     winloose:     'assets/ui/PNG/Win_loose.png',
+    mainmenu:     'assets/ui/PNG/Main_menu.png',
+    buttons:      'assets/ui/PNG/Buttons.png',
   }
 
   const _imgs = {}
@@ -134,6 +136,84 @@
     const i = Math.max(0, Math.min(3, index))
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(img, i * 8, 0, 8, 8, x, y, size, size)
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIMainMenuBtn(ctx, btnIdx, x, y, w, h, label, textColor, isPrimary)
+  //   Main_menu.png (496×176) col1 버튼 스프라이트
+  //   btnIdx: 0=RESUME, 1=RESTART, 2=SETTINGS, 3=LEVELS…  (y=34+idx*16, h=11)
+  //   버튼 스프라이트 → 배경으로 스케일, label 텍스트 위에 그림
+  // ─────────────────────────────────────────────────────────────
+  const _MM_BTN_X = 96, _MM_BTN_W = 80, _MM_BTN_H = 11, _MM_BTN_Y0 = 34, _MM_STEP = 16
+
+  window.drawUIMainMenuBtn = function (ctx, btnIdx, x, y, w, h, label, textColor, isPrimary) {
+    const img = _imgs.mainmenu
+    const srcY = _MM_BTN_Y0 + (btnIdx || 0) * _MM_STEP
+
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    if (img?.complete && img.naturalWidth > 0) {
+      // 버튼 스프라이트를 반투명 배경으로 사용
+      ctx.globalAlpha = 0.72
+      ctx.drawImage(img, _MM_BTN_X, srcY, _MM_BTN_W, _MM_BTN_H, x, y, w, h)
+      ctx.globalAlpha = 1
+    } else {
+      // 폴백
+      ctx.fillStyle = isPrimary ? 'rgba(18,22,38,0.94)' : 'rgba(12,14,24,0.88)'
+      ctx.strokeStyle = isPrimary ? '#3d5588' : '#252a3c'
+      ctx.lineWidth = isPrimary ? 1.5 : 1
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 4); ctx.fill(); ctx.stroke()
+    }
+    // 텍스트 오버레이
+    if (label) {
+      ctx.shadowColor = isPrimary ? 'rgba(100,160,255,0.6)' : 'transparent'
+      ctx.shadowBlur  = isPrimary ? 6 : 0
+      ctx.fillStyle   = textColor || (isPrimary ? '#e8eeff' : '#aaccff')
+      ctx.font        = isPrimary ? 'bold 28px "VT323", monospace' : 'bold 20px "VT323", monospace'
+      ctx.textAlign   = 'center'
+      ctx.fillText(label, x + w / 2, y + h / 2 + (isPrimary ? 9 : 7))
+    }
+    ctx.restore()
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIButtonFrame(ctx, x, y, w, h, label, textColor)
+  //   Buttons.png (400×528) 와이드 버튼 프레임
+  //   y=363-381 (h=18) 행 — 투명 내부, 테두리만 있는 프레임
+  //   배경은 caller가 미리 그림 (fillRect 등)
+  // ─────────────────────────────────────────────────────────────
+  const _BF_SY = 363, _BF_SH = 19, _BF_SW = 399
+
+  window.drawUIButtonFrame = function (ctx, x, y, w, h, label, textColor) {
+    const img = _imgs.buttons
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    if (img?.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, 0, _BF_SY, _BF_SW, _BF_SH, x, y, w, h)
+    }
+    if (label) {
+      ctx.fillStyle = textColor || '#ffffff'
+      ctx.font = 'bold 18px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(label, x + w / 2, y + h / 2 + 6)
+    }
+    ctx.restore()
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // drawUIMainMenuPanel(ctx, x, y, w, h)
+  //   Main_menu.png (496×176) col0 (x=0-79) 전체 패널 배경
+  //   버튼 목록이 포함된 나무/픽셀 아트 메뉴 패널
+  // ─────────────────────────────────────────────────────────────
+  window.drawUIMainMenuPanel = function (ctx, x, y, w, h) {
+    const img = _imgs.mainmenu
+    if (!img?.complete || img.naturalWidth === 0) return
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.globalAlpha = 0.55
+    ctx.drawImage(img, 0, 0, 80, 176, x, y, w, h)
+    ctx.globalAlpha = 1
+    ctx.restore()
   }
 
   // ─────────────────────────────────────────────────────────────

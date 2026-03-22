@@ -13,9 +13,9 @@ class Lobby {
       { key: 'amelia', x: 175, y: 142, w: 153, h: 330 },
       { key: 'vampir', x: 342, y: 142, w: 153, h: 330 },
     ]
-    this.startBtnRect   = { x: 510, y: 216, w: 275, h: 54 }
-    this.upgradeBtnRect = { x: 510, y: 284, w: 275, h: 46 }
-    this.renameBtnRect  = { x: 510, y: 408, w: 275, h: 34 }
+    this.startBtnRect   = { x: 510, y: 276, w: 275, h: 54 }
+    this.upgradeBtnRect = { x: 510, y: 348, w: 275, h: 46 }
+    this.renameBtnRect  = { x: 510, y: 460, w: 275, h: 34 }
     this._usernameInput = null
     this._usernameModalActive = false
     this._renameMode = false
@@ -243,11 +243,30 @@ class Lobby {
     ctx.fillStyle = 'rgba(0,0,0,0.65)'
     ctx.fillRect(0, 572, 800, 28)
 
-    // ── 3. 캐릭터 선택 헤더 ──────────────────────────────────────────
-    ctx.fillStyle = 'rgba(70,95,130,0.8)'
+    // ── 3. 좌상단 부제 & 통계 (우측 패널에서 이동) ────────────────────
+    ctx.textAlign = 'left'
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.fillRect(0, 0, 487, 52)
+
+    ctx.fillStyle = 'rgba(155,170,200,0.85)'
     ctx.font = '13px "VT323", monospace'
+    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 10, 18)
+
+    const _best = parseInt(localStorage.getItem('devsurvival_best') || '0')
+    const _pts  = window.MetaManager ? MetaManager.loadPoints() : 0
+    ctx.fillStyle = '#FFD700'
+    ctx.font = '13px "VT323", monospace'
+    ctx.fillText(`최고 기록: ${_best.toLocaleString()}점`, 10, 36)
+    ctx.fillStyle = '#77bbff'
+    ctx.fillText(`출시 포인트: ${_pts}`, 200, 36)
+
+    // ── 4. 캐릭터 선택 헤더 ──────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(0, 52, 487, 24)
+    ctx.fillStyle = '#8aa8cc'
+    ctx.font = 'bold 15px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('─── 캐릭터 선택 ───', 251, 136)
+    ctx.fillText('— 캐릭터 선택 —', 243, 68)
 
     // ── 4. 캐릭터 카드 (좌측) ────────────────────────────────────────
     this._drawCharCards(ctx)
@@ -268,42 +287,40 @@ class Lobby {
     ctx.font = 'bold 48px "VT323", monospace'
     ctx.fillText('SURVIVOR', tx, 128)
 
-    // 타이틀 하단 구분선
-    ctx.strokeStyle = 'rgba(80,110,190,0.4)'
-    ctx.lineWidth = 1
-    ctx.beginPath(); ctx.moveTo(514, 140); ctx.lineTo(792, 140); ctx.stroke()
+    // ── 6. 메인메뉴 패널 (monitor 하단) ─────────────────────────────
+    if (window.drawUIMainMenuPanel) {
+      drawUIMainMenuPanel(ctx, 488, 255, 312, 320)
+    } else {
+      ctx.fillStyle = 'rgba(8,12,28,0.88)'
+      ctx.fillRect(488, 255, 312, 320)
+    }
 
-    // 부제
-    ctx.fillStyle = 'rgba(155,170,200,0.75)'
-    ctx.font = '13px "VT323", monospace'
-    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', tx, 158)
+    // ── 7. 버튼 스택 (Main_menu.png) ─────────────────────────────────
+    if (window.drawUIMainMenuBtn) {
+      drawUIMainMenuBtn(ctx, 0, this.startBtnRect.x, this.startBtnRect.y, this.startBtnRect.w, this.startBtnRect.h, '▷  시작하기  ◁', '#e8eeff', true)
+      drawUIMainMenuBtn(ctx, 1, this.upgradeBtnRect.x, this.upgradeBtnRect.y, this.upgradeBtnRect.w, this.upgradeBtnRect.h, '업그레이드', '#aaccff', false)
+    } else {
+      this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
+      this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
+    }
 
-    // 통계
-    const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
-    const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
-    ctx.fillStyle = '#FFD700'
-    ctx.font = '13px "VT323", monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, tx, 177)
-    ctx.fillStyle = '#77bbff'
-    ctx.fillText(`출시 포인트: ${pts}`, tx, 194)
-
-    // ── 6. 버튼 스택 (Viking Survivors 스타일) ────────────────────────
-    this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
-    this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
-
-    // ── 7. 닉네임 영역 ──────────────────────────────────────────────
+    // ── 8. 닉네임 영역 ──────────────────────────────────────────────
     const uname = localStorage.getItem('devsurvival_username') || null
     if (uname) {
       ctx.fillStyle = '#5577aa'
       ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`👤  ${uname}`, tx, 384)
-      this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
+      ctx.fillText(`👤  ${uname}`, tx, 444)
+      if (window.drawUIMainMenuBtn) {
+        drawUIMainMenuBtn(ctx, 2, this.renameBtnRect.x, this.renameBtnRect.y, this.renameBtnRect.w, this.renameBtnRect.h, '닉네임 변경', '#6688aa', false)
+      } else {
+        this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
+      }
     } else {
       ctx.fillStyle = '#3d5066'
       ctx.font = '12px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('시작하기를 누르면 닉네임을 입력합니다', tx, 384)
+      ctx.fillText('시작하기를 누르면 닉네임을 입력합니다', tx, 444)
     }
 
     // ── 8. 조작 안내 (하단) ──────────────────────────────────────────
