@@ -14,12 +14,14 @@ const ENEMY_INTRO_DATA = {
 }
 
 const SPAWN_TIMELINE = [
-  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 0.6, maxEnemies: 12 },  // BoxBot 2×
-  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.5, maxEnemies: 8  },  // CartBot 80%
-  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 2.3, maxEnemies: 10 },  // CartBot 80%
-  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.9, maxEnemies: 12 },  // CartBot 80%
-  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.5, maxEnemies: 8  },  // CartBot 80%
-  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.5, maxEnemies: 10 },  // CartBot 80%
+  { from: 0,   to: 25,  types: ['BoxBot'],                          interval: 2.5, maxEnemies: 4  },
+  { from: 25,  to: 55,  types: ['BoxBot', 'CartBot'],               interval: 2.0, maxEnemies: 6  },
+  { from: 55,  to: 85,  types: ['CartBot', 'PCBot'],                interval: 1.8, maxEnemies: 8  },
+  { from: 85,  to: 115, types: ['CartBot', 'PCBot'],                interval: 1.3, maxEnemies: 10 },
+  { from: 115, to: 145, types: ['MirrorBot', 'CartBot'],            interval: 1.8, maxEnemies: 8  },
+  { from: 145, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'],   interval: 1.3, maxEnemies: 10 },
+  { from: 170, to: 185, types: ['MirrorBot', 'CartBot', 'PCBot'],   interval: 0.8, maxEnemies: 14 },
+  { from: 185, to: 190, types: ['MirrorBot', 'CartBot', 'PCBot'],   interval: 0.6, maxEnemies: 16 },
 ]
 
 class Spawner {
@@ -41,8 +43,8 @@ class Spawner {
     const t = GameState.gameTime
     const aliveCount = GameState.enemies.filter(e => e.isAlive()).length
 
-    // ── 2:50 이후: AIBot 단독 등장 ──────────────────────────
-    if (t >= 170) {
+    // ── 3:10 이후: AIBot 단독 등장 ──────────────────────────
+    if (t >= 190) {
       if (!this.aiBotSpawned) {
         this.aiBotSpawned = true
         GameState.aiBotIntro = true

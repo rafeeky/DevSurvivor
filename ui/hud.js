@@ -41,12 +41,43 @@ window.getSkillIcon = _getSkillIcon
 class HUD {
   constructor() {
     this._flyingGolds = []  // { x, y, targetX, targetY, type, t, duration, size }
+
+    // 일시정지 메뉴 클릭
+    window.addEventListener('click', (e) => {
+      if (GameState.screen !== 'paused') return
+      const canvas = document.getElementById('gameCanvas')
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const x = (e.clientX - rect.left) * (800 / rect.width)
+      const y = (e.clientY - rect.top)  * (600 / rect.height)
+
+      // 재개: y=252 ~ 288
+      if (x >= 300 && x <= 500 && y >= 252 && y <= 288) {
+        Game.resume(); return
+      }
+      // 메뉴로: y=306 ~ 342
+      if (x >= 300 && x <= 500 && y >= 306 && y <= 342) {
+        GameState.screen = 'lobby'; return
+      }
+      // 업그레이드: y=360 ~ 396
+      if (x >= 300 && x <= 500 && y >= 360 && y <= 396) {
+        GameState.screen = 'upgrade'; return
+      }
+    })
   }
 
   render(ctx, gameTime) {
     if (GameState.screen !== 'playing' && GameState.screen !== 'paused') return
     const player = Game.player
     if (!player) return
+
+    // 피격 플래시
+    if (window.GameState?.hitFlash > 0) {
+      const flashAlpha = GameState.hitFlash * 0.35
+      ctx.fillStyle = `rgba(255,30,30,${flashAlpha.toFixed(3)})`
+      ctx.fillRect(0, 0, 800, 600)
+    }
+
     this._drawTopBar(ctx, player, gameTime)
     this._drawBottomBar(ctx)
     this._drawDangerOverlay(ctx, gameTime)
@@ -55,6 +86,11 @@ class HUD {
     this._drawUnlockNotification(ctx)
     this._drawGoldHUD(ctx)
     this._updateFlyingGolds(ctx, 1/60)
+
+    // 일시정지 메뉴
+    if (GameState.screen === 'paused') {
+      this._drawPauseMenu(ctx)
+    }
   }
 
   _drawTopBar(ctx, player, gameTime) {
@@ -478,6 +514,45 @@ class HUD {
 
       startX += spacing
     }
+  }
+
+  _drawPauseMenu(ctx) {
+    // 반투명 오버레이
+    ctx.fillStyle = 'rgba(0,0,15,0.78)'
+    ctx.fillRect(0, 0, 800, 600)
+
+    // 패널
+    ctx.fillStyle = '#0d1a2e'
+    ctx.strokeStyle = '#4488ff'
+    ctx.lineWidth = 2
+    ctx.fillRect(260, 180, 280, 240)
+    ctx.strokeRect(260, 180, 280, 240)
+
+    // 제목
+    ctx.fillStyle = '#88aaff'
+    ctx.font = 'bold 28px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('— 일시정지 —', 400, 220)
+
+    // 버튼 3개: 재개 / 메뉴로 / 업그레이드
+    const btns = [
+      { label: '[ 재개 ]',    color: '#88ff88', y: 252 },
+      { label: '[ 메뉴로 ]',  color: '#ccaaff', y: 306 },
+      { label: '[ 업그레이드 ]', color: '#ffdd88', y: 360 },
+    ]
+    btns.forEach(({ label, color, y }) => {
+      ctx.fillStyle = 'rgba(30,50,80,0.7)'
+      ctx.strokeStyle = '#334466'
+      ctx.lineWidth = 1
+      ctx.fillRect(300, y, 200, 36)
+      ctx.strokeRect(300, y, 200, 36)
+      ctx.fillStyle = color
+      ctx.font = 'bold 18px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(label, 400, y + 24)
+    })
+
+    ctx.textAlign = 'left'
   }
 
   spawnFlyingGold(worldX, worldY, type) {

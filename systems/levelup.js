@@ -277,6 +277,19 @@ class LevelUpManager {
       if (emptySlot !== -1) sm.assignSkill(emptySlot, choice.skillId)
     } else if (choice.type === 'upgradeSkill' && sm) {
       sm.upgradeSkill(choice.skillId)
+      // 스킬 자동 슬롯 배정 (업그레이드 스킬이 슬롯에 없는 경우 보완)
+      {
+        const skillId = choice.skillId
+        const alreadyAssigned = sm.slots.some(s => s === skillId)
+        if (!alreadyAssigned) {
+          // 빈 슬롯 찾기
+          const emptySlot = sm.slots.findIndex(s => s === null || s === undefined)
+          if (emptySlot !== -1) {
+            sm.assignSkill(emptySlot, skillId)
+          }
+          // 빈 슬롯 없으면 슬롯 교체하지 않음 (기존 보유 스킬 강화는 슬롯 유지)
+        }
+      }
     } else if (choice.type === 'passiveSkill' && sm) {
       sm.assignPassive(choice.skillId)
     } else if (choice.type === 'statBoost' && player) {

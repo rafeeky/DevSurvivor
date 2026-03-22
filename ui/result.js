@@ -1,9 +1,11 @@
 class Result {
   constructor() {
-    this._winRestartRect  = { x: 200, y: 478, w: 170, h: 44 }
-    this._winUpgradeRect  = { x: 430, y: 478, w: 170, h: 44 }
-    this._loseRestartRect = { x: 200, y: 382, w: 170, h: 44 }
-    this._loseUpgradeRect = { x: 430, y: 382, w: 170, h: 44 }
+    this._winRestartRect  = { x: 78,  y: 478, w: 120, h: 44 }
+    this._winMenuRect     = { x: 340, y: 478, w: 120, h: 44 }
+    this._winUpgradeRect  = { x: 602, y: 478, w: 120, h: 44 }
+    this._loseRestartRect = { x: 78,  y: 382, w: 120, h: 44 }
+    this._loseMenuRect    = { x: 340, y: 382, w: 120, h: 44 }
+    this._loseUpgradeRect = { x: 602, y: 382, w: 120, h: 44 }
     this._resultStartTime = null
     this._rateSaved = false
     this._bindClick()
@@ -26,10 +28,14 @@ class Result {
       if (!win && elapsed < 1.2) return  // 패배 연출 중 버튼 무효
 
       const r = win ? this._winRestartRect  : this._loseRestartRect
+      const m = win ? this._winMenuRect     : this._loseMenuRect
       const u = win ? this._winUpgradeRect  : this._loseUpgradeRect
 
       if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
         Game.restart(); return
+      }
+      if (x >= m.x && x <= m.x + m.w && y >= m.y && y <= m.y + m.h) {
+        GameState.screen = 'lobby'; return
       }
       if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
         GameState.screen = 'upgrade'
@@ -143,18 +149,23 @@ class Result {
     ctx.font = '12px "VT323", monospace'
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
-    const r = this._winRestartRect, u = this._winUpgradeRect
+    const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
     if (window.drawUIPanel) {
       drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
       drawUIPanel(ctx, u.x, u.y, u.w, u.h)
     } else {
       ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#2a1a4a'; ctx.strokeStyle = '#8866cc'; ctx.lineWidth = 2
+      ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     }
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
+    ctx.fillStyle = '#ccaaff'
+    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
@@ -375,18 +386,23 @@ class Result {
     ctx.beginPath(); ctx.moveTo(px+24, py+234); ctx.lineTo(px+pw-24, py+234); ctx.stroke()
 
     // 버튼
-    const r = this._loseRestartRect, u = this._loseUpgradeRect
+    const r = this._loseRestartRect, m = this._loseMenuRect, u = this._loseUpgradeRect
     if (window.drawUIPanel) {
       drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
       drawUIPanel(ctx, u.x, u.y, u.w, u.h)
     } else {
       ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#2a1a4a'; ctx.strokeStyle = '#8866cc'; ctx.lineWidth = 2
+      ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     }
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
+    ctx.fillStyle = '#ccaaff'
+    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 

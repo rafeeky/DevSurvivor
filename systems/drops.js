@@ -74,6 +74,15 @@ class DropManager {
     if (type === 4) {
       const stored = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
       localStorage.setItem('devSurvivor_gold4', stored + 1)
+      // 뱀파이어 해금 직접 처리 (belt-and-suspenders)
+      if (window.MetaManager && !MetaManager.isUnlocked('vampir')) {
+        MetaManager.unlockChar('vampir')
+        if (window.GameState) {
+          GameState.unlockedChars = GameState.unlockedChars || {}
+          GameState.unlockedChars.vampir = true
+          GameState.unlockNotification = { msg: '뱀파이어 개발자 해금!', timer: 3.0 }
+        }
+      }
     }
 
     // Floating pickup text

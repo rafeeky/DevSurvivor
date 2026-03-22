@@ -3,16 +3,16 @@
 
 // ── 업그레이드 정의 ────────────────────────────────────────────────────────
 const META_UPGRADES = [
-  { name: '조금 더 버티기',     desc: 'maxHP +15/단계',       costs: [15, 25, 40], maxLevel: 3 },
-  { name: '더 빠르게 움직이기', desc: '이동속도 +15px/s',      costs: [10, 20, 35], maxLevel: 3 },
-  { name: '힘세고 강한 아침!',   desc: '스킬 데미지 +8%',       costs: [15, 25, 40], maxLevel: 3 },
-  { name: '경험치 증가',         desc: '경험치 획득 +15%',      costs: [20, 35, 50], maxLevel: 3 },
-  { name: '빠른 회복',           desc: '회복량 +10%',           costs: [15, 25, 40], maxLevel: 3 },
-  { name: '소음 차단',           desc: '받는 피해 -5%',         costs: [20, 35, 50], maxLevel: 3 },
-  { name: '준비된 하루',        desc: '시작 시 보호막 1 충전',  costs: [25],         maxLevel: 1 },
-  { name: '크런치 모드',         desc: '모든 쿨다운 -0.3초',    costs: [20, 35, 55], maxLevel: 3 },
-  { name: '인센티브',           desc: '출시 포인트 획득 +15%', costs: [25, 40],     maxLevel: 2 },
-  { name: '시작부터 하나 더',   desc: '시작 시 기본 스킬 지급', costs: [30],         maxLevel: 1 },
+  { name: '조금 더 버티기',     desc: 'maxHP +15/단계',       costs: [12, 22, 35], maxLevel: 3 },
+  { name: '더 빠르게 움직이기', desc: '이동속도 +15px/s',     costs: [8,  18, 30], maxLevel: 3 },
+  { name: '힘세고 강한 아침!',  desc: '스킬 데미지 +8%',      costs: [12, 22, 35], maxLevel: 3 },
+  { name: '경험치 증가',        desc: '경험치 획득 +15%',     costs: [15, 30, 45], maxLevel: 3 },
+  { name: '빠른 회복',          desc: '회복량 +10%',          costs: [12, 22, 35], maxLevel: 3 },
+  { name: '소음 차단',          desc: '받는 피해 -5%',        costs: [15, 30, 45], maxLevel: 3 },
+  { name: '준비된 하루',        desc: '시작 시 보호막 1 충전', costs: [20],         maxLevel: 1 },
+  { name: '크런치 모드',        desc: '모든 쿨다운 -0.3초',   costs: [15, 30, 45], maxLevel: 3 },
+  { name: '인센티브',          desc: '출시 포인트 획득 +15%', costs: [20, 35],     maxLevel: 2 },
+  { name: '시작부터 하나 더',   desc: '시작 시 기본 스킬 지급', costs: [25],        maxLevel: 1 },
 ]
 
 // ── MetaManager ────────────────────────────────────────────────────────────
@@ -42,11 +42,11 @@ const MetaManager = {
   // ── GDD 6.3: 출시 포인트 계산 ──────────────────────────────────────────
   calculateReleasePoints() {
     const s = GameState
-    let pts = 5                              // 플레이 시작 무조건
-    if (s.gameTime >= 60)           pts += 10  // 1분 생존
-    if (s.gameTime >= 120)          pts += 15  // 2분 생존
-    if (s._lastWin)                 pts += 20  // 3분 완주
-    if (s.killCount >= 50)          pts += 10  // 적 50마리 처치
+    let pts = 8                              // 플레이 시작 무조건
+    if (s.gameTime >= 60)           pts += 12  // 1분 생존
+    if (s.gameTime >= 120)          pts += 18  // 2분 생존
+    if (s._lastWin)                 pts += 25  // 3분 완주
+    if (s.killCount >= 50)          pts += 12  // 적 50마리 처치
     pts += (s.mirrorBotKills || 0) * 8         // 미러봇 처치 × 8
     if (s.aiBotReached)             pts += 15  // AI봇 도달
     if (s.aiBotKilled)              pts += 30  // AI봇 처치

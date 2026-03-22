@@ -60,6 +60,16 @@ window.inputKeys = inputKeys
 
 window.addEventListener('keydown', e => {
   inputKeys[e.code] = true
+  // ESC: 일시정지 토글
+  if (e.code === 'Escape') {
+    if (GameState.screen === 'playing' && !window._levelUpManager?.pendingLevelUp) {
+      Game.pause()
+    } else if (GameState.screen === 'paused') {
+      Game.resume()
+    }
+    return
+  }
+  // 기존 Q/W/E/R 처리 유지
   if (
     ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].includes(e.code) &&
     GameState.screen === 'playing' &&
@@ -83,6 +93,12 @@ function updateCamera(player) {
   const WH = window.WORLD_H || 600
   Camera.x = Math.max(0, Math.min(WW - 800, player.x - 400))
   Camera.y = Math.max(0, Math.min(WH - 600, player.y - 300))
+  // 카메라 쉐이크
+  if (GameState.cameraShake && GameState.cameraShake.timer > 0) {
+    const mag = GameState.cameraShake.mag * (GameState.cameraShake.timer / 0.35)
+    Camera.x += (Math.random() - 0.5) * mag
+    Camera.y += (Math.random() - 0.5) * mag
+  }
 }
 
 // ─────────────────────────────────────────
@@ -215,6 +231,9 @@ window.Game = {
       aiBotIntro: false,
       aiBotIntroTimer: 0,
       enemyAnnouncement: null,
+      cameraShake: { mag: 0, timer: 0 },
+      hitFlash: 0,
+      _bossAudioPlayed: false,
     })
 
     // 카메라 초기화
@@ -229,9 +248,13 @@ window.Game = {
       if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
       // 캐릭터 고유 패시브 적용 (메타 이후에 적용해 수치 누적)
       _applyCharacterPassive(Game.player, Game.skillManager)
-      // 시작 스킬 없으면 디버그 무료 지급
-      if (Game.skillManager && !Game.skillManager.slots.some(Boolean)) {
-        Game.skillManager.assignSkill(0, '디버그')
+      // 캐릭터별 초기 스킬 지급
+      if (Game.skillManager) {
+        const charSkills = { adam: '디버그', amelia: '긴급수정', vampir: '피규어청소' }
+        const startSkill = charSkills[GameState.selectedCharacter] || '디버그'
+        if (!Game.skillManager.slots.some(Boolean)) {
+          Game.skillManager.assignSkill(0, startSkill)
+        }
       }
     }
 
@@ -276,6 +299,7 @@ window.Game = {
     }
 
     _lastTime = performance.now()
+    window.GameAudio?.startBGM()
   },
 
   pause() {
@@ -301,6 +325,9 @@ window.Game = {
     if (window.MetaManager) {
       GameState.lastEarnedPoints = MetaManager.awardPoints()
     }
+    window.GameAudio?.stopBGM()
+    if (win) window.GameAudio?.playWin()
+    else window.GameAudio?.playGameOver()
   },
 
   restart() {
@@ -326,6 +353,10 @@ function _loop(now) {
   if (gs.screen === 'playing' && !gs.isPaused) {
 
     gs.gameTime += deltaTime
+
+    // hitFlash / cameraShake 감소
+    if (gs.hitFlash > 0) gs.hitFlash = Math.max(0, gs.hitFlash - deltaTime * 5)
+    if (gs.cameraShake?.timer > 0) gs.cameraShake.timer = Math.max(0, gs.cameraShake.timer - deltaTime)
 
     if (player) {
       player.update(deltaTime, inputKeys)
@@ -362,6 +393,9 @@ function _loop(now) {
         if (dist < hitR) {
           if (!(enemy._hitCooldown > 0)) {
             player.takeDamage(enemy.damage || 10)
+            gs.hitFlash = 1.0
+            gs.cameraShake = { mag: 10, timer: 0.35 }
+            window.GameAudio?.playHit()
             enemy._hitCooldown = 0.5
           }
         }
@@ -372,7 +406,7 @@ function _loop(now) {
 
       if (gs.aiBotIntro) {
         gs.aiBotIntroTimer += deltaTime
-        if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
+        if (gs.aiBotIntroTimer >= 3.5) gs.aiBotIntro = false
       }
 
       if (gs.enemyAnnouncement?.timer > 0) {
@@ -467,20 +501,37 @@ function _loop(now) {
       ctx.restore()
     }
 
-    // AIBot 등장 연출
+    // AIBot 등장 연출 (3.5초간 표시)
     if (gs.aiBotIntro) {
-      const alpha = 1 - gs.aiBotIntroTimer / 0.5
-      ctx.fillStyle = `rgba(0,0,0,${alpha * 0.85})`
-      ctx.fillRect(0, 0, 800, 600)
+      // 보스 등장 음향 (첫 프레임에만)
+      if (gs.aiBotIntroTimer < 0.05 && !gs._bossAudioPlayed) {
+        gs._bossAudioPlayed = true
+        window.GameAudio?.playBossIntro()
+      }
+      // 알파: 0→0.3s 페이드인, 0.3→2.7s 유지, 2.7→3.5s 페이드아웃
+      const t = gs.aiBotIntroTimer
+      let alpha
+      if (t < 0.3) alpha = t / 0.3
+      else if (t < 2.7) alpha = 1.0
+      else alpha = Math.max(0, 1 - (t - 2.7) / 0.8)
+
       ctx.save()
       ctx.globalAlpha = alpha
+      ctx.fillStyle = 'rgba(0,0,0,0.85)'
+      ctx.fillRect(0, 0, 800, 600)
       ctx.fillStyle = '#ff2222'
-      ctx.font = 'bold 48px "VT323", cursive'
+      ctx.font = 'bold 52px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '28px "VT323", cursive'
-      ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
+      ctx.shadowColor = '#ff0000'
+      ctx.shadowBlur = 20
+      ctx.fillText('⚠ AI가 직접 나타났다', 400, 256)
+      ctx.shadowBlur = 0
+      ctx.fillStyle = '#ffaaaa'
+      ctx.font = '30px "VT323", monospace'
+      ctx.fillText('최후의 결전. 살아남아라.', 400, 304)
+      ctx.fillStyle = '#ff4444'
+      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.fillText('[ 미러워커 ]', 400, 350)
       ctx.restore()
     }
   }

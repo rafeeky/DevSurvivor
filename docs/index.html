@@ -2259,12 +2259,14 @@ const ENEMY_INTRO_DATA = {
 }
 
 const SPAWN_TIMELINE = [
-  { from: 0,   to: 30,  types: ['BoxBot'],                    interval: 0.6, maxEnemies: 12 },  // BoxBot 2×
-  { from: 30,  to: 60,  types: ['BoxBot', 'CartBot'],         interval: 2.5, maxEnemies: 8  },  // CartBot 80%
-  { from: 60,  to: 100, types: ['CartBot', 'PCBot'],          interval: 2.3, maxEnemies: 10 },  // CartBot 80%
-  { from: 100, to: 130, types: ['CartBot', 'PCBot'],          interval: 1.9, maxEnemies: 12 },  // CartBot 80%
-  { from: 130, to: 155, types: ['MirrorBot', 'CartBot'],      interval: 2.5, maxEnemies: 8  },  // CartBot 80%
-  { from: 155, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'], interval: 2.5, maxEnemies: 10 },  // CartBot 80%
+  { from: 0,   to: 25,  types: ['BoxBot'],                          interval: 2.5, maxEnemies: 4  },
+  { from: 25,  to: 55,  types: ['BoxBot', 'CartBot'],               interval: 2.0, maxEnemies: 6  },
+  { from: 55,  to: 85,  types: ['CartBot', 'PCBot'],                interval: 1.8, maxEnemies: 8  },
+  { from: 85,  to: 115, types: ['CartBot', 'PCBot'],                interval: 1.3, maxEnemies: 10 },
+  { from: 115, to: 145, types: ['MirrorBot', 'CartBot'],            interval: 1.8, maxEnemies: 8  },
+  { from: 145, to: 170, types: ['MirrorBot', 'CartBot', 'PCBot'],   interval: 1.3, maxEnemies: 10 },
+  { from: 170, to: 185, types: ['MirrorBot', 'CartBot', 'PCBot'],   interval: 0.8, maxEnemies: 14 },
+  { from: 185, to: 190, types: ['MirrorBot', 'CartBot', 'PCBot'],   interval: 0.6, maxEnemies: 16 },
 ]
 
 class Spawner {
@@ -2286,8 +2288,8 @@ class Spawner {
     const t = GameState.gameTime
     const aliveCount = GameState.enemies.filter(e => e.isAlive()).length
 
-    // ── 2:50 이후: AIBot 단독 등장 ──────────────────────────
-    if (t >= 170) {
+    // ── 3:10 이후: AIBot 단독 등장 ──────────────────────────
+    if (t >= 190) {
       if (!this.aiBotSpawned) {
         this.aiBotSpawned = true
         GameState.aiBotIntro = true
@@ -2477,6 +2479,15 @@ class DropManager {
     if (type === 4) {
       const stored = parseInt(localStorage.getItem('devSurvivor_gold4') || '0')
       localStorage.setItem('devSurvivor_gold4', stored + 1)
+      // 뱀파이어 해금 직접 처리 (belt-and-suspenders)
+      if (window.MetaManager && !MetaManager.isUnlocked('vampir')) {
+        MetaManager.unlockChar('vampir')
+        if (window.GameState) {
+          GameState.unlockedChars = GameState.unlockedChars || {}
+          GameState.unlockedChars.vampir = true
+          GameState.unlockNotification = { msg: '뱀파이어 개발자 해금!', timer: 3.0 }
+        }
+      }
     }
 
     // Floating pickup text
@@ -2543,12 +2554,15 @@ window.dropManager = _dropManager
 const _LU_ICON_BY_ID = {
   '긴급수정':    'assets/custom/icons/skill_emergency_fix.png',
   '디버그':      'assets/custom/icons/skill_debug.png',
-  '우선순위정리':'assets/custom/icons/skill_priority_sort.png',
+  '우선순위정리':'assets/custom/icons/skill_sing.png',       // 변경: priority_sort → sing
   '커피':        'assets/custom/icons/skill_coffee.png',
-  '피규어청소':  'assets/custom/icons/skill_figure_clean.png',
+  '피규어청소':  'assets/custom/icons/skill_mental.png',     // 변경: figure_clean → mental
   '강아지':      'assets/custom/icons/skill_pet_dog.png',
   '낮잠':        'assets/custom/icons/skill_nap.png',
   '자동저장':    'assets/custom/icons/skill_autosave.png',
+  '산책':        'assets/custom/icons/skill_walk.png',
+  'hp강화':      'assets/custom/icons/upgrade_heart.png',
+  'speed강화':   'assets/custom/icons/upgrade_speed.png',
 }
 const _luIconCache = {}
 function _getLUIcon(skillId) {
@@ -2595,7 +2609,7 @@ const LEVEL_UP_CHOICES = {
   // 신규 스킬
   '긴급수정_신규': {
     label: '긴급 패치',
-    desc: '주변 범위 공격 (반경 120px, 피해 40)',
+    desc: '주변 범위 공격 (반경 120px, 피해 40) [LV.1]',
     type: 'newSkill',
     skillId: '긴급수정',
   },
@@ -2608,33 +2622,65 @@ const LEVEL_UP_CHOICES = {
   // 기존 스킬 강화
   '긴급수정_강화': {
     label: '긴급 패치 강화',
-    desc: '피해 +20 / 범위 +40px / 쿨다운 감소',
+    desc: 'LV.2: 피해+20 / LV.MAX: 범위+40px',
     type: 'upgradeSkill',
     skillId: '긴급수정',
   },
   '디버그_강화': {
     label: '디버그 강화',
-    desc: '피해 +30 / 관통(2명) / 쿨다운 감소',
+    desc: 'LV.2: 피해+30 / LV.MAX: 2명 관통',
     type: 'upgradeSkill',
     skillId: '디버그',
+  },
+  '우선순위정리_강화': {
+    label: '고성방가 강화',
+    desc: 'LV.2: 피해+15 / LV.MAX: 범위+20px·쿨 4초',
+    type: 'upgradeSkill',
+    skillId: '우선순위정리',
+  },
+  '커피_강화': {
+    label: '커피 한 잔 강화',
+    desc: 'LV.2: 속도+60%·쿨감소↑ / LV.MAX: 지속 8초',
+    type: 'upgradeSkill',
+    skillId: '커피',
+  },
+  '피규어청소_강화': {
+    label: '멘탈관리 강화',
+    desc: 'LV.2: 피해감소 50%·5초 / LV.MAX: 넉백범위+60px·HP+10%',
+    type: 'upgradeSkill',
+    skillId: '피규어청소',
+  },
+  '강아지_강화': {
+    label: '쓰다듬기 강화',
+    desc: 'LV.2: HP 35% 회복 / LV.MAX: 보호막 +1',
+    type: 'upgradeSkill',
+    skillId: '강아지',
+  },
+  '낮잠_강화': {
+    label: '낮잠자기 강화',
+    desc: 'LV.2: HP 65% 회복 / LV.MAX: 정지 1초로 단축',
+    type: 'upgradeSkill',
+    skillId: '낮잠',
   },
   // 기본 능력 강화
   'hp강화': {
     label: 'HP +15',
     desc: '최대 체력이 15 증가합니다',
     type: 'statBoost',
+    iconId: 'hp강화',
     apply: (player) => { player.maxHp += 15; player.hp = Math.min(player.hp + 15, player.maxHp) },
   },
   'speed강화': {
     label: '이동속도 +20',
     desc: '이동 속도가 20px/s 증가합니다',
     type: 'statBoost',
+    iconId: 'speed강화',
     apply: (player) => { player.baseSpeed += 20 },
   },
   // M4 액티브 스킬
   '우선순위정리_신규': {
     label: '고성방가',
-    desc: '전방 부채꼴 160px, 피해 30, 넉백 100px, 쿨 7초',
+    desc: '전방 부채꼴 160px, 피해 30, 넉백 100px [LV.1]',
     type: 'newSkill',
     skillId: '우선순위정리',
   },
@@ -2646,13 +2692,13 @@ const LEVEL_UP_CHOICES = {
   },
   '피규어청소_신규': {
     label: '멘탈관리',
-    desc: '피해 감소 40% (4초) + 주변 적 넉백, 쿨 12초',
+    desc: '피해 감소 40% (4초) + 주변 적 넉백 [LV.1]',
     type: 'newSkill',
     skillId: '피규어청소',
   },
   '강아지_신규': {
     label: '쓰다듬기',
-    desc: '최대 HP 25% 즉시 회복, 쿨 20초',
+    desc: '최대 HP 25% 즉시 회복 [LV.1]',
     type: 'newSkill',
     skillId: '강아지',
   },
@@ -2724,9 +2770,36 @@ class LevelUpManager {
       if (!ownedSlots.includes('낮잠'))        choices.push(LEVEL_UP_CHOICES['낮잠_신규'])
     }
 
-    // 보유 스킬 강화 선택지
-    if (ownedSlots.includes('긴급수정')) choices.push(LEVEL_UP_CHOICES['긴급수정_강화'])
-    if (ownedSlots.includes('디버그'))   choices.push(LEVEL_UP_CHOICES['디버그_강화'])
+    // 보유 스킬 강화 선택지 (레벨 3 미만인 경우만)
+    const sm2 = Game.skillManager
+    if (ownedSlots.includes('긴급수정')) {
+      const lv = sm2?.skillDefs?.['긴급수정']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['긴급수정_강화'])
+    }
+    if (ownedSlots.includes('디버그')) {
+      const lv = sm2?.skillDefs?.['디버그']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['디버그_강화'])
+    }
+    if (ownedSlots.includes('우선순위정리')) {
+      const lv = sm2?.skillDefs?.['우선순위정리']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['우선순위정리_강화'])
+    }
+    if (ownedSlots.includes('커피')) {
+      const lv = sm2?.skillDefs?.['커피']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['커피_강화'])
+    }
+    if (ownedSlots.includes('피규어청소')) {
+      const lv = sm2?.skillDefs?.['피규어청소']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['피규어청소_강화'])
+    }
+    if (ownedSlots.includes('강아지')) {
+      const lv = sm2?.skillDefs?.['강아지']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['강아지_강화'])
+    }
+    if (ownedSlots.includes('낮잠')) {
+      const lv = sm2?.skillDefs?.['낮잠']?.level || 1
+      if (lv < 3) choices.push(LEVEL_UP_CHOICES['낮잠_강화'])
+    }
 
     // 미보유 패시브 스킬
     if (!activePassives.includes('자동저장')) choices.push(LEVEL_UP_CHOICES['자동저장_신규'])
@@ -2752,6 +2825,19 @@ class LevelUpManager {
       if (emptySlot !== -1) sm.assignSkill(emptySlot, choice.skillId)
     } else if (choice.type === 'upgradeSkill' && sm) {
       sm.upgradeSkill(choice.skillId)
+      // 스킬 자동 슬롯 배정 (업그레이드 스킬이 슬롯에 없는 경우 보완)
+      {
+        const skillId = choice.skillId
+        const alreadyAssigned = sm.slots.some(s => s === skillId)
+        if (!alreadyAssigned) {
+          // 빈 슬롯 찾기
+          const emptySlot = sm.slots.findIndex(s => s === null || s === undefined)
+          if (emptySlot !== -1) {
+            sm.assignSkill(emptySlot, skillId)
+          }
+          // 빈 슬롯 없으면 슬롯 교체하지 않음 (기존 보유 스킬 강화는 슬롯 유지)
+        }
+      }
     } else if (choice.type === 'passiveSkill' && sm) {
       sm.assignPassive(choice.skillId)
     } else if (choice.type === 'statBoost' && player) {
@@ -2828,24 +2914,25 @@ class LevelUpManager {
       }
 
       // ── 상단 아이콘 박스 (카드 상단 중앙) ────────────────────────────
-      const icon = _getLUIcon(c.skillId)
+      const _iconKey = c.skillId || c.iconId
+      const icon = _getLUIcon(_iconKey)
       const iconSize = 80
       const iconX = cx + (cardW - iconSize) / 2
       const iconY = cy + 22
       // 박스 배경
       ctx.fillStyle = 'rgba(10,20,55,0.9)'
       ctx.fillRect(iconX, iconY, iconSize, iconSize)
-      ctx.strokeStyle = c.skillId ? '#4488cc' : '#2a3a55'
+      ctx.strokeStyle = _iconKey ? '#4488cc' : '#2a3a55'
       ctx.lineWidth = 1.5
       ctx.strokeRect(iconX, iconY, iconSize, iconSize)
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.imageSmoothingEnabled = true
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconX, iconY, iconSize, iconSize)
         ctx.imageSmoothingEnabled = false
-      } else if (c.skillId) {
+      } else if (_iconKey) {
         // 로딩 중 플레이스홀더
         ctx.fillStyle = 'rgba(68,102,170,0.25)'
-        ctx.fillRect(iconX + 4, iconY + 4, iconSize - 8, iconSize - 8)
+        ctx.fillRect(iconX, iconY, iconSize, iconSize)
       }
 
       // 키 레이블 (좌상단)
@@ -2896,19 +2983,6 @@ class LevelUpManager {
       }
 
       this.choiceRects.push({ x: cx, y: cy, w: cardW, h: cardH })
-
-      // 카드 하단 화살표 버튼 힌트 (ui-pack-4 Arrows)
-      if (window.drawUIArrow) {
-        const arrowY = cy + cardH + 6
-        const arrowSize = 20
-        // 왼쪽 카드 → 왼쪽 화살표, 오른쪽 카드 → 오른쪽 화살표, 가운데는 양쪽
-        if (i === 0) drawUIArrow(ctx, 'right', 'purple', cx + cardW - arrowSize - 4, arrowY, arrowSize)
-        if (i === 1) {
-          drawUIArrow(ctx, 'left',  'purple', cx + 4,             arrowY, arrowSize)
-          drawUIArrow(ctx, 'right', 'purple', cx + cardW - arrowSize - 4, arrowY, arrowSize)
-        }
-        if (i === 2) drawUIArrow(ctx, 'left', 'purple', cx + 4, arrowY, arrowSize)
-      }
     }
 
     ctx.textAlign = 'left'
@@ -2982,6 +3056,130 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
 
   </script>
 
+  <!-- systems/audio.js -->
+  <script>
+;(function () {
+  let _ctx = null
+  let _bgmNodes = []
+  let _bgmActive = false
+
+  function _getCtx() {
+    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)()
+    if (_ctx.state === 'suspended') _ctx.resume()
+    return _ctx
+  }
+
+  function _playTone(freq, type, duration, gainVal, startDelay = 0) {
+    try {
+      const ctx = _getCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = type
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(gainVal, ctx.currentTime + startDelay)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startDelay + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(ctx.currentTime + startDelay)
+      osc.stop(ctx.currentTime + startDelay + duration)
+    } catch(e) {}
+  }
+
+  function _playNoise(duration, gainVal) {
+    try {
+      const ctx = _getCtx()
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate)
+      const d = buf.getChannelData(0)
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length)
+      const src = ctx.createBufferSource()
+      src.buffer = buf
+      const gain = ctx.createGain()
+      gain.gain.setValueAtTime(gainVal, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration)
+      src.connect(gain)
+      gain.connect(ctx.destination)
+      src.start()
+    } catch(e) {}
+  }
+
+  const GameAudio = {
+    // 플레이어 피격음: 짧은 노이즈 + 낮은 톤
+    playHit() {
+      _playNoise(0.12, 0.25)
+      _playTone(180, 'sawtooth', 0.15, 0.12)
+    },
+    // 적 처치음: 상승 톤 2개
+    playKill() {
+      _playTone(330, 'square', 0.08, 0.1)
+      _playTone(440, 'square', 0.08, 0.1, 0.06)
+    },
+    // 레벨업: 밝은 아르페지오
+    playLevelUp() {
+      [330, 392, 494, 659].forEach((f, i) => _playTone(f, 'sine', 0.18, 0.18, i * 0.07))
+    },
+    // 보스 등장: 드라마틱 저음 + 노이즈
+    playBossIntro() {
+      _playNoise(0.5, 0.4)
+      _playTone(80, 'sawtooth', 1.2, 0.3)
+      _playTone(60, 'square', 1.5, 0.2, 0.1)
+    },
+    // 승리: 밝은 팡파레
+    playWin() {
+      [523, 659, 784, 1047].forEach((f, i) => _playTone(f, 'sine', 0.3, 0.2, i * 0.1))
+    },
+    // 패배: 하강 음
+    playGameOver() {
+      [440, 330, 220, 110].forEach((f, i) => _playTone(f, 'sawtooth', 0.3, 0.18, i * 0.15))
+    },
+    // BGM: 반복 멜로디 루프 (8비트 스타일)
+    startBGM() {
+      if (_bgmActive) return
+      _bgmActive = true
+      const ctx = _getCtx()
+      // 멜로디 패턴: [freq, duration]
+      const melody = [
+        [220,0.25],[247,0.25],[262,0.25],[294,0.5],
+        [330,0.25],[294,0.25],[262,0.25],[247,0.5],
+        [220,0.25],[262,0.25],[330,0.25],[392,0.5],
+        [330,0.25],[262,0.25],[247,0.25],[220,1.0],
+      ]
+      const totalDur = melody.reduce((s,[,d]) => s + d, 0)
+      function scheduleMelody(startTime) {
+        if (!_bgmActive) return
+        let t = startTime
+        melody.forEach(([freq, dur]) => {
+          try {
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.type = 'square'
+            osc.frequency.value = freq
+            gain.gain.setValueAtTime(0.04, t)
+            gain.gain.setValueAtTime(0.04, t + dur * 0.7)
+            gain.gain.linearRampToValueAtTime(0.0, t + dur)
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.start(t)
+            osc.stop(t + dur)
+            _bgmNodes.push({ osc, gain })
+          } catch(e) {}
+          t += dur
+        })
+        // 루프 예약
+        setTimeout(() => scheduleMelody(ctx.currentTime + 0.05), (totalDur - 0.5) * 1000)
+      }
+      scheduleMelody(ctx.currentTime + 0.05)
+    },
+    stopBGM() {
+      _bgmActive = false
+      _bgmNodes.forEach(n => { try { n.osc.stop(); } catch(e) {} })
+      _bgmNodes = []
+    },
+  }
+
+  window.GameAudio = GameAudio
+})()
+  </script>
+
   <!-- systems/meta.js -->
   <script>
 // systems/meta.js — GDD Part 6.3 출시 포인트 & Part 6.4 메타 업그레이드
@@ -2989,22 +3187,22 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
 
 // ── 업그레이드 정의 ────────────────────────────────────────────────────────
 const META_UPGRADES = [
-  { name: '조금 더 버티기',     desc: 'maxHP +15/단계',       costs: [15, 25, 40], maxLevel: 3 },
-  { name: '더 빠르게 움직이기', desc: '이동속도 +15px/s',      costs: [10, 20, 35], maxLevel: 3 },
-  { name: '정리 속도 높이기',   desc: '스킬 데미지 +8%',       costs: [15, 25, 40], maxLevel: 3 },
-  { name: '빠른 판단',          desc: '경험치 획득 +15%',      costs: [20, 35, 50], maxLevel: 3 },
-  { name: '회복 습관',          desc: '회복량 +10%',           costs: [15, 25, 40], maxLevel: 3 },
-  { name: '실수 줄이기',        desc: '받는 피해 -5%',         costs: [20, 35, 50], maxLevel: 3 },
-  { name: '준비된 하루',        desc: '시작 시 보호막 1 충전',  costs: [25],         maxLevel: 1 },
-  { name: '손이 빨라짐',        desc: '모든 쿨다운 -0.3초',    costs: [20, 35, 55], maxLevel: 3 },
-  { name: '인센티브',           desc: '출시 포인트 획득 +15%', costs: [25, 40],     maxLevel: 2 },
-  { name: '시작부터 하나 더',   desc: '시작 시 기본 스킬 지급', costs: [30],         maxLevel: 1 },
+  { name: '조금 더 버티기',     desc: 'maxHP +15/단계',       costs: [12, 22, 35], maxLevel: 3 },
+  { name: '더 빠르게 움직이기', desc: '이동속도 +15px/s',     costs: [8,  18, 30], maxLevel: 3 },
+  { name: '힘세고 강한 아침!',  desc: '스킬 데미지 +8%',      costs: [12, 22, 35], maxLevel: 3 },
+  { name: '경험치 증가',        desc: '경험치 획득 +15%',     costs: [15, 30, 45], maxLevel: 3 },
+  { name: '빠른 회복',          desc: '회복량 +10%',          costs: [12, 22, 35], maxLevel: 3 },
+  { name: '소음 차단',          desc: '받는 피해 -5%',        costs: [15, 30, 45], maxLevel: 3 },
+  { name: '준비된 하루',        desc: '시작 시 보호막 1 충전', costs: [20],         maxLevel: 1 },
+  { name: '크런치 모드',        desc: '모든 쿨다운 -0.3초',   costs: [15, 30, 45], maxLevel: 3 },
+  { name: '인센티브',          desc: '출시 포인트 획득 +15%', costs: [20, 35],     maxLevel: 2 },
+  { name: '시작부터 하나 더',   desc: '시작 시 기본 스킬 지급', costs: [25],        maxLevel: 1 },
 ]
 
 // ── MetaManager ────────────────────────────────────────────────────────────
 const MetaManager = {
-  STORAGE_POINTS:   'devsurvival_points',
-  STORAGE_UPGRADES: 'devsurvival_upgrades',
+  get STORAGE_POINTS()   { const u = localStorage.getItem('devsurvival_username') || 'Guest'; return `devsurvival_points_${u}` },
+  get STORAGE_UPGRADES() { const u = localStorage.getItem('devsurvival_username') || 'Guest'; return `devsurvival_upgrades_${u}` },
 
   loadPoints() {
     return parseInt(localStorage.getItem(this.STORAGE_POINTS) || '0')
@@ -3028,11 +3226,11 @@ const MetaManager = {
   // ── GDD 6.3: 출시 포인트 계산 ──────────────────────────────────────────
   calculateReleasePoints() {
     const s = GameState
-    let pts = 5                              // 플레이 시작 무조건
-    if (s.gameTime >= 60)           pts += 10  // 1분 생존
-    if (s.gameTime >= 120)          pts += 15  // 2분 생존
-    if (s._lastWin)                 pts += 20  // 3분 완주
-    if (s.killCount >= 50)          pts += 10  // 적 50마리 처치
+    let pts = 8                              // 플레이 시작 무조건
+    if (s.gameTime >= 60)           pts += 12  // 1분 생존
+    if (s.gameTime >= 120)          pts += 18  // 2분 생존
+    if (s._lastWin)                 pts += 25  // 3분 완주
+    if (s.killCount >= 50)          pts += 12  // 적 50마리 처치
     pts += (s.mirrorBotKills || 0) * 8         // 미러봇 처치 × 8
     if (s.aiBotReached)             pts += 15  // AI봇 도달
     if (s.aiBotKilled)              pts += 30  // AI봇 처치
@@ -3078,19 +3276,19 @@ const MetaManager = {
     // 2. 정리 속도 높이기: 스킬 데미지 배율 (skills.js에서 참조)
     GameState.skillDamageMult = 1 + 0.08 * (lv[2] || 0)
 
-    // 3. 빠른 판단: 경험치 배율 (enemies.js에서 참조)
+    // 3. 경험치 증가: 경험치 배율 (enemies.js에서 참조)
     GameState.expMultiplier = 1 + 0.15 * (lv[3] || 0)
 
-    // 4. 회복 습관: 회복량 배율 (skills.js에서 참조)
+    // 4. 빠른 회복: 회복량 배율 (skills.js에서 참조)
     GameState.healMultiplier = 1 + 0.10 * (lv[4] || 0)
 
-    // 5. 실수 줄이기: 받는 피해 감소 -5%/lv (영구 패시브)
+    // 5. 소음 차단: 받는 피해 감소 -5%/lv (영구 패시브)
     if (lv[5] > 0) player.applyBuff('damageReduction', 0.05 * lv[5], Infinity)
 
     // 6. 준비된 하루: 시작 시 보호막 1
     if (lv[6] > 0) player.addShield(1)
 
-    // 7. 손이 빨라짐: 모든 액티브 스킬 쿨다운 -0.3초/lv
+    // 7. 크런치 모드: 모든 액티브 스킬 쿨다운 -0.3초/lv
     if (lv[7] > 0 && skillManager) {
       const red = 0.3 * lv[7]
       for (const def of Object.values(skillManager.skillDefs)) {
@@ -3127,16 +3325,16 @@ const MetaManager = {
 
   // ── 메타 업그레이드 아이콘 매핑 ───────────────────────────────────────
   _iconMap: {
-    '조금 더 버티기':     'assets/custom/icons/skill_emergency_fix.png',
-    '더 빠르게 움직이기': 'assets/custom/icons/skill_coffee.png',
-    '정리 속도 높이기':   'assets/custom/icons/skill_debug.png',
-    '빠른 판단':          'assets/custom/icons/skill_priority_sort.png',
-    '회복 습관':          'assets/custom/icons/skill_pet_dog.png',
-    '실수 줄이기':        'assets/custom/icons/skill_figure_clean.png',
-    '준비된 하루':        'assets/custom/icons/skill_autosave.png',
-    '손이 빨라짐':        'assets/custom/icons/skill_emergency_fix.png',
-    '인센티브':       'assets/custom/icons/skill_priority_sort.png',
-    '시작부터 하나 더':   'assets/custom/icons/skill_nap.png',
+    '조금 더 버티기':     'assets/custom/icons/upgrade_heart.png',
+    '더 빠르게 움직이기': 'assets/custom/icons/upgrade_speed.png',
+    '힘세고 강한 아침!':  'assets/custom/icons/upgrade_health.png',
+    '경험치 증가':        'assets/custom/icons/upgrade_exp.png',
+    '빠른 회복':          'assets/custom/icons/upgrade_hp.png',
+    '소음 차단':          'assets/custom/icons/upgrade_noise.png',
+    '준비된 하루':        'assets/custom/icons/upgrade_shield.png',
+    '크런치 모드':        'assets/custom/icons/upgrade_crunch.png',
+    '인센티브':           'assets/custom/icons/upgrade_incentive.png',
+    '시작부터 하나 더':   'assets/custom/icons/upgrade_addskill.png',
   },
   _iconCache: {},
   _getIcon(name) {
@@ -3518,27 +3716,28 @@ window.addEventListener('click', (e) => {
   <script>
 // 스킬 이름 → 타입 뱃지 매핑
 const _SKILL_TYPE_BADGE = {
-  '긴급 패치':  { label: '공격', color: '#ff6644' },
-  '디버그':     { label: '공격', color: '#ff6644' },
-  '고성방가':   { label: '공격', color: '#ff6644' },
-  '커피 한 잔': { label: '이속↑', color: '#ffdd44' },
-  '멘탈관리':   { label: '방어', color: '#44aaff' },
-  '쓰다듬기':   { label: '회복', color: '#ff88bb' },
-  '낮잠자기':   { label: '회복', color: '#ff88bb' },
-  '자동 저장':  { label: '패시브', color: '#aa88ff' },
-  '산책하기':   { label: '패시브', color: '#aa88ff' },
+  '긴급 패치':   { label: '공격', color: '#ff6644' },
+  '디버그':      { label: '공격', color: '#ff6644' },
+  '고성방가':    { label: '공격', color: '#ff6644' },
+  '커피 한 잔':  { label: '이속↑', color: '#ffdd44' },
+  '멘탈관리':    { label: '방어', color: '#44aaff' },
+  '쓰다듬기':    { label: '회복', color: '#ff88bb' },
+  '낮잠자기':    { label: '회복', color: '#ff88bb' },
+  '자동 저장':   { label: '패시브', color: '#aa88ff' },
+  '산책하기':    { label: '패시브', color: '#aa88ff' },
 }
 
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
   '긴급 패치':  'assets/custom/icons/skill_emergency_fix.png',
   '디버그':     'assets/custom/icons/skill_debug.png',
-  '고성방가':   'assets/custom/icons/skill_priority_sort.png',
+  '고성방가':   'assets/custom/icons/skill_sing.png',
   '커피 한 잔': 'assets/custom/icons/skill_coffee.png',
-  '멘탈관리':   'assets/custom/icons/skill_figure_clean.png',
+  '멘탈관리':   'assets/custom/icons/skill_mental.png',
   '쓰다듬기':   'assets/custom/icons/skill_pet_dog.png',
   '낮잠자기':   'assets/custom/icons/skill_nap.png',
   '자동 저장':  'assets/custom/icons/skill_autosave.png',
+  '산책하기':   'assets/custom/icons/skill_walk.png',
 }
 // 지연 로드 캐시
 const _skillIconCache = {}
@@ -3558,19 +3757,56 @@ window.getSkillIcon = _getSkillIcon
 class HUD {
   constructor() {
     this._flyingGolds = []  // { x, y, targetX, targetY, type, t, duration, size }
+
+    // 일시정지 메뉴 클릭
+    window.addEventListener('click', (e) => {
+      if (GameState.screen !== 'paused') return
+      const canvas = document.getElementById('gameCanvas')
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const x = (e.clientX - rect.left) * (800 / rect.width)
+      const y = (e.clientY - rect.top)  * (600 / rect.height)
+
+      // 재개: y=252 ~ 288
+      if (x >= 300 && x <= 500 && y >= 252 && y <= 288) {
+        Game.resume(); return
+      }
+      // 메뉴로: y=306 ~ 342
+      if (x >= 300 && x <= 500 && y >= 306 && y <= 342) {
+        GameState.screen = 'lobby'; return
+      }
+      // 업그레이드: y=360 ~ 396
+      if (x >= 300 && x <= 500 && y >= 360 && y <= 396) {
+        GameState.screen = 'upgrade'; return
+      }
+    })
   }
 
   render(ctx, gameTime) {
     if (GameState.screen !== 'playing' && GameState.screen !== 'paused') return
     const player = Game.player
     if (!player) return
+
+    // 피격 플래시
+    if (window.GameState?.hitFlash > 0) {
+      const flashAlpha = GameState.hitFlash * 0.35
+      ctx.fillStyle = `rgba(255,30,30,${flashAlpha.toFixed(3)})`
+      ctx.fillRect(0, 0, 800, 600)
+    }
+
     this._drawTopBar(ctx, player, gameTime)
     this._drawBottomBar(ctx)
     this._drawDangerOverlay(ctx, gameTime)
     this._drawSpeechBubble(ctx)
+    this._drawArrowGuide(ctx)
     this._drawUnlockNotification(ctx)
     this._drawGoldHUD(ctx)
     this._updateFlyingGolds(ctx, 1/60)
+
+    // 일시정지 메뉴
+    if (GameState.screen === 'paused') {
+      this._drawPauseMenu(ctx)
+    }
   }
 
   _drawTopBar(ctx, player, gameTime) {
@@ -3715,19 +3951,28 @@ class HUD {
           const ratio = 1 - state.cooldownRemaining / state.cooldownMax
           ctx.fillStyle = '#4488ff'
           ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
-        } else {
-          ctx.fillStyle = '#44ff88'
-          ctx.font = '10px "VT323", monospace'
-          ctx.fillText('READY', sx + 52, sy + 36)
+        }
+        // LV 표시 (우하단)
+        if (!state.isEmpty) {
+          const lv = state.level || 1
+          const lvLabel = lv >= 3 ? 'LV.MAX' : `LV.${lv}`
+          const lvColor = lv >= 3 ? '#FFD700' : lv >= 2 ? '#aaddff' : '#667799'
+          ctx.fillStyle = lvColor
+          ctx.font = 'bold 8px "VT323", monospace'
+          ctx.textAlign = 'right'
+          ctx.fillText(lvLabel, sx + 98, sy + 14)
+          ctx.textAlign = 'left'
         }
       }
 
-      // 키 레이블 — 항상 마지막에 그려 아이콘 위에 표시 (작은 배경 포함)
-      ctx.fillStyle = 'rgba(0,0,0,0.65)'
-      ctx.fillRect(sx + 2, sy + 2, 14, 13)
-      ctx.fillStyle = state.isEmpty ? '#666' : '#ffffff'
-      ctx.font = 'bold 10px "VT323", monospace'
-      ctx.fillText(keys[i], sx + 4, sy + 13)
+      // 키 레이블 — 슬롯 전체 폭 스트립 (상단 고정, 항상 맨 위에 렌더)
+      ctx.fillStyle = 'rgba(0,0,0,0.82)'
+      ctx.fillRect(sx, sy, 100, 24)
+      ctx.fillStyle = state.isEmpty ? '#555' : '#e8e8ff'
+      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(keys[i], sx + 50, sy + 19)
+      ctx.textAlign = 'left'
     }
 
     // 빈 슬롯 힌트 (초반 안내)
@@ -3838,6 +4083,92 @@ class HUD {
     ctx.font = 'bold 22px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('🔓 ' + notif.msg, 400, 278)
+    ctx.textAlign = 'left'
+    ctx.globalAlpha = 1
+    ctx.restore()
+  }
+
+  _drawArrowGuide(ctx) {
+    const tut = GameState.arrowTutorial
+    if (!tut || tut.timer <= 0) return
+    tut.timer -= 1 / 60
+
+    const player = Game.player
+    if (!player) return
+
+    const alpha = tut.timer < 1.0 ? tut.timer : 1.0
+    const px = player.x - (window.Camera?.x || 0)
+    const py = player.y - (window.Camera?.y || 0)
+
+    // Panel dimensions
+    const pw = 88
+    const ph = 96
+    const bx = px + 48
+    const by = py - ph / 2
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Panel background
+    ctx.fillStyle = 'rgba(10,14,30,0.88)'
+    ctx.strokeStyle = '#4466aa'
+    ctx.lineWidth = 1.5
+    const r = 6
+    ctx.beginPath()
+    ctx.moveTo(bx + r, by)
+    ctx.lineTo(bx + pw - r, by)
+    ctx.quadraticCurveTo(bx + pw, by, bx + pw, by + r)
+    ctx.lineTo(bx + pw, by + ph - r)
+    ctx.quadraticCurveTo(bx + pw, by + ph, bx + pw - r, by + ph)
+    ctx.lineTo(bx + r, by + ph)
+    ctx.quadraticCurveTo(bx, by + ph, bx, by + ph - r)
+    ctx.lineTo(bx, by + r)
+    ctx.quadraticCurveTo(bx, by, bx + r, by)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    // Left tail pointer
+    ctx.fillStyle = 'rgba(10,14,30,0.88)'
+    ctx.strokeStyle = '#4466aa'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(bx, by + ph / 2 - 7)
+    ctx.lineTo(bx - 9, by + ph / 2)
+    ctx.lineTo(bx, by + ph / 2 + 7)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+
+    // "방향키" label
+    ctx.fillStyle = '#aabbdd'
+    ctx.font = 'bold 12px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('방향키', bx + pw / 2, by + 15)
+
+    // Arrow cross layout: cx, cy = center of cross
+    const cx = bx + pw / 2
+    const cy = by + 56
+    const step = 24
+    const arrows = [
+      { char: '↑', dx: 0, dy: -step },
+      { char: '↓', dx: 0, dy: step },
+      { char: '←', dx: -step, dy: 0 },
+      { char: '→', dx: step, dy: 0 },
+    ]
+    ctx.font = 'bold 22px "VT323", monospace'
+    ctx.textAlign = 'center'
+    for (const a of arrows) {
+      // Key box
+      ctx.fillStyle = 'rgba(60,80,130,0.85)'
+      ctx.strokeStyle = '#6688cc'
+      ctx.lineWidth = 1
+      ctx.fillRect(cx + a.dx - 12, cy + a.dy - 14, 24, 22)
+      ctx.strokeRect(cx + a.dx - 12, cy + a.dy - 14, 24, 22)
+      ctx.fillStyle = '#e8eeff'
+      ctx.fillText(a.char, cx + a.dx, cy + a.dy + 3)
+    }
+
     ctx.textAlign = 'left'
     ctx.globalAlpha = 1
     ctx.restore()
@@ -3972,6 +4303,45 @@ class HUD {
 
       if (progress >= 1) this._flyingGolds.splice(i, 1)
     }
+  }
+
+  _drawPauseMenu(ctx) {
+    // 반투명 오버레이
+    ctx.fillStyle = 'rgba(0,0,15,0.78)'
+    ctx.fillRect(0, 0, 800, 600)
+
+    // 패널
+    ctx.fillStyle = '#0d1a2e'
+    ctx.strokeStyle = '#4488ff'
+    ctx.lineWidth = 2
+    ctx.fillRect(260, 180, 280, 240)
+    ctx.strokeRect(260, 180, 280, 240)
+
+    // 제목
+    ctx.fillStyle = '#88aaff'
+    ctx.font = 'bold 28px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('— 일시정지 —', 400, 220)
+
+    // 버튼 3개: 재개 / 메뉴로 / 업그레이드
+    const btns = [
+      { label: '[ 재개 ]',    color: '#88ff88', y: 252 },
+      { label: '[ 메뉴로 ]',  color: '#ccaaff', y: 306 },
+      { label: '[ 업그레이드 ]', color: '#ffdd88', y: 360 },
+    ]
+    btns.forEach(({ label, color, y }) => {
+      ctx.fillStyle = 'rgba(30,50,80,0.7)'
+      ctx.strokeStyle = '#334466'
+      ctx.lineWidth = 1
+      ctx.fillRect(300, y, 200, 36)
+      ctx.strokeRect(300, y, 200, 36)
+      ctx.fillStyle = color
+      ctx.font = 'bold 18px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(label, 400, y + 24)
+    })
+
+    ctx.textAlign = 'left'
   }
 }
 
@@ -4321,10 +4691,12 @@ window._lobby = _lobby
   <script>
 class Result {
   constructor() {
-    this._winRestartRect  = { x: 200, y: 478, w: 170, h: 44 }
-    this._winUpgradeRect  = { x: 430, y: 478, w: 170, h: 44 }
-    this._loseRestartRect = { x: 200, y: 382, w: 170, h: 44 }
-    this._loseUpgradeRect = { x: 430, y: 382, w: 170, h: 44 }
+    this._winRestartRect  = { x: 78,  y: 478, w: 120, h: 44 }
+    this._winMenuRect     = { x: 340, y: 478, w: 120, h: 44 }
+    this._winUpgradeRect  = { x: 602, y: 478, w: 120, h: 44 }
+    this._loseRestartRect = { x: 78,  y: 382, w: 120, h: 44 }
+    this._loseMenuRect    = { x: 340, y: 382, w: 120, h: 44 }
+    this._loseUpgradeRect = { x: 602, y: 382, w: 120, h: 44 }
     this._resultStartTime = null
     this._rateSaved = false
     this._bindClick()
@@ -4347,10 +4719,14 @@ class Result {
       if (!win && elapsed < 1.2) return  // 패배 연출 중 버튼 무효
 
       const r = win ? this._winRestartRect  : this._loseRestartRect
+      const m = win ? this._winMenuRect     : this._loseMenuRect
       const u = win ? this._winUpgradeRect  : this._loseUpgradeRect
 
       if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
         Game.restart(); return
+      }
+      if (x >= m.x && x <= m.x + m.w && y >= m.y && y <= m.y + m.h) {
+        GameState.screen = 'lobby'; return
       }
       if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
         GameState.screen = 'upgrade'
@@ -4392,7 +4768,7 @@ class Result {
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 24px "Press Start 2P", monospace'
+    ctx.font = 'bold 56px monospace'
     ctx.shadowColor = '#FFD700'
     ctx.shadowBlur = 24
     ctx.fillText('배포 성공!', 400, 94)
@@ -4464,18 +4840,23 @@ class Result {
     ctx.font = '12px "VT323", monospace'
     ctx.fillText(`(누적: ${total}pt)`, 400, 454)
 
-    const r = this._winRestartRect, u = this._winUpgradeRect
+    const r = this._winRestartRect, m = this._winMenuRect, u = this._winUpgradeRect
     if (window.drawUIPanel) {
       drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
       drawUIPanel(ctx, u.x, u.y, u.w, u.h)
     } else {
       ctx.fillStyle = '#1e2a4a'; ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#2a1a4a'; ctx.strokeStyle = '#8866cc'; ctx.lineWidth = 2
+      ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     }
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'
     ctx.fillText('[ 다시 도전 ]', r.x + r.w / 2, r.y + 28)
+    ctx.fillStyle = '#ccaaff'
+    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
     ctx.restore()
@@ -4513,10 +4894,10 @@ class Result {
     ctx.save()
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
-    ctx.font = 'bold 32px "Press Start 2P", monospace'
+    ctx.font = 'bold 128px monospace'
     ctx.fillStyle = '#6b0000'
     ctx.fillText('AI', 400, 172)
-    ctx.font = 'bold 32px "Press Start 2P", monospace'
+    ctx.font = 'bold 82px monospace'
     ctx.fillStyle = '#b81010'
     ctx.fillText('승  리', 400, 266)
     ctx.restore()
@@ -4696,18 +5077,23 @@ class Result {
     ctx.beginPath(); ctx.moveTo(px+24, py+234); ctx.lineTo(px+pw-24, py+234); ctx.stroke()
 
     // 버튼
-    const r = this._loseRestartRect, u = this._loseUpgradeRect
+    const r = this._loseRestartRect, m = this._loseMenuRect, u = this._loseUpgradeRect
     if (window.drawUIPanel) {
       drawUIPanel(ctx, r.x, r.y, r.w, r.h)
+      drawUIPanel(ctx, m.x, m.y, m.w, m.h)
       drawUIPanel(ctx, u.x, u.y, u.w, u.h)
     } else {
       ctx.fillStyle = '#1e3a88'; ctx.strokeStyle = '#4466cc'; ctx.lineWidth = 2
       ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#2a1a4a'; ctx.strokeStyle = '#8866cc'; ctx.lineWidth = 2
+      ctx.fillRect(m.x, m.y, m.w, m.h); ctx.strokeRect(m.x, m.y, m.w, m.h)
       ctx.fillStyle = '#1a4a1a'; ctx.strokeStyle = '#2d8840'; ctx.lineWidth = 2
       ctx.fillRect(u.x, u.y, u.w, u.h); ctx.strokeRect(u.x, u.y, u.w, u.h)
     }
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText('[ 재도전 ]', r.x + r.w / 2, r.y + 28)
+    ctx.fillStyle = '#ccaaff'
+    ctx.fillText('[ 메뉴 ]', m.x + m.w / 2, m.y + 28)
     ctx.fillStyle = '#88ff88'
     ctx.fillText('[ 업그레이드 ]', u.x + u.w / 2, u.y + 28)
 
@@ -4943,6 +5329,13 @@ window._joystick = new VirtualJoystick()
  * Integration Lead (메인 에이전트) 통합 버전
  */
 
+async function tryImport(path) {
+  try {
+    await import(path)
+  } catch (e) {
+    console.warn(`[game.js] optional module not found: ${path}`)
+  }
+}
 
 // ─────────────────────────────────────────
 // 전역 상태
@@ -4993,6 +5386,16 @@ window.inputKeys = inputKeys
 
 window.addEventListener('keydown', e => {
   inputKeys[e.code] = true
+  // ESC: 일시정지 토글
+  if (e.code === 'Escape') {
+    if (GameState.screen === 'playing' && !window._levelUpManager?.pendingLevelUp) {
+      Game.pause()
+    } else if (GameState.screen === 'paused') {
+      Game.resume()
+    }
+    return
+  }
+  // 기존 Q/W/E/R 처리 유지
   if (
     ['KeyQ', 'KeyW', 'KeyE', 'KeyR'].includes(e.code) &&
     GameState.screen === 'playing' &&
@@ -5016,6 +5419,12 @@ function updateCamera(player) {
   const WH = window.WORLD_H || 600
   Camera.x = Math.max(0, Math.min(WW - 800, player.x - 400))
   Camera.y = Math.max(0, Math.min(WH - 600, player.y - 300))
+  // 카메라 쉐이크
+  if (GameState.cameraShake && GameState.cameraShake.timer > 0) {
+    const mag = GameState.cameraShake.mag * (GameState.cameraShake.timer / 0.35)
+    Camera.x += (Math.random() - 0.5) * mag
+    Camera.y += (Math.random() - 0.5) * mag
+  }
 }
 
 // ─────────────────────────────────────────
@@ -5148,6 +5557,9 @@ window.Game = {
       aiBotIntro: false,
       aiBotIntroTimer: 0,
       enemyAnnouncement: null,
+      cameraShake: { mag: 0, timer: 0 },
+      hitFlash: 0,
+      _bossAudioPlayed: false,
     })
 
     // 카메라 초기화
@@ -5162,9 +5574,13 @@ window.Game = {
       if (window.MetaManager) MetaManager.applyToPlayer(Game.player, Game.skillManager)
       // 캐릭터 고유 패시브 적용 (메타 이후에 적용해 수치 누적)
       _applyCharacterPassive(Game.player, Game.skillManager)
-      // 시작 스킬 없으면 디버그 무료 지급
-      if (Game.skillManager && !Game.skillManager.slots.some(Boolean)) {
-        Game.skillManager.assignSkill(0, '디버그')
+      // 캐릭터별 초기 스킬 지급
+      if (Game.skillManager) {
+        const charSkills = { adam: '디버그', amelia: '긴급수정', vampir: '피규어청소' }
+        const startSkill = charSkills[GameState.selectedCharacter] || '디버그'
+        if (!Game.skillManager.slots.some(Boolean)) {
+          Game.skillManager.assignSkill(0, startSkill)
+        }
       }
     }
 
@@ -5187,6 +5603,8 @@ window.Game = {
       const picked = _BUBBLE_LINES.find(l => { r -= l.w; return r <= 0 }) || _BUBBLE_LINES[0]
       GameState.speechBubble = { text: picked.text, timer: 4.0, maxTimer: 4.0 }
     }
+    // 시작 방향키 튜토리얼 (말풍선과 동일 시간)
+    GameState.arrowTutorial = { timer: 4.0 }
 
     // 골드 드롭 리셋
     window.dropManager?.reset()
@@ -5207,6 +5625,7 @@ window.Game = {
     }
 
     _lastTime = performance.now()
+    window.GameAudio?.startBGM()
   },
 
   pause() {
@@ -5232,6 +5651,9 @@ window.Game = {
     if (window.MetaManager) {
       GameState.lastEarnedPoints = MetaManager.awardPoints()
     }
+    window.GameAudio?.stopBGM()
+    if (win) window.GameAudio?.playWin()
+    else window.GameAudio?.playGameOver()
   },
 
   restart() {
@@ -5257,6 +5679,10 @@ function _loop(now) {
   if (gs.screen === 'playing' && !gs.isPaused) {
 
     gs.gameTime += deltaTime
+
+    // hitFlash / cameraShake 감소
+    if (gs.hitFlash > 0) gs.hitFlash = Math.max(0, gs.hitFlash - deltaTime * 5)
+    if (gs.cameraShake?.timer > 0) gs.cameraShake.timer = Math.max(0, gs.cameraShake.timer - deltaTime)
 
     if (player) {
       player.update(deltaTime, inputKeys)
@@ -5293,6 +5719,9 @@ function _loop(now) {
         if (dist < hitR) {
           if (!(enemy._hitCooldown > 0)) {
             player.takeDamage(enemy.damage || 10)
+            gs.hitFlash = 1.0
+            gs.cameraShake = { mag: 10, timer: 0.35 }
+            window.GameAudio?.playHit()
             enemy._hitCooldown = 0.5
           }
         }
@@ -5303,7 +5732,7 @@ function _loop(now) {
 
       if (gs.aiBotIntro) {
         gs.aiBotIntroTimer += deltaTime
-        if (gs.aiBotIntroTimer >= 0.5) gs.aiBotIntro = false
+        if (gs.aiBotIntroTimer >= 3.5) gs.aiBotIntro = false
       }
 
       if (gs.enemyAnnouncement?.timer > 0) {
@@ -5398,20 +5827,37 @@ function _loop(now) {
       ctx.restore()
     }
 
-    // AIBot 등장 연출
+    // AIBot 등장 연출 (3.5초간 표시)
     if (gs.aiBotIntro) {
-      const alpha = 1 - gs.aiBotIntroTimer / 0.5
-      ctx.fillStyle = `rgba(0,0,0,${alpha * 0.85})`
-      ctx.fillRect(0, 0, 800, 600)
+      // 보스 등장 음향 (첫 프레임에만)
+      if (gs.aiBotIntroTimer < 0.05 && !gs._bossAudioPlayed) {
+        gs._bossAudioPlayed = true
+        window.GameAudio?.playBossIntro()
+      }
+      // 알파: 0→0.3s 페이드인, 0.3→2.7s 유지, 2.7→3.5s 페이드아웃
+      const t = gs.aiBotIntroTimer
+      let alpha
+      if (t < 0.3) alpha = t / 0.3
+      else if (t < 2.7) alpha = 1.0
+      else alpha = Math.max(0, 1 - (t - 2.7) / 0.8)
+
       ctx.save()
       ctx.globalAlpha = alpha
+      ctx.fillStyle = 'rgba(0,0,0,0.85)'
+      ctx.fillRect(0, 0, 800, 600)
       ctx.fillStyle = '#ff2222'
-      ctx.font = 'bold 48px "VT323", cursive'
+      ctx.font = 'bold 52px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('⚠ AI가 직접 나타났다', 400, 270)
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '28px "VT323", cursive'
-      ctx.fillText('마지막 10초. 살아남아라.', 400, 315)
+      ctx.shadowColor = '#ff0000'
+      ctx.shadowBlur = 20
+      ctx.fillText('⚠ AI가 직접 나타났다', 400, 256)
+      ctx.shadowBlur = 0
+      ctx.fillStyle = '#ffaaaa'
+      ctx.font = '30px "VT323", monospace'
+      ctx.fillText('최후의 결전. 살아남아라.', 400, 304)
+      ctx.fillStyle = '#ff4444'
+      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.fillText('[ 미러워커 ]', 400, 350)
       ctx.restore()
     }
   }
@@ -5422,10 +5868,28 @@ function _loop(now) {
 // ─────────────────────────────────────────
 // 부트스트랩
 // ─────────────────────────────────────────
+;(async () => {
+  await tryImport('./entities/charsprites.js')
+  await tryImport('./entities/enemysprites.js')
+  await tryImport('./entities/player.js')
+  await tryImport('./entities/enemies.js')
+  await tryImport('./entities/skills.js')
+  await tryImport('./systems/tilemap.js')
+  await tryImport('./systems/spawner.js')
+  await tryImport('./systems/levelup.js')
+  await tryImport('./systems/score.js')
+  await tryImport('./systems/drops.js')
+  await tryImport('./systems/meta.js')
+  await tryImport('./ui/hud.js')
+  await tryImport('./ui/lobby.js')
+  await tryImport('./ui/result.js')
+  await tryImport('./ui/joystick.js')
 
-// 모든 모듈 이미 로드됨 — 동기 초기화
-window.dispatchEvent(new Event('gameReady'))
-Game.init()
+  // 모든 모듈 로드 완료 → gameReady 이벤트 발송
+  window.dispatchEvent(new Event('gameReady'))
+
+  Game.init()
+})()
 
 
   </script>
