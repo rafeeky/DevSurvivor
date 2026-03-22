@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-22T12:51:12.753Z",
+  "file": "ui/hud.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/save.png",
+      "file": "ui/hud.js"
+    }
+  ]
+}

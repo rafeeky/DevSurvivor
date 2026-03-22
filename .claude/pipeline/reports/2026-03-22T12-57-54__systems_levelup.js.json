@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-22T12:57:54.717Z",
+  "file": "systems/levelup.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/cat.png",
+      "file": "systems/levelup.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/save.png",
+      "file": "systems/levelup.js"
+    }
+  ]
+}
