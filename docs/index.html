@@ -1647,7 +1647,7 @@ class SkillManager {
     this.skillDefs = {
       // ── 기존 스킬 ──
       '긴급수정': {
-        name: '긴급 수정',
+        name: '긴급 패치',
         type: 'active',
         cooldown: 5,
         level: 1,
@@ -1662,7 +1662,7 @@ class SkillManager {
       },
       // ── M4 액티브 스킬 ──
       '우선순위정리': {
-        name: '우선순위정리',
+        name: '고성방가',
         type: 'active',
         cooldown: 6,
         level: 1,
@@ -1676,14 +1676,14 @@ class SkillManager {
         activate: (sm) => sm._coffee(),
       },
       '피규어청소': {
-        name: '피규어청소',
+        name: '멘탈관리',
         type: 'active',
         cooldown: 12,
         level: 1,
         activate: (sm) => sm._cleanFigure(),
       },
       '강아지': {
-        name: '강아지쓰다듬기',
+        name: '쓰다듬기',
         type: 'active',
         cooldown: 15,
         level: 1,
@@ -2594,7 +2594,7 @@ const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450, 650, 900, 1200]
 const LEVEL_UP_CHOICES = {
   // 신규 스킬
   '긴급수정_신규': {
-    label: '긴급 수정',
+    label: '긴급 패치',
     desc: '주변 범위 공격 (반경 120px, 피해 40)',
     type: 'newSkill',
     skillId: '긴급수정',
@@ -2607,7 +2607,7 @@ const LEVEL_UP_CHOICES = {
   },
   // 기존 스킬 강화
   '긴급수정_강화': {
-    label: '긴급 수정 강화',
+    label: '긴급 패치 강화',
     desc: '피해 +20 / 범위 +40px / 쿨다운 감소',
     type: 'upgradeSkill',
     skillId: '긴급수정',
@@ -2633,7 +2633,7 @@ const LEVEL_UP_CHOICES = {
   },
   // M4 액티브 스킬
   '우선순위정리_신규': {
-    label: '우선순위 정리',
+    label: '고성방가',
     desc: '전방 부채꼴 160px, 피해 30, 넉백 100px, 쿨 7초',
     type: 'newSkill',
     skillId: '우선순위정리',
@@ -2645,13 +2645,13 @@ const LEVEL_UP_CHOICES = {
     skillId: '커피',
   },
   '피규어청소_신규': {
-    label: '피규어 청소하기',
+    label: '멘탈관리',
     desc: '피해 감소 40% (4초) + 주변 적 넉백, 쿨 12초',
     type: 'newSkill',
     skillId: '피규어청소',
   },
   '강아지_신규': {
-    label: '강아지 쓰다듬기',
+    label: '쓰다듬기',
     desc: '최대 HP 25% 즉시 회복, 쿨 20초',
     type: 'newSkill',
     skillId: '강아지',
@@ -3518,27 +3518,27 @@ window.addEventListener('click', (e) => {
   <script>
 // 스킬 이름 → 타입 뱃지 매핑
 const _SKILL_TYPE_BADGE = {
-  '긴급 수정':    { label: '공격', color: '#ff6644' },
-  '디버그':       { label: '공격', color: '#ff6644' },
-  '우선순위정리': { label: '공격', color: '#ff6644' },
-  '커피 한 잔':   { label: '이속↑', color: '#ffdd44' },
-  '피규어청소':   { label: '방어', color: '#44aaff' },
-  '강아지쓰다듬기': { label: '회복', color: '#ff88bb' },
-  '낮잠자기':     { label: '회복', color: '#ff88bb' },
-  '자동 저장':    { label: '패시브', color: '#aa88ff' },
-  '산책하기':     { label: '패시브', color: '#aa88ff' },
+  '긴급 패치':  { label: '공격', color: '#ff6644' },
+  '디버그':     { label: '공격', color: '#ff6644' },
+  '고성방가':   { label: '공격', color: '#ff6644' },
+  '커피 한 잔': { label: '이속↑', color: '#ffdd44' },
+  '멘탈관리':   { label: '방어', color: '#44aaff' },
+  '쓰다듬기':   { label: '회복', color: '#ff88bb' },
+  '낮잠자기':   { label: '회복', color: '#ff88bb' },
+  '자동 저장':  { label: '패시브', color: '#aa88ff' },
+  '산책하기':   { label: '패시브', color: '#aa88ff' },
 }
 
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
-  '긴급 수정':    'assets/custom/icons/skill_emergency_fix.png',
-  '디버그':       'assets/custom/icons/skill_debug.png',
-  '우선순위정리': 'assets/custom/icons/skill_priority_sort.png',
-  '커피 한 잔':   'assets/custom/icons/skill_coffee.png',
-  '피규어청소':   'assets/custom/icons/skill_figure_clean.png',
-  '강아지쓰다듬기': 'assets/custom/icons/skill_pet_dog.png',
-  '낮잠자기':     'assets/custom/icons/skill_nap.png',
-  '자동 저장':    'assets/custom/icons/skill_autosave.png',
+  '긴급 패치':  'assets/custom/icons/skill_emergency_fix.png',
+  '디버그':     'assets/custom/icons/skill_debug.png',
+  '고성방가':   'assets/custom/icons/skill_priority_sort.png',
+  '커피 한 잔': 'assets/custom/icons/skill_coffee.png',
+  '멘탈관리':   'assets/custom/icons/skill_figure_clean.png',
+  '쓰다듬기':   'assets/custom/icons/skill_pet_dog.png',
+  '낮잠자기':   'assets/custom/icons/skill_nap.png',
+  '자동 저장':  'assets/custom/icons/skill_autosave.png',
 }
 // 지연 로드 캐시
 const _skillIconCache = {}

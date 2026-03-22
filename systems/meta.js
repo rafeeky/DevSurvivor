@@ -17,8 +17,8 @@ const META_UPGRADES = [
 
 // ── MetaManager ────────────────────────────────────────────────────────────
 const MetaManager = {
-  STORAGE_POINTS:   'devsurvival_points',
-  STORAGE_UPGRADES: 'devsurvival_upgrades',
+  get STORAGE_POINTS()   { const u = localStorage.getItem('devsurvival_username') || 'Guest'; return `devsurvival_points_${u}` },
+  get STORAGE_UPGRADES() { const u = localStorage.getItem('devsurvival_username') || 'Guest'; return `devsurvival_upgrades_${u}` },
 
   loadPoints() {
     return parseInt(localStorage.getItem(this.STORAGE_POINTS) || '0')
@@ -241,11 +241,11 @@ const MetaManager = {
       if (icon?.complete && icon.naturalWidth > 0) {
         ctx.imageSmoothingEnabled = true
         ctx.globalAlpha = 1.0
-        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconBoxX + 2, iconBoxY + 2, iconBoxSize - 4, iconBoxSize - 4)
+        ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize)
       }
       ctx.restore()
 
-      const textX = bx + 4 + iconBoxSize + 8
+      const textX = bx + 4 + iconBoxSize + 24
 
       // 이름
       ctx.fillStyle = '#ddeeff'

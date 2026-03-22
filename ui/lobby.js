@@ -16,7 +16,77 @@ class Lobby {
     ]
     this.startBtnRect   = { x: 210, y: 362, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 436, w: 220, h: 34 }
+    this._usernameInput = null
+    this._initUsernameInput()
     this._bindClick()
+  }
+
+  _initUsernameInput() {
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.maxLength = 12
+    input.placeholder = '닉네임 입력 (최대 12자)'
+    input.id = 'devsurvival-username-input'
+    input.value = localStorage.getItem('devsurvival_username') || ''
+    Object.assign(input.style, {
+      position:        'absolute',
+      zIndex:          '10',
+      display:         'none',
+      fontSize:        '15px',
+      fontFamily:      '"VT323", monospace',
+      color:           '#ffffff',
+      background:      'rgba(10,20,50,0.88)',
+      border:          '1.5px solid #4488ff',
+      borderRadius:    '4px',
+      padding:         '4px 8px',
+      outline:         'none',
+      boxShadow:       '0 0 8px rgba(68,136,255,0.5)',
+      letterSpacing:   '1px',
+      textAlign:       'center',
+      width:           '160px',
+      boxSizing:       'border-box',
+    })
+    input.addEventListener('blur', () => {
+      let val = input.value.trim().slice(0, 12)
+      if (!val) val = ''
+      input.value = val
+      if (val) {
+        localStorage.setItem('devsurvival_username', val)
+      } else {
+        localStorage.removeItem('devsurvival_username')
+      }
+    })
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur()
+    })
+    document.body.appendChild(input)
+    this._usernameInput = input
+  }
+
+  _showUsernameInput() {
+    const input = this._usernameInput
+    if (!input) return
+    const canvas = document.getElementById('gameCanvas')
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    // canvas 상에서 username input 박스 목표 위치 (canvas 좌표 기준: x=320, y=530)
+    const scaleX = rect.width  / 800
+    const scaleY = rect.height / 600
+    const inputW = 160 * scaleX
+    const inputH = 26  * scaleY
+    const canvasX = (800 / 2 - 80) * scaleX  // 중앙 정렬
+    const canvasY = 530 * scaleY
+    input.style.left    = (rect.left + window.scrollX + canvasX) + 'px'
+    input.style.top     = (rect.top  + window.scrollY + canvasY) + 'px'
+    input.style.width   = inputW + 'px'
+    input.style.height  = inputH + 'px'
+    input.style.fontSize = Math.max(10, Math.round(14 * scaleY)) + 'px'
+    input.style.display = 'block'
+    input.value = localStorage.getItem('devsurvival_username') || ''
+  }
+
+  _hideUsernameInput() {
+    if (this._usernameInput) this._usernameInput.style.display = 'none'
   }
 
   _select(key) {
@@ -54,7 +124,13 @@ class Lobby {
   }
 
   render(ctx) {
-    if (GameState.screen !== 'lobby') return
+    if (GameState.screen !== 'lobby') {
+      this._hideUsernameInput()
+      return
+    }
+
+    // username input HTML 오버레이 위치 갱신
+    this._showUsernameInput()
 
     // GameState 동기화
     GameState.selectedCharacter = this._selected
@@ -161,6 +237,24 @@ class Lobby {
     ctx.font = '16px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 508)
+
+    // Username 라벨 (input HTML 오버레이 위, 캔버스 하단)
+    const uname = localStorage.getItem('devsurvival_username') || 'Guest'
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'
+    ctx.fillRect(240, 520, 320, 52)
+    ctx.fillStyle = '#aaccff'
+    ctx.font = '13px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(`플레이어: ${uname}`, 400, 534)
+    // 입력칸 자리 표시 (HTML input이 그 위에 올라감)
+    ctx.strokeStyle = '#4488ff'
+    ctx.lineWidth = 1
+    ctx.strokeRect(320, 538, 160, 22)
+    // 기기 한정 저장 안내
+    ctx.fillStyle = '#556677'
+    ctx.font = '11px "VT323", monospace'
+    ctx.fillText('저장은 이 기기에만 적용됩니다', 400, 572)
+
     ctx.textAlign = 'left'
   }
 
