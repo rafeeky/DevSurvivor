@@ -1598,7 +1598,7 @@ function updateAndRenderEffects(ctx, deltaTime) {
     } else if (e.type === 'float') {
       const floatY = e.y - (1 - alpha) * 36
       ctx.fillStyle = e.color
-      ctx.font = e.font || 'bold 10px "Press Start 2P", monospace'
+      ctx.font = e.font || 'bold 14px monospace'
       ctx.textAlign = 'center'
       ctx.shadowColor = e.color
       ctx.shadowBlur = 6
@@ -1732,7 +1732,7 @@ class SkillManager {
       this.napTimer -= deltaTime
       if (this.napTimer <= 0) {
         this.napTimer = 0
-        const healAmt = Math.floor(this.player.maxHp * 0.5 * (GameState.healMultiplier || 1))
+        const healAmt = Math.floor(this.player.maxHp * (this._napHealRatio || 0.5) * (GameState.healMultiplier || 1))
         this.player.heal(healAmt)
         addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 50, color: '#88ff88', life: 0.6, maxLife: 0.6 })
       }
@@ -1768,7 +1768,7 @@ class SkillManager {
 
   upgradeSkill(skillId) {
     const def = this.skillDefs[skillId]
-    if (def) def.level = Math.min(4, (def.level || 1) + 1)
+    if (def) def.level = Math.min(3, (def.level || 1) + 1)
   }
 
   getSkillState(slot) {
@@ -1799,8 +1799,7 @@ class SkillManager {
     let radius = 120
     let damage = 40
     if (def.level >= 2) damage += 20
-    if (def.level >= 3) radius += 40
-    if (def.level >= 4 && def.cooldown > 3) def.cooldown = 3
+    if (def.level >= 3) { radius += 40; if (def.cooldown > 3) def.cooldown = 3 }
     damage = Math.floor(damage * (GameState.skillDamageMult || 1))
 
     for (const enemy of GameState.enemies) {
@@ -1825,8 +1824,7 @@ class SkillManager {
     let damage = 70
     let targetCount = 1
     if (def.level >= 2) damage += 30
-    if (def.level >= 3) targetCount = 2
-    if (def.level >= 4 && def.cooldown > 1.5) def.cooldown = 1.5
+    if (def.level >= 3) { targetCount = 2; if (def.cooldown > 1.5) def.cooldown = 1.5 }
     damage = Math.floor(damage * (GameState.skillDamageMult || 1))
 
     const alive = GameState.enemies.filter(e => e.isAlive())
@@ -1848,8 +1846,12 @@ class SkillManager {
   // 우선순위 정리: 전방 부채꼴(120°) 160px, 피해 30, 넉백 100px, 쿨 7초
   _prioritySort() {
     const p = this.player
-    const radius = 160
-    const damage = Math.floor(30 * (GameState.skillDamageMult || 1))
+    const def = this.skillDefs['우선순위정리']
+    let damage = 30
+    let radius = 160
+    if (def.level >= 2) damage += 15
+    if (def.level >= 3) { radius += 20; if (def.cooldown > 4) def.cooldown = 4 }
+    damage = Math.floor(damage * (GameState.skillDamageMult || 1))
     const knockbackDist = 100
     const halfAngle = Math.PI / 3   // ±60° = 총 120°
 
@@ -1890,29 +1892,46 @@ class SkillManager {
   // 커피 한 잔: 이동속도 +40% (5초), 현재 쿨다운 20% 단축, 쿨 20초
   _coffee() {
     const p = this.player
-    p.applyBuff('speed', 1.4, 5)
+    const def = this.skillDefs['커피']
+    let speedMult = 1.4
+    let duration = 5
+    let cdReduction = 0.8
+    if (def.level >= 2) { speedMult = 1.6; cdReduction = 0.75 }
+    if (def.level >= 3) { duration = 8; cdReduction = Math.min(cdReduction, 0.65) }
+    p.applyBuff('speed', speedMult, duration)
     for (let i = 0; i < 4; i++) {
-      if (this.cooldowns[i] > 0) this.cooldowns[i] *= 0.8
+      if (this.cooldowns[i] > 0) this.cooldowns[i] *= cdReduction
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 10px "Press Start 2P", monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 16px monospace' })
     addEffect({ type: 'sprite', img: _VFX.brightfire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 110, life: 0.83, maxLife: 0.83 })
   }
 
   // 피규어 청소하기: 받는 피해 -40% (4초), 주변 150px 적 넉백 120px, 쿨 12초
   _cleanFigure() {
     const p = this.player
-    p.applyBuff('damageReduction', 0.4, 4)
+    const def = this.skillDefs['피규어청소']
+    let reduction = 0.4
+    let dur = 4
+    let knockbackRange = 150
+    let knockbackDist = 120
+    if (def.level >= 2) { reduction = 0.5; dur = 5 }
+    if (def.level >= 3) {
+      knockbackRange = 210
+      const healAmt = Math.floor(p.maxHp * 0.10 * (GameState.healMultiplier || 1))
+      p.heal(healAmt)
+    }
+    p.applyBuff('damageReduction', reduction, dur)
 
     for (const enemy of GameState.enemies) {
       if (!enemy.isAlive()) continue
       const dx = enemy.x - p.x
       const dy = enemy.y - p.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist <= 150 && dist > 0) {
-        enemy.x = Math.max(20, Math.min(780, enemy.x + (dx / dist) * 120))
-        enemy.y = Math.max(20, Math.min(580, enemy.y + (dy / dist) * 120))
+      if (dist <= knockbackRange && dist > 0) {
+        enemy.x = Math.max(20, Math.min(780, enemy.x + (dx / dist) * knockbackDist))
+        enemy.y = Math.max(20, Math.min(580, enemy.y + (dy / dist) * knockbackDist))
       }
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 150, color: '#aaddff', life: 0.5, maxLife: 0.5 })
@@ -1924,21 +1943,34 @@ class SkillManager {
   // 강아지 쓰다듬기: 최대 HP 25% 회복, 쿨 15초 (20→15 밸런스 조정)
   _petDog() {
     const p = this.player
-    const healAmt = Math.floor(p.maxHp * 0.25 * (GameState.healMultiplier || 1))
+    const def = this.skillDefs['강아지']
+    let healRatio = 0.25
+    if (def.level >= 2) healRatio = 0.35
+    if (def.level >= 3) {
+      p.addShield(1)
+      addEffect({ type: 'circle', x: p.x, y: p.y, radius: 32, color: '#44aaff', life: 0.4, maxLife: 0.4 })
+    }
+    const healAmt = Math.floor(p.maxHp * healRatio * (GameState.healMultiplier || 1))
     p.heal(healAmt)
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 12px "Press Start 2P", monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 18px monospace' })
     addEffect({ type: 'sprite', img: _VFX.bluefire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 100, life: 0.83, maxLife: 0.83 })
   }
 
   // 낮잠자기: 이동 1.5초 정지 후 HP 50% 회복, 쿨 30초
   _nap() {
     if (this.napTimer > 0) return
-    this.player.applyBuff('speed', 0, 1.5)
-    this.napTimer = 1.5
+    const def = this.skillDefs['낮잠']
+    let waitTime = 1.5
+    let healRatio = 0.5
+    if (def.level >= 2) healRatio = 0.65
+    if (def.level >= 3) waitTime = 1.0
+    this._napHealRatio = healRatio
+    this.player.applyBuff('speed', 0, waitTime)
+    this.napTimer = waitTime
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
-    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 12px "Press Start 2P", monospace' })
+    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
     addEffect({ type: 'sprite', img: _VFX.nebula, x: this.player.x, y: this.player.y, fw: 100, fh: 100, fps: 18, totalFrames: 27, size: 90, life: 1.5, maxLife: 1.5 })
   }
 }
@@ -3173,6 +3205,7 @@ window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore
 
   window.GameAudio = GameAudio
 })()
+
   </script>
 
   <!-- systems/meta.js -->
@@ -3271,19 +3304,19 @@ const MetaManager = {
     // 2. 정리 속도 높이기: 스킬 데미지 배율 (skills.js에서 참조)
     GameState.skillDamageMult = 1 + 0.08 * (lv[2] || 0)
 
-    // 3. 경험치 증가: 경험치 배율 (enemies.js에서 참조)
+    // 3. 빠른 판단: 경험치 배율 (enemies.js에서 참조)
     GameState.expMultiplier = 1 + 0.15 * (lv[3] || 0)
 
-    // 4. 빠른 회복: 회복량 배율 (skills.js에서 참조)
+    // 4. 회복 습관: 회복량 배율 (skills.js에서 참조)
     GameState.healMultiplier = 1 + 0.10 * (lv[4] || 0)
 
-    // 5. 소음 차단: 받는 피해 감소 -5%/lv (영구 패시브)
+    // 5. 실수 줄이기: 받는 피해 감소 -5%/lv (영구 패시브)
     if (lv[5] > 0) player.applyBuff('damageReduction', 0.05 * lv[5], Infinity)
 
     // 6. 준비된 하루: 시작 시 보호막 1
     if (lv[6] > 0) player.addShield(1)
 
-    // 7. 크런치 모드: 모든 액티브 스킬 쿨다운 -0.3초/lv
+    // 7. 손이 빨라짐: 모든 액티브 스킬 쿨다운 -0.3초/lv
     if (lv[7] > 0 && skillManager) {
       const red = 0.3 * lv[7]
       for (const def of Object.values(skillManager.skillDefs)) {
@@ -4372,83 +4405,131 @@ class Lobby {
     ]
     this.startBtnRect   = { x: 210, y: 362, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 436, w: 220, h: 34 }
+    this.renameBtnRect  = { x: 320, y: 574, w: 160, h: 20 }
     this._usernameInput = null
     this._usernameModalActive = false
+    this._renameMode = false
     this._lobbyBgmPlaying = false
     this._initUsernameInput()
     this._bindClick()
   }
 
   _initUsernameInput() {
+    // ── 텍스트 입력창 ──
     const input = document.createElement('input')
     input.type = 'text'
     input.maxLength = 12
-    input.placeholder = '닉네임 입력 (최대 12자)'
+    input.placeholder = '닉네임 (한글·영어)'
     input.id = 'devsurvival-username-input'
     input.value = localStorage.getItem('devsurvival_username') || ''
     Object.assign(input.style, {
-      position:        'absolute',
-      zIndex:          '9999',
-      display:         'none',
-      fontSize:        '15px',
-      fontFamily:      '"VT323", monospace',
-      color:           '#ffffff',
-      background:      'rgba(10,20,50,0.88)',
-      border:          '1.5px solid #4488ff',
-      borderRadius:    '4px',
-      padding:         '4px 8px',
-      outline:         'none',
-      boxShadow:       '0 0 8px rgba(68,136,255,0.5)',
-      letterSpacing:   '1px',
-      textAlign:       'center',
-      width:           '160px',
-      boxSizing:       'border-box',
+      position:     'absolute',
+      zIndex:       '9999',
+      display:      'none',
+      fontSize:     '16px',
+      fontFamily:   '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+      color:        '#ffffff',
+      caretColor:   '#4488ff',
+      background:   '#0a1432',
+      border:       '2px solid #4488ff',
+      borderRadius: '4px',
+      padding:      '6px 10px',
+      outline:      'none',
+      boxShadow:    '0 0 10px rgba(68,136,255,0.6)',
+      textAlign:    'center',
+      width:        '200px',
+      boxSizing:    'border-box',
     })
-    input.addEventListener('blur', () => {
-      let val = input.value.trim().slice(0, 12)
-      if (!val) val = ''
-      input.value = val
-      if (val) {
-        localStorage.setItem('devsurvival_username', val)
-        // 모달 모드였으면 게임 시작
-        if (this._usernameModalActive) {
-          this._usernameModalActive = false
-          this._hideUsernameInput()
+    // -webkit-text-fill-color: WebKit 계열 브라우저에서 color 대신 이 속성이 텍스트 색을 제어함
+    input.style.setProperty('-webkit-text-fill-color', '#ffffff')
+
+    // ── 확인 버튼 ──
+    const btn = document.createElement('button')
+    btn.textContent = '확인'
+    btn.id = 'devsurvival-username-btn'
+    Object.assign(btn.style, {
+      position:     'absolute',
+      zIndex:       '9999',
+      display:      'none',
+      fontSize:     '16px',
+      fontFamily:   '"VT323", "Malgun Gothic", sans-serif',
+      color:        '#aaddff',
+      background:   '#0d2040',
+      border:       '2px solid #3366cc',
+      borderRadius: '4px',
+      padding:      '4px 0',
+      cursor:       'pointer',
+      width:        '200px',
+      boxSizing:    'border-box',
+      outline:      'none',
+    })
+
+    const _confirm = () => {
+      const val = input.value.trim().slice(0, 12)
+      if (!val) { input.focus(); return }
+      localStorage.setItem('devsurvival_username', val)
+      if (this._usernameModalActive) {
+        this._usernameModalActive = false
+        this._hideUsernameInput()
+        if (!this._renameMode) {
           Game.start()
         }
+        this._renameMode = false
       }
-    })
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') input.blur()
-    })
+    }
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _confirm() })
+    btn.addEventListener('click', _confirm)
+
     document.body.appendChild(input)
+    document.body.appendChild(btn)
     this._usernameInput = input
+    this._usernameBtn   = btn
   }
 
   _showUsernameInput() {
     const input = this._usernameInput
+    const btn   = this._usernameBtn
     if (!input) return
     const canvas = document.getElementById('gameCanvas')
     if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    // canvas 상에서 username input 박스 목표 위치 (canvas 좌표 기준: x=320, y=530)
+    const rect   = canvas.getBoundingClientRect()
     const scaleX = rect.width  / 800
     const scaleY = rect.height / 600
-    const inputW = 160 * scaleX
-    const inputH = 26  * scaleY
-    const canvasX = (800 / 2 - 80) * scaleX  // 중앙 정렬
-    const canvasY = 530 * scaleY
-    input.style.left    = (rect.left + window.scrollX + canvasX) + 'px'
-    input.style.top     = (rect.top  + window.scrollY + canvasY) + 'px'
+
+    const inputW = 200 * scaleX
+    const inputH = 36 * scaleY
+    const btnH   = 36 * scaleY
+    const gap    = 8  * scaleY
+    // 패널 중앙 x=400, 입력창 상단 y=302 (canvas 좌표)
+    const screenCX   = rect.left + window.scrollX + 400 * scaleX
+    const inputTop   = rect.top  + window.scrollY + 302 * scaleY
+
+    // value는 처음 표시할 때만 초기화 (매 프레임 리셋 방지)
+    if (input.style.display === 'none') {
+      input.value = localStorage.getItem('devsurvival_username') || ''
+    }
+
+    const fs = Math.max(12, Math.round(15 * scaleY)) + 'px'
+    input.style.left    = (screenCX - inputW / 2) + 'px'
+    input.style.top     = inputTop + 'px'
     input.style.width   = inputW + 'px'
     input.style.height  = inputH + 'px'
-    input.style.fontSize = Math.max(10, Math.round(14 * scaleY)) + 'px'
+    input.style.fontSize = fs
     input.style.display = 'block'
-    input.value = localStorage.getItem('devsurvival_username') || ''
+
+    if (btn) {
+      btn.style.left    = (screenCX - inputW / 2) + 'px'
+      btn.style.top     = (inputTop + inputH + gap) + 'px'
+      btn.style.width   = inputW + 'px'
+      btn.style.height  = btnH + 'px'
+      btn.style.fontSize = fs
+      btn.style.display = 'block'
+    }
   }
 
   _hideUsernameInput() {
     if (this._usernameInput) this._usernameInput.style.display = 'none'
+    if (this._usernameBtn)   this._usernameBtn.style.display   = 'none'
   }
 
   _select(key) {
@@ -4492,6 +4573,16 @@ class Lobby {
       const u = this.upgradeBtnRect
       if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
         GameState.screen = 'upgrade'
+        return
+      }
+
+      const r = this.renameBtnRect
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+        this._renameMode = true
+        this._usernameModalActive = true
+        this._showUsernameInput()
+        setTimeout(() => { if (this._usernameInput) this._usernameInput.focus() }, 80)
+        return
       }
     })
   }
@@ -4610,16 +4701,25 @@ class Lobby {
     ctx.textAlign = 'center'
     ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 508)
 
-    // Username 표시 (로비 하단, 클릭 불가 — 정보 표시용)
+    // Username 표시 + 닉네임 변경 버튼
     const uname = localStorage.getItem('devsurvival_username') || null
     if (uname) {
       ctx.fillStyle = '#8899bb'
-      ctx.font = '12px "VT323", monospace'
+      ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`👤 ${uname}`, 400, 572)
-      ctx.fillStyle = '#445566'
-      ctx.font = '10px "VT323", monospace'
-      ctx.fillText('저장은 이 기기에만 적용됩니다', 400, 585)
+      ctx.fillText(`👤 ${uname}`, 400, 563)
+
+      // 닉네임 변경 버튼
+      const r = this.renameBtnRect
+      ctx.fillStyle = 'rgba(20,30,60,0.75)'
+      ctx.strokeStyle = '#334466'
+      ctx.lineWidth = 1
+      ctx.fillRect(r.x, r.y, r.w, r.h)
+      ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#6688aa'
+      ctx.font = '13px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('[ 닉네임 변경 ]', r.x + r.w / 2, r.y + r.h - 4)
     } else {
       ctx.fillStyle = '#667788'
       ctx.font = '12px "VT323", monospace'
@@ -4627,17 +4727,31 @@ class Lobby {
       ctx.fillText('시작하기를 누르면 닉네임을 입력할 수 있습니다', 400, 572)
     }
 
-    // 모달 모드: 반투명 오버레이 + 안내 텍스트
+    // 모달 모드: 반투명 오버레이 + 패널
     if (this._usernameModalActive) {
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'
+      // 오버레이
+      ctx.fillStyle = 'rgba(0,0,0,0.72)'
       ctx.fillRect(0, 0, 800, 600)
+
+      // 패널 (230,220) ~ (570,420)
+      ctx.fillStyle = '#0a1432'
+      ctx.strokeStyle = '#3366cc'
+      ctx.lineWidth = 2
+      ctx.fillRect(230, 220, 340, 200)
+      ctx.strokeRect(230, 220, 340, 200)
+
+      // 제목
       ctx.fillStyle = '#aaccff'
-      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.font = 'bold 24px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('닉네임을 입력하세요 (최대 12자)', 400, 270)
-      ctx.fillStyle = '#778899'
+      ctx.fillText(this._renameMode ? '닉네임 변경' : '닉네임을 입력하세요', 400, 256)
+
+      // 부제
+      ctx.fillStyle = '#556677'
       ctx.font = '14px "VT323", monospace'
-      ctx.fillText('Enter 키로 확인', 400, 300)
+      ctx.fillText('한글·영어 · 최대 12자', 400, 280)
+
+      // DOM 입력창 + 확인 버튼은 y=302, 346 위치에 렌더됨 (DOM)
       this._showUsernameInput()  // 모달 위치 갱신
     }
 
@@ -5426,15 +5540,15 @@ class VirtualJoystick {
       if (skill) {
         // 키 레이블 (위쪽 작게)
         ctx.fillStyle = '#aaccff'
-        ctx.font = 'bold 8px "Press Start 2P", monospace'
+        ctx.font = 'bold 10px monospace'
         ctx.fillText(btn.label, btn.x, btn.y - 9)
         // 스킬 이름 앞 3자 (아래쪽)
         ctx.fillStyle = cd > 0 ? '#778899' : '#ffffff'
-        ctx.font = 'bold 8px "Press Start 2P", monospace'
+        ctx.font = 'bold 11px monospace'
         ctx.fillText(skill.slice(0, 3), btn.x, btn.y + 7)
       } else {
         ctx.fillStyle = '#555'
-        ctx.font = 'bold 10px "Press Start 2P", monospace'
+        ctx.font = 'bold 14px monospace'
         ctx.fillText(btn.label, btn.x, btn.y)
       }
     }
@@ -6017,7 +6131,6 @@ function _loop(now) {
 
   Game.init()
 })()
-
 
   </script>
 
