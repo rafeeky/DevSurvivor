@@ -35,8 +35,9 @@ class Lobby {
       zIndex:          '9999',
       display:         'none',
       fontSize:        '15px',
-      fontFamily:      '"VT323", monospace',
+      fontFamily:      '"VT323", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
       color:           '#ffffff',
+      caretColor:      '#4488ff',
       background:      'rgba(10,20,50,0.88)',
       border:          '1.5px solid #4488ff',
       borderRadius:    '4px',
@@ -81,14 +82,17 @@ class Lobby {
     const inputW = 160 * scaleX
     const inputH = 26  * scaleY
     const canvasX = (800 / 2 - 80) * scaleX  // 중앙 정렬
-    const canvasY = 530 * scaleY
+    const canvasY = 315 * scaleY
     input.style.left    = (rect.left + window.scrollX + canvasX) + 'px'
     input.style.top     = (rect.top  + window.scrollY + canvasY) + 'px'
     input.style.width   = inputW + 'px'
     input.style.height  = inputH + 'px'
     input.style.fontSize = Math.max(10, Math.round(14 * scaleY)) + 'px'
+    // value는 처음 표시할 때만 설정 (매 프레임 리셋 방지)
+    if (input.style.display === 'none') {
+      input.value = localStorage.getItem('devsurvival_username') || ''
+    }
     input.style.display = 'block'
-    input.value = localStorage.getItem('devsurvival_username') || ''
   }
 
   _hideUsernameInput() {
