@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-21T19:43:43.995Z",
+  "file": "ui/hud.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/icon/gold_${i}.png",
+      "file": "ui/hud.js"
+    }
+  ]
+}

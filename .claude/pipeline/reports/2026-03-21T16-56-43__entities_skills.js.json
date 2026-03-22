@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-21T16:56:43.436Z",
+  "file": "entities/skills.js",
+  "issues": [
+    {
+      "level": "warn",
+      "code": "CTX_BALANCE",
+      "msg": "ctx.save(1) ≠ ctx.restore(2) → 렌더 상태 누적 위험",
+      "file": "entities/skills.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/packs/Free",
+      "file": "entities/skills.js"
+    }
+  ]
+}

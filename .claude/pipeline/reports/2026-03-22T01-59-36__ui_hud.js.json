@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-03-22T01:59:36.534Z",
+  "file": "ui/hud.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_emergency_fix.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_debug.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_sing.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_coffee.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_mental.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_pet_dog.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_nap.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_autosave.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_walk.png",
+      "file": "ui/hud.js"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-21T19:34:58.060Z",
+  "file": "game.js",
+  "issues": [
+    {
+      "level": "warn",
+      "code": "GAMEOVER_NO_RETURN",
+      "msg": "Game.gameOver() 후 return 없음 (line 372) → 이후 코드 계속 실행됨",
+      "file": "game.js"
+    },
+    {
+      "level": "warn",
+      "code": "LESSON_HIT",
+      "msg": "알려진 패턴 감지: Game.gameOver() 호출 후 return 없이 로직 계속 실행",
+      "file": "game.js"
+    },
+    {
+      "level": "warn",
+      "code": "LESSON_HIT",
+      "msg": "알려진 패턴 감지: Game.start()에서 GameState 필드 리셋 누락 (aiBotSpawned, spawnTimer 등)",
+      "file": "game.js"
+    },
+    {
+      "level": "warn",
+      "code": "LESSON_HIT",
+      "msg": "알려진 패턴 감지: 게임 시작 시 플레이어에게 스킬이 없어 공격 불가",
+      "file": "game.js"
+    }
+  ]
+}

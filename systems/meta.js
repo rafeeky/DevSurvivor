@@ -141,16 +141,16 @@ const MetaManager = {
 
   // ── 메타 업그레이드 아이콘 매핑 ───────────────────────────────────────
   _iconMap: {
-    '조금 더 버티기':     'assets/custom/icons/upgrade_heart.png',
-    '더 빠르게 움직이기': 'assets/custom/icons/upgrade_speed.png',
-    '힘세고 강한 아침!':  'assets/custom/icons/upgrade_health.png',
-    '경험치 증가':        'assets/custom/icons/upgrade_exp.png',
-    '빠른 회복':          'assets/custom/icons/upgrade_hp.png',
-    '소음 차단':          'assets/custom/icons/upgrade_noise.png',
-    '준비된 하루':        'assets/custom/icons/upgrade_shield.png',
-    '크런치 모드':        'assets/custom/icons/upgrade_crunch.png',
-    '인센티브':           'assets/custom/icons/upgrade_incentive.png',
-    '시작부터 하나 더':   'assets/custom/icons/upgrade_addskill.png',
+    '조금 더 버티기':     'assets/custom/icons/A_upgrade_heart.png',
+    '더 빠르게 움직이기': 'assets/custom/icons/A_upgrade_speed.png',
+    '힘세고 강한 아침!':  'assets/custom/icons/A_upgrade_health.png',
+    '경험치 증가':        'assets/custom/icons/A_upgrade_exp.png',
+    '빠른 회복':          'assets/custom/icons/A_upgrade_hp.png',
+    '소음 차단':          'assets/custom/icons/A_upgrade_noise.png',
+    '준비된 하루':        'assets/custom/icons/A_upgrade_shield.png',
+    '크런치 모드':        'assets/custom/icons/A_upgrade_crunch.png',
+    '인센티브':           'assets/custom/icons/A_upgrade_incentive.png',
+    '시작부터 하나 더':   'assets/custom/icons/A_upgrade_addskill.png',
   },
   _iconCache: {},
   _getIcon(name) {

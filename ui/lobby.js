@@ -17,6 +17,8 @@ class Lobby {
     this.startBtnRect   = { x: 210, y: 362, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 436, w: 220, h: 34 }
     this._usernameInput = null
+    this._usernameModalActive = false
+    this._lobbyBgmPlaying = false
     this._initUsernameInput()
     this._bindClick()
   }
@@ -52,8 +54,12 @@ class Lobby {
       input.value = val
       if (val) {
         localStorage.setItem('devsurvival_username', val)
-      } else {
-        localStorage.removeItem('devsurvival_username')
+        // 모달 모드였으면 게임 시작
+        if (this._usernameModalActive) {
+          this._usernameModalActive = false
+          this._hideUsernameInput()
+          Game.start()
+        }
       }
     })
     input.addEventListener('keydown', (e) => {
@@ -114,7 +120,16 @@ class Lobby {
 
       const s = this.startBtnRect
       if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) {
-        Game.start(); return
+        const existing = localStorage.getItem('devsurvival_username')?.trim()
+        if (existing) {
+          Game.start()
+        } else {
+          // username 미설정 → 모달 모드 진입
+          this._usernameModalActive = true
+          this._showUsernameInput()
+          if (this._usernameInput) this._usernameInput.focus()
+        }
+        return
       }
       const u = this.upgradeBtnRect
       if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
@@ -126,11 +141,18 @@ class Lobby {
   render(ctx) {
     if (GameState.screen !== 'lobby') {
       this._hideUsernameInput()
+      // 로비 BGM 정지
+      if (this._lobbyBgmPlaying) {
+        this._lobbyBgmPlaying = false
+        window.GameAudio?.stopBGM()
+      }
       return
     }
-
-    // username input HTML 오버레이 위치 갱신
-    this._showUsernameInput()
+    // 로비 BGM 시작 (처음 진입 시 1회)
+    if (!this._lobbyBgmPlaying) {
+      this._lobbyBgmPlaying = true
+      window.GameAudio?.startLobbyBGM()
+    }
 
     // GameState 동기화
     GameState.selectedCharacter = this._selected
@@ -238,22 +260,36 @@ class Lobby {
     ctx.textAlign = 'center'
     ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 508)
 
-    // Username 라벨 (input HTML 오버레이 위, 캔버스 하단)
-    const uname = localStorage.getItem('devsurvival_username') || 'Guest'
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'
-    ctx.fillRect(240, 520, 320, 52)
-    ctx.fillStyle = '#aaccff'
-    ctx.font = '13px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText(`플레이어: ${uname}`, 400, 534)
-    // 입력칸 자리 표시 (HTML input이 그 위에 올라감)
-    ctx.strokeStyle = '#4488ff'
-    ctx.lineWidth = 1
-    ctx.strokeRect(320, 538, 160, 22)
-    // 기기 한정 저장 안내
-    ctx.fillStyle = '#556677'
-    ctx.font = '11px "VT323", monospace'
-    ctx.fillText('저장은 이 기기에만 적용됩니다', 400, 572)
+    // Username 표시 (로비 하단, 클릭 불가 — 정보 표시용)
+    const uname = localStorage.getItem('devsurvival_username') || null
+    if (uname) {
+      ctx.fillStyle = '#8899bb'
+      ctx.font = '12px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(`👤 ${uname}`, 400, 572)
+      ctx.fillStyle = '#445566'
+      ctx.font = '10px "VT323", monospace'
+      ctx.fillText('저장은 이 기기에만 적용됩니다', 400, 585)
+    } else {
+      ctx.fillStyle = '#667788'
+      ctx.font = '12px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('시작하기를 누르면 닉네임을 입력할 수 있습니다', 400, 572)
+    }
+
+    // 모달 모드: 반투명 오버레이 + 안내 텍스트
+    if (this._usernameModalActive) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'
+      ctx.fillRect(0, 0, 800, 600)
+      ctx.fillStyle = '#aaccff'
+      ctx.font = 'bold 22px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('닉네임을 입력하세요 (최대 12자)', 400, 270)
+      ctx.fillStyle = '#778899'
+      ctx.font = '14px "VT323", monospace'
+      ctx.fillText('Enter 키로 확인', 400, 300)
+      this._showUsernameInput()  // 모달 위치 갱신
+    }
 
     ctx.textAlign = 'left'
   }

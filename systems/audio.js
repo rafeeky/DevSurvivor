@@ -71,7 +71,73 @@
     playGameOver() {
       [440, 330, 220, 110].forEach((f, i) => _playTone(f, 'sawtooth', 0.3, 0.18, i * 0.15))
     },
-    // BGM: 반복 멜로디 루프 (8비트 스타일)
+    // 로비 BGM: 전자음 베이스라인 + 멜로디 조합 (BPM 140)
+    startLobbyBGM() {
+      if (_bgmActive) return
+      _bgmActive = true
+      const ctx = _getCtx()
+      // 전자음 베이스라인 + 멜로디 조합
+      // BPM: 140 (더 빠름), 패턴: 2bar
+      const basePattern = [
+        [110, 0.214], [110, 0.107], [147, 0.214], [165, 0.107],
+        [110, 0.214], [130, 0.107], [110, 0.214], [98, 0.214],
+      ]
+      const melody = [
+        [440, 0.214], [494, 0.107], [523, 0.214], [587, 0.214],
+        [523, 0.107], [494, 0.107], [440, 0.428], [0, 0.214],
+        [392, 0.214], [440, 0.107], [494, 0.214], [440, 0.214],
+        [392, 0.107], [349, 0.107], [392, 0.428], [0, 0.214],
+      ]
+      const totalDur = melody.reduce((s,[,d]) => s + d, 0)
+
+      function scheduleLoop(startTime) {
+        if (!_bgmActive) return
+        let t = startTime
+        // 베이스라인 (2번 반복)
+        for (let r = 0; r < 2; r++) {
+          basePattern.forEach(([freq, dur]) => {
+            if (!freq) { t += dur; return }
+            try {
+              const ctx2 = _getCtx()
+              const osc = ctx2.createOscillator()
+              const gain = ctx2.createGain()
+              osc.type = 'sawtooth'
+              osc.frequency.value = freq
+              gain.gain.setValueAtTime(0.06, t)
+              gain.gain.setValueAtTime(0.06, t + dur * 0.8)
+              gain.gain.linearRampToValueAtTime(0, t + dur)
+              osc.connect(gain); gain.connect(ctx2.destination)
+              osc.start(t); osc.stop(t + dur)
+              _bgmNodes.push({ osc, gain })
+            } catch(e) {}
+            t += dur
+          })
+        }
+        // 멜로디
+        let mt = startTime
+        melody.forEach(([freq, dur]) => {
+          if (freq > 0) {
+            try {
+              const ctx2 = _getCtx()
+              const osc = ctx2.createOscillator()
+              const gain = ctx2.createGain()
+              osc.type = 'square'
+              osc.frequency.value = freq
+              gain.gain.setValueAtTime(0.05, mt)
+              gain.gain.setValueAtTime(0.05, mt + dur * 0.7)
+              gain.gain.linearRampToValueAtTime(0, mt + dur)
+              osc.connect(gain); gain.connect(ctx2.destination)
+              osc.start(mt); osc.stop(mt + dur)
+              _bgmNodes.push({ osc, gain })
+            } catch(e) {}
+          }
+          mt += dur
+        })
+        setTimeout(() => scheduleLoop(_getCtx().currentTime + 0.05), (totalDur - 0.5) * 1000)
+      }
+      scheduleLoop(ctx.currentTime + 0.1)
+    },
+    // BGM: 반복 멜로디 루프 (8비트 스타일, 게임용)
     startBGM() {
       if (_bgmActive) return
       _bgmActive = true

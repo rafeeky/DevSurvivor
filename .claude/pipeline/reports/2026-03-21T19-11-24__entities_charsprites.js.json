@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-21T19:11:24.246Z",
+  "file": "entities/charsprites.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/player/vampir_idle.png",
+      "file": "entities/charsprites.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/player/vampir_run.png",
+      "file": "entities/charsprites.js"
+    }
+  ]
+}

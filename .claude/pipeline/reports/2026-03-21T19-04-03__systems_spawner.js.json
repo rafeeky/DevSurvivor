@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-21T19:04:03.049Z",
+  "file": "systems/spawner.js",
+  "issues": [
+    {
+      "level": "warn",
+      "code": "LESSON_HIT",
+      "msg": "알려진 패턴 감지: Game.start()에서 GameState 필드 리셋 누락 (aiBotSpawned, spawnTimer 등)",
+      "file": "systems/spawner.js"
+    }
+  ]
+}

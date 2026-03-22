@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-21T16:58:05.174Z",
+  "file": "entities/skills.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/packs/Free",
+      "file": "entities/skills.js"
+    }
+  ]
+}

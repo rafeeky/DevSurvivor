@@ -4,17 +4,17 @@
 
 // skillId → 아이콘 파일 매핑
 const _LU_ICON_BY_ID = {
-  '긴급수정':    'assets/custom/icons/skill_emergency_fix.png',
-  '디버그':      'assets/custom/icons/skill_debug.png',
-  '우선순위정리':'assets/custom/icons/skill_sing.png',       // 변경: priority_sort → sing
-  '커피':        'assets/custom/icons/skill_coffee.png',
-  '피규어청소':  'assets/custom/icons/skill_mental.png',     // 변경: figure_clean → mental
-  '강아지':      'assets/custom/icons/skill_pet_dog.png',
-  '낮잠':        'assets/custom/icons/skill_nap.png',
-  '자동저장':    'assets/custom/icons/skill_autosave.png',
-  '산책':        'assets/custom/icons/skill_walk.png',
-  'hp강화':      'assets/custom/icons/upgrade_heart.png',
-  'speed강화':   'assets/custom/icons/upgrade_speed.png',
+  '긴급수정':    'assets/custom/icons/A_skill_emergency_fix.png',
+  '디버그':      'assets/custom/icons/A_skill_debug.png',
+  '우선순위정리':'assets/custom/icons/A_skill_sing.png',       // 변경: priority_sort → sing
+  '커피':        'assets/custom/icons/A_skill_coffee.png',
+  '피규어청소':  'assets/custom/icons/A_skill_mental.png',     // 변경: figure_clean → mental
+  '강아지':      'assets/custom/icons/A_skill_pet_dog.png',
+  '낮잠':        'assets/custom/icons/A_skill_nap.png',
+  '자동저장':    'assets/custom/icons/A_skill_autosave.png',
+  '산책':        'assets/custom/icons/A_skill_walk.png',
+  'hp강화':      'assets/custom/icons/A_upgrade_heart.png',
+  'speed강화':   'assets/custom/icons/A_upgrade_speed.png',
 }
 const _luIconCache = {}
 function _getLUIcon(skillId) {

@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-21T19:07:32.324Z",
+  "file": "systems/drops.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/icon/gold_${i}.png",
+      "file": "systems/drops.js"
+    },
+    {
+      "level": "error",
+      "code": "BUNDLE_MISSING",
+      "msg": "bundle.js SCRIPTS에 'systems/drops.js' 없음 → docs/index.html 미반영",
+      "file": "systems/drops.js"
+    }
+  ]
+}

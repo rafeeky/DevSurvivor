@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-21T19:07:52.406Z",
+  "file": "systems/drops.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "BUNDLE_MISSING",
+      "msg": "bundle.js SCRIPTS에 'systems/drops.js' 없음 → docs/index.html 미반영",
+      "file": "systems/drops.js"
+    }
+  ]
+}

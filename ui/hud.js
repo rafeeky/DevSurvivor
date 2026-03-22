@@ -13,15 +13,15 @@ const _SKILL_TYPE_BADGE = {
 
 // 스킬 이름 → 아이콘 파일 매핑
 const _SKILL_ICON_MAP = {
-  '긴급 패치':  'assets/custom/icons/skill_emergency_fix.png',
-  '디버그':     'assets/custom/icons/skill_debug.png',
-  '고성방가':   'assets/custom/icons/skill_sing.png',
-  '커피 한 잔': 'assets/custom/icons/skill_coffee.png',
-  '멘탈관리':   'assets/custom/icons/skill_mental.png',
-  '쓰다듬기':   'assets/custom/icons/skill_pet_dog.png',
-  '낮잠자기':   'assets/custom/icons/skill_nap.png',
-  '자동 저장':  'assets/custom/icons/skill_autosave.png',
-  '산책하기':   'assets/custom/icons/skill_walk.png',
+  '긴급 패치':  'assets/custom/icons/A_skill_emergency_fix.png',
+  '디버그':     'assets/custom/icons/A_skill_debug.png',
+  '고성방가':   'assets/custom/icons/A_skill_sing.png',
+  '커피 한 잔': 'assets/custom/icons/A_skill_coffee.png',
+  '멘탈관리':   'assets/custom/icons/A_skill_mental.png',
+  '쓰다듬기':   'assets/custom/icons/A_skill_pet_dog.png',
+  '낮잠자기':   'assets/custom/icons/A_skill_nap.png',
+  '자동 저장':  'assets/custom/icons/A_skill_autosave.png',
+  '산책하기':   'assets/custom/icons/A_skill_walk.png',
 }
 // 지연 로드 캐시
 const _skillIconCache = {}
@@ -140,7 +140,7 @@ class HUD {
     }
 
     // 타이머 (남은 시간)
-    const remaining = Math.max(0, 180 - gameTime)
+    const remaining = Math.max(0, 210 - gameTime)
     const mins = Math.floor(remaining / 60)
     const secs = Math.floor(remaining % 60)
     const timeStr = `${mins}:${secs.toString().padStart(2,'0')}`
@@ -164,102 +164,110 @@ class HUD {
     ctx.font = '13px "VT323", monospace'
     ctx.textAlign = 'right'
     ctx.fillText(`${GameState.score.toLocaleString()}`, 788, 24)
+
+    // Username 표시 (우상단)
+    const uname = localStorage.getItem('devsurvival_username') || 'Guest'
+    ctx.fillStyle = '#8899bb'
+    ctx.font = '11px "VT323", monospace'
+    ctx.textAlign = 'right'
+    ctx.fillText(`👤 ${uname}`, 788, 44)
     ctx.textAlign = 'left'
   }
 
   _drawBottomBar(ctx) {
-    // 하단 반투명 바 배경
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'
-    ctx.fillRect(0, 548, 800, 52)
+    // 하단 바 배경 (더 넓게)
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'
+    ctx.fillRect(0, 528, 800, 72)
 
-    // 스킬 슬롯 4개 (Q/W/E/R)
     const keys = ['Q','W','E','R']
+    const sy_key  = 530   // 키 레이블 스트립 Y
+    const sy_slot = 548   // 스킬 슬롯 시작 Y
+    const slotH   = 46
+
     for (let i = 0; i < 4; i++) {
       const sx = 12 + i * 112
-      const sy = 553
       const state = Game.skillManager?.getSkillState(i) || { isEmpty: true }
 
+      // ── 키 레이블 스트립 (슬롯 위) ──
+      ctx.fillStyle = state.isEmpty ? 'rgba(30,30,60,0.5)' : 'rgba(20,40,80,0.7)'
+      ctx.fillRect(sx, sy_key, 100, 16)
+      ctx.fillStyle = state.isEmpty ? '#556' : '#aaccff'
+      ctx.font = 'bold 14px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(keys[i], sx + 50, sy_key + 12)
+      ctx.textAlign = 'left'
+
+      // ── 스킬 슬롯 ──
       if (state.isEmpty) {
-        ctx.fillStyle = '#1a1a2e'
-        ctx.strokeStyle = '#333'
+        ctx.fillStyle = '#0e0e1a'
+        ctx.strokeStyle = '#2a2a44'
       } else if (state.cooldownRemaining > 0) {
-        ctx.fillStyle = '#111'
-        ctx.strokeStyle = '#444'
+        ctx.fillStyle = '#0e0e1a'
+        ctx.strokeStyle = '#334'
       } else {
-        ctx.fillStyle = '#1e2a4a'
-        ctx.strokeStyle = '#4488ff'
+        ctx.fillStyle = '#111827'
+        ctx.strokeStyle = '#3366aa'
       }
       ctx.lineWidth = 1.5
-      ctx.fillRect(sx, sy, 100, 40)
-      ctx.strokeRect(sx, sy, 100, 40)
+      ctx.fillRect(sx, sy_slot, 100, slotH)
+      ctx.strokeRect(sx, sy_slot, 100, slotH)
 
       if (!state.isEmpty) {
-        // 스킬 아이콘 (있으면) — 키 레이블보다 먼저 그려서 레이블이 위에 오도록
+        // 아이콘 (좌측 40×40, 슬롯 안에 꽉)
         const icon = _getSkillIcon(state.name)
         if (icon?.complete && icon.naturalWidth > 0) {
           ctx.save()
           ctx.globalAlpha = state.cooldownRemaining > 0 ? 0.3 : 1.0
           ctx.imageSmoothingEnabled = true
-          // 아이콘을 슬롯 왼쪽에 꽉 채워 넣기 (36×36)
-          ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, sx + 2, sy + 2, 36, 36)
+          ctx.drawImage(icon, 0, 0, icon.naturalWidth, icon.naturalHeight, sx + 2, sy_slot + 2, 40, 40)
           ctx.globalAlpha = 1
-          ctx.imageSmoothingEnabled = false
           ctx.restore()
         }
 
-        // 스킬 타입 뱃지
+        // 타입 뱃지
         const badge = _SKILL_TYPE_BADGE[state.name]
         if (badge) {
           ctx.fillStyle = badge.color + '33'
-          ctx.fillRect(sx + 38, sy + 2, 58, 11)
+          ctx.fillRect(sx + 44, sy_slot + 2, 52, 12)
           ctx.fillStyle = badge.color
           ctx.font = 'bold 9px "VT323", monospace'
-          ctx.fillText(badge.label, sx + 40, sy + 11)
+          ctx.fillText(badge.label, sx + 46, sy_slot + 11)
         }
-        // 스킬 이름
-        ctx.fillStyle = state.cooldownRemaining > 0 ? '#556' : '#aaccff'
-        ctx.font = '11px "VT323", monospace'
-        ctx.fillText(state.name.substring(0, 7), sx + 38, sy + 25)
 
-        // 쿨다운 숫자
+        // 스킬 이름
+        ctx.fillStyle = state.cooldownRemaining > 0 ? '#446' : '#cce'
+        ctx.font = '11px "VT323", monospace'
+        ctx.fillText(state.name.substring(0, 7), sx + 44, sy_slot + 26)
+
+        // LV 표시 (우하단)
+        const lv = state.level || 1
+        const lvLabel = lv >= 3 ? 'MAX' : `LV.${lv}`
+        const lvColor = lv >= 3 ? '#FFD700' : lv >= 2 ? '#aaddff' : '#556677'
+        ctx.fillStyle = lvColor
+        ctx.font = 'bold 9px "VT323", monospace'
+        ctx.textAlign = 'right'
+        ctx.fillText(lvLabel, sx + 98, sy_slot + 44)
+        ctx.textAlign = 'left'
+
+        // 쿨다운
         if (state.cooldownRemaining > 0) {
           ctx.fillStyle = '#ff8844'
-          ctx.font = 'bold 13px "VT323", monospace'
+          ctx.font = 'bold 12px "VT323", monospace'
           ctx.textAlign = 'center'
-          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 68, sy + 36)
+          ctx.fillText(state.cooldownRemaining.toFixed(1), sx + 72, sy_slot + 38)
           ctx.textAlign = 'left'
 
-          // 쿨다운 진행 바
-          ctx.fillStyle = '#224'
-          ctx.fillRect(sx, sy + 38, 100, 3)
+          // 쿨다운 바
+          ctx.fillStyle = '#113'
+          ctx.fillRect(sx, sy_slot + slotH - 4, 100, 4)
           const ratio = 1 - state.cooldownRemaining / state.cooldownMax
           ctx.fillStyle = '#4488ff'
-          ctx.fillRect(sx, sy + 38, 100 * ratio, 3)
-        }
-        // LV 표시 (우하단)
-        if (!state.isEmpty) {
-          const lv = state.level || 1
-          const lvLabel = lv >= 3 ? 'LV.MAX' : `LV.${lv}`
-          const lvColor = lv >= 3 ? '#FFD700' : lv >= 2 ? '#aaddff' : '#667799'
-          ctx.fillStyle = lvColor
-          ctx.font = 'bold 8px "VT323", monospace'
-          ctx.textAlign = 'right'
-          ctx.fillText(lvLabel, sx + 98, sy + 14)
-          ctx.textAlign = 'left'
+          ctx.fillRect(sx, sy_slot + slotH - 4, 100 * ratio, 4)
         }
       }
-
-      // 키 레이블 — 슬롯 전체 폭 스트립 (상단 고정, 항상 맨 위에 렌더)
-      ctx.fillStyle = 'rgba(0,0,0,0.82)'
-      ctx.fillRect(sx, sy, 100, 24)
-      ctx.fillStyle = state.isEmpty ? '#555' : '#e8e8ff'
-      ctx.font = 'bold 22px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText(keys[i], sx + 50, sy + 19)
-      ctx.textAlign = 'left'
     }
 
-    // 빈 슬롯 힌트 (초반 안내)
+    // 빈 슬롯 힌트
     const allEmpty = !Game.skillManager?.slots?.some(Boolean)
     if (allEmpty) {
       ctx.fillStyle = '#556688'
@@ -270,30 +278,28 @@ class HUD {
     }
 
     // 레벨 & 경험치 바
-    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
+    const RANKS = ['인턴', '주니어', '시니어', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     ctx.fillStyle = '#ccaaff'
     ctx.font = 'bold 12px "VT323", monospace'
-    ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 568)
+    ctx.fillText(`${rankName}  Lv.${GameState.playerLevel}`, 462, 558)
 
     const EXP_THRESHOLDS = [0, 30, 80, 160, 280, 450, 650, 900, 1200]
     const lvl = GameState.playerLevel
     const expNeeded = lvl < EXP_THRESHOLDS.length ? EXP_THRESHOLDS[lvl] : EXP_THRESHOLDS[EXP_THRESHOLDS.length - 1]
-    const expCurrent = GameState.playerExp
-    const expRatio = expNeeded > 0 ? Math.min(1, expCurrent / expNeeded) : 1
-
-    ctx.fillStyle = '#333'
-    ctx.fillRect(460, 576, 200, 8)
+    const expRatio = expNeeded > 0 ? Math.min(1, GameState.playerExp / expNeeded) : 1
+    ctx.fillStyle = '#222'
+    ctx.fillRect(460, 562, 200, 7)
     ctx.fillStyle = '#aa66ff'
-    ctx.fillRect(460, 576, 200 * expRatio, 8)
-    ctx.strokeStyle = '#555'
+    ctx.fillRect(460, 562, 200 * expRatio, 7)
+    ctx.strokeStyle = '#444'
     ctx.lineWidth = 1
-    ctx.strokeRect(460, 576, 200, 8)
+    ctx.strokeRect(460, 562, 200, 7)
 
     // 처치 수
     ctx.fillStyle = '#aaa'
     ctx.font = '11px "VT323", monospace'
-    ctx.fillText(`처치: ${GameState.killCount}`, 670, 568)
+    ctx.fillText(`처치: ${GameState.killCount}`, 670, 558)
   }
 
   _drawSpeechBubble(ctx) {

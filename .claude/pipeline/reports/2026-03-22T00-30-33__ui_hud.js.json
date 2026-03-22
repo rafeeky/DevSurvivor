@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-22T00:30:33.359Z",
+  "file": "ui/hud.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_priority_sort.png",
+      "file": "ui/hud.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_figure_clean.png",
+      "file": "ui/hud.js"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-03-22T00:30:43.724Z",
+  "file": "systems/meta.js",
+  "issues": [
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_priority_sort.png",
+      "file": "systems/meta.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_figure_clean.png",
+      "file": "systems/meta.js"
+    },
+    {
+      "level": "error",
+      "code": "ASSET_MISSING",
+      "msg": "에셋 없음: assets/custom/icons/skill_priority_sort.png",
+      "file": "systems/meta.js"
+    }
+  ]
+}
