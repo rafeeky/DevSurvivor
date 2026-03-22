@@ -20,3 +20,10 @@ build/
 # docs 배포 폴더 — 아카이브/팩 원본은 제외 (용량 절약)
 docs/assets/_archive/
 docs/assets/packs/
+
+# docs/assets/ui — PSD/MACOSX는 빌드 복사본에서도 제외
+docs/assets/ui/PSD/
+docs/assets/ui/__MACOSX/
+
+# __MACOSX 메타데이터 (맥 압축 해제 찌꺼기)
+**/__MACOSX/
