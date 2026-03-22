@@ -16,8 +16,10 @@ class Lobby {
     ]
     this.startBtnRect   = { x: 210, y: 362, w: 380, h: 60 }
     this.upgradeBtnRect = { x: 290, y: 436, w: 220, h: 34 }
+    this.renameBtnRect  = { x: 320, y: 574, w: 160, h: 20 }
     this._usernameInput = null
     this._usernameModalActive = false
+    this._renameMode = false
     this._lobbyBgmPlaying = false
     this._initUsernameInput()
     this._bindClick()
@@ -80,7 +82,10 @@ class Lobby {
       if (this._usernameModalActive) {
         this._usernameModalActive = false
         this._hideUsernameInput()
-        Game.start()
+        if (!this._renameMode) {
+          Game.start()
+        }
+        this._renameMode = false
       }
     }
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _confirm() })
@@ -179,6 +184,16 @@ class Lobby {
       const u = this.upgradeBtnRect
       if (x >= u.x && x <= u.x + u.w && y >= u.y && y <= u.y + u.h) {
         GameState.screen = 'upgrade'
+        return
+      }
+
+      const r = this.renameBtnRect
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+        this._renameMode = true
+        this._usernameModalActive = true
+        this._showUsernameInput()
+        setTimeout(() => { if (this._usernameInput) this._usernameInput.focus() }, 80)
+        return
       }
     })
   }
@@ -297,16 +312,25 @@ class Lobby {
     ctx.textAlign = 'center'
     ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 508)
 
-    // Username 표시 (로비 하단, 클릭 불가 — 정보 표시용)
+    // Username 표시 + 닉네임 변경 버튼
     const uname = localStorage.getItem('devsurvival_username') || null
     if (uname) {
       ctx.fillStyle = '#8899bb'
-      ctx.font = '12px "VT323", monospace'
+      ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`👤 ${uname}`, 400, 572)
-      ctx.fillStyle = '#445566'
-      ctx.font = '10px "VT323", monospace'
-      ctx.fillText('저장은 이 기기에만 적용됩니다', 400, 585)
+      ctx.fillText(`👤 ${uname}`, 400, 563)
+
+      // 닉네임 변경 버튼
+      const r = this.renameBtnRect
+      ctx.fillStyle = 'rgba(20,30,60,0.75)'
+      ctx.strokeStyle = '#334466'
+      ctx.lineWidth = 1
+      ctx.fillRect(r.x, r.y, r.w, r.h)
+      ctx.strokeRect(r.x, r.y, r.w, r.h)
+      ctx.fillStyle = '#6688aa'
+      ctx.font = '13px "VT323", monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('[ 닉네임 변경 ]', r.x + r.w / 2, r.y + r.h - 4)
     } else {
       ctx.fillStyle = '#667788'
       ctx.font = '12px "VT323", monospace'
@@ -331,9 +355,9 @@ class Lobby {
       ctx.fillStyle = '#aaccff'
       ctx.font = 'bold 24px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('닉네임을 입력하세요', 400, 256)
+      ctx.fillText(this._renameMode ? '닉네임 변경' : '닉네임을 입력하세요', 400, 256)
 
-      // 부제 (입력창 y=302 바로 위, y=282 위치)
+      // 부제
       ctx.fillStyle = '#556677'
       ctx.font = '14px "VT323", monospace'
       ctx.fillText('한글·영어 · 최대 12자', 400, 280)
