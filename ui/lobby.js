@@ -181,10 +181,10 @@ class Lobby {
     // 타이틀
     ctx.textAlign = 'center'
     ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 44px "VT323", monospace'
-    ctx.fillText('DEV', 400, 62)
+    ctx.font = 'bold 30px "VT323", monospace'
+    ctx.fillText('DEV', 400, 46)
     ctx.fillStyle = '#ffffff'
-    ctx.fillText('SURVIVOR', 400, 116)
+    ctx.fillText('SURVIVOR', 400, 80)
 
     // 부제
     ctx.fillStyle = '#ffcc55'
