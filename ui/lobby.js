@@ -7,16 +7,15 @@ class Lobby {
     let saved = localStorage.getItem('devSurvivor_char') || 'adam'
     if (saved === 'alex') saved = 'adam'  // alex removed
     this._selected = saved
-    // 카드 레이아웃: 3장 × 170px, gap 20px, 800px 중앙 정렬 → left=125
-    // 카드 높이 168px: 포트레이트 108 + 이름 16 + 역할배지 16 + 패시브 설명 16 + 여백 12
+    // 카드 레이아웃: 3장 × 153px, 왼쪽 패널 (x=8~495)
     this._cards = [
-      { key: 'adam',   x: 125, y: 180, w: 170, h: 168 },
-      { key: 'amelia', x: 315, y: 180, w: 170, h: 168 },
-      { key: 'vampir', x: 505, y: 180, w: 170, h: 168 },
+      { key: 'adam',   x: 8,   y: 142, w: 153, h: 330 },
+      { key: 'amelia', x: 175, y: 142, w: 153, h: 330 },
+      { key: 'vampir', x: 342, y: 142, w: 153, h: 330 },
     ]
-    this.startBtnRect   = { x: 210, y: 362, w: 380, h: 60 }
-    this.upgradeBtnRect = { x: 290, y: 436, w: 220, h: 34 }
-    this.renameBtnRect  = { x: 320, y: 574, w: 160, h: 20 }
+    this.startBtnRect   = { x: 510, y: 216, w: 275, h: 54 }
+    this.upgradeBtnRect = { x: 510, y: 284, w: 275, h: 46 }
+    this.renameBtnRect  = { x: 510, y: 408, w: 275, h: 34 }
     this._usernameInput = null
     this._usernameModalActive = false
     this._renameMode = false
@@ -201,172 +200,157 @@ class Lobby {
   render(ctx) {
     if (GameState.screen !== 'lobby') {
       this._hideUsernameInput()
-      // 로비 BGM 정지
       if (this._lobbyBgmPlaying) {
         this._lobbyBgmPlaying = false
         window.GameAudio?.stopBGM()
       }
       return
     }
-    // 로비 BGM 시작 (진입 시 — 게임 BGM 정지 후 재시작)
     if (!this._lobbyBgmPlaying) {
       this._lobbyBgmPlaying = true
       window.GameAudio?.stopBGM()
       window.GameAudio?.startLobbyBGM()
     }
 
-    // GameState 동기화
     GameState.selectedCharacter = this._selected
 
-    // 배경 (bg_office.png 또는 폴백 그리드)
+    // ── 1. 배경 ──────────────────────────────────────────────────────────
     if (_lobbyBgImg.complete && _lobbyBgImg.naturalWidth > 0) {
       ctx.drawImage(_lobbyBgImg, 0, 0, _lobbyBgImg.naturalWidth, _lobbyBgImg.naturalHeight, 0, 0, 800, 600)
-      ctx.fillStyle = 'rgba(0,0,10,0.22)'
+      ctx.fillStyle = 'rgba(0,0,10,0.28)'
       ctx.fillRect(0, 0, 800, 600)
     } else {
       ctx.fillStyle = '#0d0d1a'
       ctx.fillRect(0, 0, 800, 600)
-      ctx.strokeStyle = '#1a1a3e'
-      ctx.lineWidth = 1
+      ctx.strokeStyle = '#1a1a3e'; ctx.lineWidth = 1
       for (let x = 0; x < 800; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,600); ctx.stroke() }
       for (let y = 0; y < 600; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(800,y); ctx.stroke() }
     }
 
-    // CRT 모니터 데코 (좌/우 배치, 타이틀 높이에 맞춤)
-    if (window.drawUIMonitor) {
-      const mw = 104, mh = 85
-      drawUIMonitor(ctx, 14,  20, mw, mh)   // 좌측
-      drawUIMonitor(ctx, 682, 20, mw, mh)   // 우측
-    }
+    // ── 2. 우측 다크 패널 오버레이 ────────────────────────────────────
+    const rpGrad = ctx.createLinearGradient(488, 0, 800, 0)
+    rpGrad.addColorStop(0,    'rgba(0,0,8,0)')
+    rpGrad.addColorStop(0.1,  'rgba(0,0,12,0.78)')
+    rpGrad.addColorStop(1,    'rgba(0,0,14,0.90)')
+    ctx.fillStyle = rpGrad
+    ctx.fillRect(488, 0, 312, 600)
 
-    // 타이틀
+    // 하단 컨트롤 바
+    ctx.fillStyle = 'rgba(0,0,0,0.65)'
+    ctx.fillRect(0, 572, 800, 28)
+
+    // ── 3. 캐릭터 선택 헤더 ──────────────────────────────────────────
+    ctx.fillStyle = 'rgba(70,95,130,0.8)'
+    ctx.font = '13px "VT323", monospace'
     ctx.textAlign = 'center'
-    ctx.fillStyle = '#4488ff'
-    ctx.font = 'bold 30px "VT323", monospace'
-    ctx.fillText('DEV', 400, 46)
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText('SURVIVOR', 400, 80)
+    ctx.fillText('─── 캐릭터 선택 ───', 251, 136)
+
+    // ── 4. 캐릭터 카드 (좌측) ────────────────────────────────────────
+    this._drawCharCards(ctx)
+
+    // ── 5. 타이틀 (우측 패널) ────────────────────────────────────────
+    const tx = 648   // 우측 패널 중앙
+    ctx.textAlign = 'center'
+
+    ctx.save()
+    ctx.shadowColor = '#3366ff'
+    ctx.shadowBlur = 22
+    ctx.fillStyle = '#5599ff'
+    ctx.font = 'bold 70px "VT323", monospace'
+    ctx.fillText('DEV', tx, 76)
+    ctx.restore()
+
+    ctx.fillStyle = '#ddeeff'
+    ctx.font = 'bold 48px "VT323", monospace'
+    ctx.fillText('SURVIVOR', tx, 128)
+
+    // 타이틀 하단 구분선
+    ctx.strokeStyle = 'rgba(80,110,190,0.4)'
+    ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(514, 140); ctx.lineTo(792, 140); ctx.stroke()
 
     // 부제
-    ctx.fillStyle = '#ffcc55'
-    ctx.font = '22px "VT323", monospace'
-    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', 400, 140)
+    ctx.fillStyle = 'rgba(155,170,200,0.75)'
+    ctx.font = '13px "VT323", monospace'
+    ctx.fillText('AI가 발전하는 세상에서, 오늘도 버텨야 한다', tx, 158)
 
-    // 점수 / 포인트 (한 줄)
+    // 통계
     const best = parseInt(localStorage.getItem('devsurvival_best') || '0')
     const pts  = window.MetaManager ? MetaManager.loadPoints() : 0
     ctx.fillStyle = '#FFD700'
-    ctx.font = '15px "VT323", monospace'
-    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, 230, 161)
-    ctx.fillStyle = '#ff4444'
-    ctx.font = 'bold 16px "VT323", monospace'
-    ctx.fillText(`출시 포인트: ${pts}`, 510, 161)
+    ctx.font = '13px "VT323", monospace'
+    ctx.fillText(`최고 기록: ${best.toLocaleString()}점`, tx, 177)
+    ctx.fillStyle = '#77bbff'
+    ctx.fillText(`출시 포인트: ${pts}`, tx, 194)
 
-    // 캐릭터 선택 헤더
-    ctx.fillStyle = '#556677'
-    ctx.font = '12px "VT323", monospace'
-    ctx.fillText('── 캐릭터 선택 ──', 400, 181)
+    // ── 6. 버튼 스택 (Viking Survivors 스타일) ────────────────────────
+    this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
+    this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
 
-    // 캐릭터 카드
-    this._drawCharCards(ctx)
-
-    // 시작 버튼 (메인 CTA — gradient rect)
-    const s = this.startBtnRect
-    ctx.save()
-    ctx.shadowColor = '#4488ff'
-    ctx.shadowBlur = 14
-    const sGrad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h)
-    sGrad.addColorStop(0, '#1e4a90')
-    sGrad.addColorStop(1, '#0d2450')
-    ctx.fillStyle = sGrad
-    ctx.strokeStyle = '#66aaff'
-    ctx.lineWidth = 2
-    ctx.fillRect(s.x, s.y, s.w, s.h)
-    ctx.strokeRect(s.x, s.y, s.w, s.h)
-    ctx.restore()
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 36px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('[ 시작하기 ]', s.x + s.w / 2, s.y + s.h / 2 + 8)
-
-    // 업그레이드 버튼 (보조 — gradient rect)
-    const u = this.upgradeBtnRect
-    const uGrad = ctx.createLinearGradient(u.x, u.y, u.x, u.y + u.h)
-    uGrad.addColorStop(0, '#1a3a1a')
-    uGrad.addColorStop(1, '#0a1e0a')
-    ctx.fillStyle = uGrad
-    ctx.strokeStyle = '#55aa55'
-    ctx.lineWidth = 1.5
-    ctx.fillRect(u.x, u.y, u.w, u.h)
-    ctx.strokeRect(u.x, u.y, u.w, u.h)
-    ctx.fillStyle = '#77cc77'
-    ctx.font = '18px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('업그레이드', u.x + u.w / 2, u.y + u.h / 2 + 6)
-
-    // 조작 안내 (1줄로 축소)
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, 488, 800, 32)
-    ctx.fillStyle = '#7799bb'
-    ctx.font = '16px "VT323", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 508)
-
-    // Username 표시 + 닉네임 변경 버튼
+    // ── 7. 닉네임 영역 ──────────────────────────────────────────────
     const uname = localStorage.getItem('devsurvival_username') || null
     if (uname) {
-      ctx.fillStyle = '#8899bb'
+      ctx.fillStyle = '#5577aa'
       ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(`👤 ${uname}`, 400, 563)
-
-      // 닉네임 변경 버튼
-      const r = this.renameBtnRect
-      ctx.fillStyle = 'rgba(20,30,60,0.75)'
-      ctx.strokeStyle = '#334466'
-      ctx.lineWidth = 1
-      ctx.fillRect(r.x, r.y, r.w, r.h)
-      ctx.strokeRect(r.x, r.y, r.w, r.h)
-      ctx.fillStyle = '#6688aa'
-      ctx.font = '13px "VT323", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('[ 닉네임 변경 ]', r.x + r.w / 2, r.y + r.h - 4)
+      ctx.fillText(`👤  ${uname}`, tx, 384)
+      this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
     } else {
-      ctx.fillStyle = '#667788'
+      ctx.fillStyle = '#3d5066'
       ctx.font = '12px "VT323", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('시작하기를 누르면 닉네임을 입력할 수 있습니다', 400, 572)
+      ctx.fillText('시작하기를 누르면 닉네임을 입력합니다', tx, 384)
     }
 
-    // 모달 모드: 반투명 오버레이 + 패널
+    // ── 8. 조작 안내 (하단) ──────────────────────────────────────────
+    ctx.fillStyle = '#4a5c6e'
+    ctx.font = '14px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('이동: 방향키  /  스킬: Q/W/E/R  /  레벨업 시 스킬 선택', 400, 587)
+
+    // ── 9. 닉네임 모달 ──────────────────────────────────────────────
     if (this._usernameModalActive) {
-      // 오버레이
       ctx.fillStyle = 'rgba(0,0,0,0.72)'
       ctx.fillRect(0, 0, 800, 600)
-
-      // 패널 (230,220) ~ (570,420)
-      ctx.fillStyle = '#0a1432'
-      ctx.strokeStyle = '#3366cc'
-      ctx.lineWidth = 2
+      ctx.fillStyle = '#0a1432'; ctx.strokeStyle = '#3366cc'; ctx.lineWidth = 2
       ctx.fillRect(230, 220, 340, 200)
       ctx.strokeRect(230, 220, 340, 200)
-
-      // 제목
       ctx.fillStyle = '#aaccff'
       ctx.font = 'bold 24px "VT323", monospace'
       ctx.textAlign = 'center'
       ctx.fillText(this._renameMode ? '닉네임 변경' : '닉네임을 입력하세요', 400, 256)
-
-      // 부제
       ctx.fillStyle = '#556677'
       ctx.font = '14px "VT323", monospace'
       ctx.fillText('한글·영어 · 최대 12자', 400, 280)
-
-      // DOM 입력창 + 확인 버튼은 y=302, 346 위치에 렌더됨 (DOM)
-      this._showUsernameInput()  // 모달 위치 갱신
+      this._showUsernameInput()
     }
 
     ctx.textAlign = 'left'
+  }
+
+  _drawVikingBtn(ctx, r, label, textColor, isPrimary) {
+    // 배경
+    ctx.fillStyle = isPrimary ? 'rgba(18,22,38,0.94)' : 'rgba(12,14,24,0.88)'
+    ctx.strokeStyle = isPrimary ? '#3d5588' : '#252a3c'
+    ctx.lineWidth = isPrimary ? 1.5 : 1
+    ctx.beginPath()
+    ctx.roundRect(r.x, r.y, r.w, r.h, 4)
+    ctx.fill()
+    ctx.stroke()
+    // 상단 미묘한 하이라이트 선
+    if (isPrimary) {
+      ctx.strokeStyle = 'rgba(100,140,220,0.25)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(r.x + 6, r.y + 1)
+      ctx.lineTo(r.x + r.w - 6, r.y + 1)
+      ctx.stroke()
+    }
+    // 텍스트
+    ctx.fillStyle = textColor
+    ctx.font = isPrimary ? 'bold 28px "VT323", monospace' : 'bold 20px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2 + (isPrimary ? 9 : 7))
   }
 
   _drawCharCards(ctx) {
