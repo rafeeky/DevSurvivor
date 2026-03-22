@@ -144,7 +144,7 @@ const MetaManager = {
     '조금 더 버티기':     'assets/custom/icons/angel.png',
     '더 빠르게 움직이기': 'assets/custom/icons/arrowhead.png',
     '힘세고 강한 아침!':  'assets/custom/icons/cupid.png',
-    '경험치 증가':        'assets/custom/icons/A_upgrade_exp.png',
+    '경험치 증가':        'assets/custom/icons/graph.png',
     '빠른 회복':          'assets/custom/icons/flask.png',
     '소음 차단':          'assets/custom/icons/headphones.png',
     '준비된 하루':        'assets/custom/icons/connected-data-safety.png',
