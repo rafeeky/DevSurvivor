@@ -310,37 +310,31 @@ const MetaManager = {
     this._nextRect = null
 
     if (this._page > 0) {
-      if (window.drawUIButtonFrame) drawUIButtonFrame(ctx, 190, navY, 140, 36, '◀ 이전', '#aaccff')
-      else {
-        if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
-        else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
-        if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
-        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-        ctx.fillText('이전', 258, navY + 23)
-      }
+      if (window.drawUIPanel) drawUIPanel(ctx, 190, navY, 140, 36)
+      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(190, navY, 140, 36); ctx.strokeRect(190, navY, 140, 36) }
+      if (window.drawUIArrow) drawUIArrow(ctx, 'left', 'teal', 198, navY + 2, 32)
+      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('이전', 258, navY + 23)
       this._prevRect = { x: 190, y: navY, w: 140, h: 36 }
     }
 
     if (this._page < totalPages - 1) {
-      if (window.drawUIButtonFrame) drawUIButtonFrame(ctx, 470, navY, 140, 36, '다음 ▶', '#aaccff')
-      else {
-        if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
-        else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
-        ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
-        ctx.fillText('다음', 542, navY + 23)
-        if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
-      }
+      if (window.drawUIPanel) drawUIPanel(ctx, 470, navY, 140, 36)
+      else { ctx.fillStyle = '#1a2a4a'; ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1.5; ctx.fillRect(470, navY, 140, 36); ctx.strokeRect(470, navY, 140, 36) }
+      ctx.fillStyle = '#aaccff'; ctx.font = '16px "VT323", monospace'; ctx.textAlign = 'center'
+      ctx.fillText('다음', 542, navY + 23)
+      if (window.drawUIArrow) drawUIArrow(ctx, 'right', 'teal', 578, navY + 2, 32)
       this._nextRect = { x: 470, y: navY, w: 140, h: 36 }
     }
 
     // 돌아가기 버튼
-    if (window.drawUIButtonFrame) drawUIButtonFrame(ctx, 300, 492, 200, 44, '돌아가기', '#88ff88')
-    else {
-      if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
-      else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
-      ctx.fillStyle = '#88ff88'; ctx.font = 'bold 20px "VT323", monospace'
-      ctx.textAlign = 'center'; ctx.fillText('돌아가기', 400, 520); ctx.textAlign = 'left'
-    }
+    if (window.drawUIPanel) drawUIPanel(ctx, 300, 492, 200, 44)
+    else { ctx.fillStyle = '#0d1a0d'; ctx.strokeStyle = '#44aa44'; ctx.lineWidth = 2; ctx.fillRect(300, 492, 200, 44); ctx.strokeRect(300, 492, 200, 44) }
+    ctx.fillStyle = '#88ff88'
+    ctx.font = 'bold 20px "VT323", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('돌아가기', 400, 520)
+    ctx.textAlign = 'left'
   },
 
   handleClick(x, y) {

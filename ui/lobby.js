@@ -287,35 +287,18 @@ class Lobby {
     ctx.font = 'bold 48px "VT323", monospace'
     ctx.fillText('SURVIVOR', tx, 128)
 
-    // ── 6. 메인메뉴 패널 (monitor 하단) ─────────────────────────────
-    if (window.drawUIMainMenuPanel) {
-      drawUIMainMenuPanel(ctx, 488, 255, 312, 320)
-    } else {
-      ctx.fillStyle = 'rgba(8,12,28,0.88)'
-      ctx.fillRect(488, 255, 312, 320)
-    }
+    // ── 6. 버튼 스택 ─────────────────────────────────────────────────
+    this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
+    this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
 
-    // ── 7. 버튼 스택 (Main_menu.png) ─────────────────────────────────
-    if (window.drawUIMainMenuBtn) {
-      drawUIMainMenuBtn(ctx, 0, this.startBtnRect.x, this.startBtnRect.y, this.startBtnRect.w, this.startBtnRect.h, '▷  시작하기  ◁', '#e8eeff', true)
-      drawUIMainMenuBtn(ctx, 1, this.upgradeBtnRect.x, this.upgradeBtnRect.y, this.upgradeBtnRect.w, this.upgradeBtnRect.h, '업그레이드', '#aaccff', false)
-    } else {
-      this._drawVikingBtn(ctx, this.startBtnRect,   '▷  시작하기  ◁', '#e8eeff', true)
-      this._drawVikingBtn(ctx, this.upgradeBtnRect, '업그레이드',      '#aaccff', false)
-    }
-
-    // ── 8. 닉네임 영역 ──────────────────────────────────────────────
+    // ── 7. 닉네임 영역 ──────────────────────────────────────────────
     const uname = localStorage.getItem('devsurvival_username') || null
     if (uname) {
       ctx.fillStyle = '#5577aa'
       ctx.font = '13px "VT323", monospace'
       ctx.textAlign = 'center'
       ctx.fillText(`👤  ${uname}`, tx, 444)
-      if (window.drawUIMainMenuBtn) {
-        drawUIMainMenuBtn(ctx, 2, this.renameBtnRect.x, this.renameBtnRect.y, this.renameBtnRect.w, this.renameBtnRect.h, '닉네임 변경', '#6688aa', false)
-      } else {
-        this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
-      }
+      this._drawVikingBtn(ctx, this.renameBtnRect, '닉네임 변경', '#6688aa', false)
     } else {
       ctx.fillStyle = '#3d5066'
       ctx.font = '12px "VT323", monospace'
