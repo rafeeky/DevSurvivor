@@ -199,18 +199,33 @@ class HUD {
 
       // ── 스킬 슬롯 ──
       if (state.isEmpty) {
-        ctx.fillStyle = '#0e0e1a'
-        ctx.strokeStyle = '#2a2a44'
-      } else if (state.cooldownRemaining > 0) {
-        ctx.fillStyle = '#0e0e1a'
-        ctx.strokeStyle = '#334'
+        ctx.fillStyle = '#080810'
+        ctx.fillRect(sx, sy_slot, 100, slotH)
+        ctx.save()
+        ctx.setLineDash([4, 3])
+        ctx.strokeStyle = '#1e1e38'
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(sx, sy_slot, 100, slotH)
+        ctx.setLineDash([])
+        ctx.restore()
+        // "+" hint
+        ctx.fillStyle = '#1e1e3a'
+        ctx.font = 'bold 18px "VT323", monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText('+', sx + 50, sy_slot + 28)
+        ctx.textAlign = 'left'
       } else {
-        ctx.fillStyle = '#111827'
-        ctx.strokeStyle = '#3366aa'
+        if (state.cooldownRemaining > 0) {
+          ctx.fillStyle = '#0e0e1a'
+          ctx.strokeStyle = '#334'
+        } else {
+          ctx.fillStyle = '#111827'
+          ctx.strokeStyle = '#3366aa'
+        }
+        ctx.lineWidth = 1.5
+        ctx.fillRect(sx, sy_slot, 100, slotH)
+        ctx.strokeRect(sx, sy_slot, 100, slotH)
       }
-      ctx.lineWidth = 1.5
-      ctx.fillRect(sx, sy_slot, 100, slotH)
-      ctx.strokeRect(sx, sy_slot, 100, slotH)
 
       if (!state.isEmpty) {
         // 아이콘 (좌측 40×40, 슬롯 안에 꽉)
@@ -325,8 +340,8 @@ class HUD {
     const by = sy - 80
 
     // Bubble background (rounded rect + tail)
-    ctx.fillStyle = 'rgba(255,255,255,0.92)'
-    ctx.strokeStyle = '#334466'
+    ctx.fillStyle = 'rgba(8,12,30,0.94)'
+    ctx.strokeStyle = '#4466aa'
     ctx.lineWidth = 1.5
     const r = 6
     ctx.beginPath()
@@ -347,7 +362,7 @@ class HUD {
     ctx.stroke()
 
     // Text
-    ctx.fillStyle = '#112244'
+    ctx.fillStyle = '#ddeeff'
     ctx.font = '15px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(bubble.text, bx + bw / 2, by + bh - 8)

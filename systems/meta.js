@@ -289,7 +289,7 @@ const MetaManager = {
           ctx.fillStyle = '#ffffff'
           ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 21)
         } else {
-          ctx.fillStyle = '#ff6666'
+          ctx.fillStyle = '#4a5568'
           ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
         }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })

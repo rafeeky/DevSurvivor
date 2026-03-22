@@ -1598,7 +1598,7 @@ function updateAndRenderEffects(ctx, deltaTime) {
     } else if (e.type === 'float') {
       const floatY = e.y - (1 - alpha) * 36
       ctx.fillStyle = e.color
-      ctx.font = e.font || 'bold 14px monospace'
+      ctx.font = e.font || 'bold 10px "Press Start 2P", monospace'
       ctx.textAlign = 'center'
       ctx.shadowColor = e.color
       ctx.shadowBlur = 6
@@ -1904,7 +1904,7 @@ class SkillManager {
     }
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 40, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 10, radius: 55, color: '#ffdd44', life: 0.5, maxLife: 0.5 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 16px monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+SPEED', color: '#ffdd44', life: 0.8, maxLife: 0.8, font: 'bold 10px "Press Start 2P", monospace' })
     addEffect({ type: 'sprite', img: _VFX.brightfire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 110, life: 0.83, maxLife: 0.83 })
   }
 
@@ -1954,7 +1954,7 @@ class SkillManager {
     p.heal(healAmt)
     addEffect({ type: 'circle', x: p.x, y: p.y, radius: 28, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
     addEffect({ type: 'burst', x: p.x, y: p.y, count: 8, radius: 48, color: '#ff88bb', life: 0.6, maxLife: 0.6 })
-    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 18px monospace' })
+    addEffect({ type: 'float', x: p.x, y: p.y - 20, text: '+HP', color: '#ff88bb', life: 0.8, maxLife: 0.8, font: 'bold 12px "Press Start 2P", monospace' })
     addEffect({ type: 'sprite', img: _VFX.bluefire, x: p.x, y: p.y, fw: 100, fh: 100, fps: 24, totalFrames: 20, size: 100, life: 0.83, maxLife: 0.83 })
   }
 
@@ -1970,7 +1970,7 @@ class SkillManager {
     this.player.applyBuff('speed', 0, waitTime)
     this.napTimer = waitTime
     addEffect({ type: 'circle', x: this.player.x, y: this.player.y, radius: 22, color: '#8888ff', life: 1.5, maxLife: 1.5 })
-    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 20px monospace' })
+    addEffect({ type: 'float', x: this.player.x, y: this.player.y - 30, text: 'zzz', color: '#aaaaff', life: 1.5, maxLife: 1.5, font: 'bold 12px "Press Start 2P", monospace' })
     addEffect({ type: 'sprite', img: _VFX.nebula, x: this.player.x, y: this.player.y, fw: 100, fh: 100, fps: 18, totalFrames: 27, size: 90, life: 1.5, maxLife: 1.5 })
   }
 }
@@ -2933,18 +2933,34 @@ class LevelUpManager {
       const cx = startX + i * (cardW + 20)
       const cy = 200
 
+      // 희귀도별 테두리 색
+      const _rarityColor = {
+        newSkill:     '#ffaa33',  // 골드 — 신규 스킬
+        upgradeSkill: '#aa55ff',  // 보라 — 강화
+        passiveSkill: '#33ddaa',  // 청록 — 패시브
+        statBoost:    '#4499ff',  // 파랑 — 스탯
+      }[c.type] || '#4466aa'
+
       // 카드 배경 — ui-pack-4 다크 패널 (9-slice)
       if (window.drawUIPanel) {
         drawUIPanel(ctx, cx, cy, cardW, cardH)
       } else {
-        ctx.fillStyle = '#1e2a4a'
-        ctx.strokeStyle = '#4466aa'
-        ctx.lineWidth = 2
+        ctx.fillStyle = '#1a2240'
         ctx.beginPath()
         ctx.roundRect(cx, cy, cardW, cardH, 8)
         ctx.fill()
-        ctx.stroke()
       }
+
+      // 희귀도 테두리 (glow)
+      ctx.save()
+      ctx.shadowColor = _rarityColor
+      ctx.shadowBlur = 8
+      ctx.strokeStyle = _rarityColor
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.roundRect(cx, cy, cardW, cardH, 8)
+      ctx.stroke()
+      ctx.restore()
 
       // ── 상단 아이콘 박스 (카드 상단 중앙) ────────────────────────────
       const _iconKey = c.skillId || c.iconId
@@ -3086,125 +3102,6 @@ function finalizeScore() {
 }
 
 window.ScoreSystem = { calculateFinalScore, updateReleaseProgress, finalizeScore }
-
-  </script>
-
-  <!-- systems/audio.js -->
-  <script>
-;(function () {
-  let _ctx = null
-  let _bgmNodes = []
-  let _bgmActive = false
-  let _currentBGM = null
-
-  function _getCtx() {
-    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)()
-    if (_ctx.state === 'suspended') _ctx.resume()
-    return _ctx
-  }
-
-  function _playTone(freq, type, duration, gainVal, startDelay = 0) {
-    try {
-      const ctx = _getCtx()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = type
-      osc.frequency.value = freq
-      gain.gain.setValueAtTime(gainVal, ctx.currentTime + startDelay)
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startDelay + duration)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(ctx.currentTime + startDelay)
-      osc.stop(ctx.currentTime + startDelay + duration)
-    } catch(e) {}
-  }
-
-  function _playNoise(duration, gainVal) {
-    try {
-      const ctx = _getCtx()
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate)
-      const d = buf.getChannelData(0)
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length)
-      const src = ctx.createBufferSource()
-      src.buffer = buf
-      const gain = ctx.createGain()
-      gain.gain.setValueAtTime(gainVal, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration)
-      src.connect(gain)
-      gain.connect(ctx.destination)
-      src.start()
-    } catch(e) {}
-  }
-
-  const GameAudio = {
-    // 플레이어 피격음: 짧은 노이즈 + 낮은 톤
-    playHit() {
-      _playNoise(0.12, 0.25)
-      _playTone(180, 'sawtooth', 0.15, 0.12)
-    },
-    // 적 처치음: 상승 톤 2개
-    playKill() {
-      _playTone(330, 'square', 0.08, 0.1)
-      _playTone(440, 'square', 0.08, 0.1, 0.06)
-    },
-    // 레벨업: 밝은 아르페지오
-    playLevelUp() {
-      [330, 392, 494, 659].forEach((f, i) => _playTone(f, 'sine', 0.18, 0.18, i * 0.07))
-    },
-    // 보스 등장: 드라마틱 저음 + 노이즈
-    playBossIntro() {
-      _playNoise(0.5, 0.4)
-      _playTone(80, 'sawtooth', 1.2, 0.3)
-      _playTone(60, 'square', 1.5, 0.2, 0.1)
-    },
-    // 승리: 밝은 팡파레
-    playWin() {
-      [523, 659, 784, 1047].forEach((f, i) => _playTone(f, 'sine', 0.3, 0.2, i * 0.1))
-    },
-    // 패배: 하강 음
-    playGameOver() {
-      [440, 330, 220, 110].forEach((f, i) => _playTone(f, 'sawtooth', 0.3, 0.18, i * 0.15))
-    },
-    // 로비 BGM: music_title.mp3
-    startLobbyBGM() {
-      _bgmActive = true
-      try {
-        _currentBGM = new Audio('assets/sounds/music_title.mp3')
-        _currentBGM.loop = true
-        _currentBGM.volume = 0.6
-        _currentBGM.play().catch(() => {})
-      } catch(e) {}
-    },
-    // 게임 BGM: music_play.mp3
-    startBGM() {
-      _bgmActive = true
-      try {
-        _currentBGM = new Audio('assets/sounds/music_play.mp3')
-        _currentBGM.loop = true
-        _currentBGM.volume = 0.5
-        _currentBGM.play().catch(() => {})
-      } catch(e) {}
-    },
-    // autoplay 차단 해제 후 재시도
-    resumeBGMIfNeeded() {
-      if (_currentBGM && _currentBGM.paused) {
-        _currentBGM.play().catch(() => {})
-      }
-    },
-    stopBGM() {
-      _bgmActive = false
-      if (_currentBGM) {
-        _currentBGM.pause()
-        _currentBGM.currentTime = 0
-        _currentBGM = null
-      }
-      _bgmNodes.forEach(n => { try { n.osc.stop(); } catch(e) {} })
-      _bgmNodes = []
-    },
-  }
-
-  window.GameAudio = GameAudio
-})()
 
   </script>
 
@@ -3501,7 +3398,7 @@ const MetaManager = {
           ctx.fillStyle = '#ffffff'
           ctx.fillText(`구매 ${cost}pt`, btnX + btnW / 2, btnY + 21)
         } else {
-          ctx.fillStyle = '#ff6666'
+          ctx.fillStyle = '#4a5568'
           ctx.fillText(`부족 (${cost}pt)`, btnX + btnW / 2, btnY + 21)
         }
         this._buyRects.push({ x: btnX, y: btnY, w: btnW, h: btnH, index: i })
@@ -3943,18 +3840,33 @@ class HUD {
 
       // ── 스킬 슬롯 ──
       if (state.isEmpty) {
-        ctx.fillStyle = '#0e0e1a'
-        ctx.strokeStyle = '#2a2a44'
-      } else if (state.cooldownRemaining > 0) {
-        ctx.fillStyle = '#0e0e1a'
-        ctx.strokeStyle = '#334'
+        ctx.fillStyle = '#080810'
+        ctx.fillRect(sx, sy_slot, 100, slotH)
+        ctx.save()
+        ctx.setLineDash([4, 3])
+        ctx.strokeStyle = '#1e1e38'
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(sx, sy_slot, 100, slotH)
+        ctx.setLineDash([])
+        ctx.restore()
+        // "+" hint
+        ctx.fillStyle = '#1e1e3a'
+        ctx.font = 'bold 18px "VT323", monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText('+', sx + 50, sy_slot + 28)
+        ctx.textAlign = 'left'
       } else {
-        ctx.fillStyle = '#111827'
-        ctx.strokeStyle = '#3366aa'
+        if (state.cooldownRemaining > 0) {
+          ctx.fillStyle = '#0e0e1a'
+          ctx.strokeStyle = '#334'
+        } else {
+          ctx.fillStyle = '#111827'
+          ctx.strokeStyle = '#3366aa'
+        }
+        ctx.lineWidth = 1.5
+        ctx.fillRect(sx, sy_slot, 100, slotH)
+        ctx.strokeRect(sx, sy_slot, 100, slotH)
       }
-      ctx.lineWidth = 1.5
-      ctx.fillRect(sx, sy_slot, 100, slotH)
-      ctx.strokeRect(sx, sy_slot, 100, slotH)
 
       if (!state.isEmpty) {
         // 아이콘 (좌측 40×40, 슬롯 안에 꽉)
@@ -4069,8 +3981,8 @@ class HUD {
     const by = sy - 80
 
     // Bubble background (rounded rect + tail)
-    ctx.fillStyle = 'rgba(255,255,255,0.92)'
-    ctx.strokeStyle = '#334466'
+    ctx.fillStyle = 'rgba(8,12,30,0.94)'
+    ctx.strokeStyle = '#4466aa'
     ctx.lineWidth = 1.5
     const r = 6
     ctx.beginPath()
@@ -4091,7 +4003,7 @@ class HUD {
     ctx.stroke()
 
     // Text
-    ctx.fillStyle = '#112244'
+    ctx.fillStyle = '#ddeeff'
     ctx.font = '15px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(bubble.text, bx + bw / 2, by + bh - 8)
@@ -5008,7 +4920,7 @@ class Result {
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 56px monospace'
+    ctx.font = 'bold 24px "Press Start 2P", monospace'
     ctx.shadowColor = '#FFD700'
     ctx.shadowBlur = 24
     ctx.fillText('배포 성공!', 400, 94)
@@ -5033,7 +4945,7 @@ class Result {
       ctx.strokeRect(188, 148, 424, 240)
     }
 
-    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     const t = GameState.gameTime
     const mins = Math.floor(t / 60)
@@ -5134,10 +5046,10 @@ class Result {
     ctx.save()
     ctx.globalAlpha = titleAlpha
     ctx.textAlign = 'center'
-    ctx.font = 'bold 128px monospace'
+    ctx.font = 'bold 32px "Press Start 2P", monospace'
     ctx.fillStyle = '#6b0000'
     ctx.fillText('AI', 400, 172)
-    ctx.font = 'bold 82px monospace'
+    ctx.font = 'bold 32px "Press Start 2P", monospace'
     ctx.fillStyle = '#b81010'
     ctx.fillText('승  리', 400, 266)
     ctx.restore()
@@ -5224,7 +5136,7 @@ class Result {
     const cause   = causes[GameState.killCount   % causes.length]
     const comment = comments[GameState.killCount % comments.length]
 
-    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     const t = GameState.gameTime
     const mins = Math.floor(t / 60)
@@ -5247,29 +5159,45 @@ class Result {
     ctx.fillStyle = 'rgba(0,0,0,0.62)'
     ctx.fillRect(0, 0, 800, 600)
 
-    // 카드
+    // 카드 — 다크 테마
     const px = 104, py = 88, pw = 592, ph = 268
-    ctx.fillStyle = '#f0ece0'
+    ctx.fillStyle = '#08080f'
     ctx.fillRect(px, py, pw, ph)
-    ctx.strokeStyle = '#881111'
-    ctx.lineWidth = 3
+
+    // 카드 내부 상단 미묘한 red tint
+    const defeatGrad = ctx.createLinearGradient(px, py, px, py + ph)
+    defeatGrad.addColorStop(0, 'rgba(160,10,20,0.18)')
+    defeatGrad.addColorStop(0.5, 'rgba(60,5,10,0.08)')
+    defeatGrad.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = defeatGrad
+    ctx.fillRect(px, py, pw, ph)
+
+    // 카드 테두리
+    ctx.strokeStyle = '#cc2233'
+    ctx.lineWidth = 2
     ctx.strokeRect(px, py, pw, ph)
 
-    // 헤더
-    ctx.fillStyle = '#881111'
+    // 헤더 배경
+    ctx.fillStyle = '#220008'
     ctx.fillRect(px, py, pw, 40)
-    ctx.fillStyle = '#ffffff'
+
+    // 헤더 텍스트 (red glow)
+    ctx.save()
+    ctx.shadowColor = '#ff2233'
+    ctx.shadowBlur = 8
+    ctx.fillStyle = '#ff4455'
     ctx.font = 'bold 19px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
+    ctx.restore()
 
     // 원인
-    ctx.fillStyle = '#444'
+    ctx.fillStyle = '#bb8899'
     ctx.font = '13px "VT323", monospace'
     ctx.fillText(cause, 400, py + 62)
 
     // 구분선 1
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(200,50,60,0.35)'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(px+24, py+74); ctx.lineTo(px+pw-24, py+74); ctx.stroke()
 
     // 스탯 (2열)
@@ -5286,34 +5214,34 @@ class Result {
     const c2l = px + 318, c2r = px + pw - 20
     statRows.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#7799aa'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c1l, ry)
-      ctx.fillStyle = '#111'; ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
+      ctx.fillStyle = '#ddeeff'; ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c1r, ry)
     })
     statRows2.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#7799aa'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c2l, ry)
-      ctx.fillStyle = i === 1 ? '#1a44cc' : '#111'
+      ctx.fillStyle = i === 1 ? '#ff8888' : '#ddeeff'
       ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c2r, ry)
     })
 
     // 구분선 2
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(200,50,60,0.35)'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(px+24, py+178); ctx.lineTo(px+pw-24, py+178); ctx.stroke()
 
     // 포인트 요약
-    ctx.fillStyle = '#333'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#aabbcc'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText(`출시 포인트 +${earned} 획득  (누적: ${total}pt)`, 400, py + 200)
 
     // 블랙코미디 멘트
-    ctx.fillStyle = '#888'; ctx.font = '11px "VT323", monospace'
+    ctx.fillStyle = '#667788'; ctx.font = '11px "VT323", monospace'
     ctx.fillText(comment, 400, py + 222)
 
     // 구분선 3
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(200,50,60,0.35)'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(px+24, py+234); ctx.lineTo(px+pw-24, py+234); ctx.stroke()
 
     // 버튼
@@ -5540,15 +5468,15 @@ class VirtualJoystick {
       if (skill) {
         // 키 레이블 (위쪽 작게)
         ctx.fillStyle = '#aaccff'
-        ctx.font = 'bold 10px monospace'
+        ctx.font = 'bold 8px "Press Start 2P", monospace'
         ctx.fillText(btn.label, btn.x, btn.y - 9)
         // 스킬 이름 앞 3자 (아래쪽)
         ctx.fillStyle = cd > 0 ? '#778899' : '#ffffff'
-        ctx.font = 'bold 11px monospace'
+        ctx.font = 'bold 8px "Press Start 2P", monospace'
         ctx.fillText(skill.slice(0, 3), btn.x, btn.y + 7)
       } else {
         ctx.fillStyle = '#555'
-        ctx.font = 'bold 14px monospace'
+        ctx.font = 'bold 10px "Press Start 2P", monospace'
         ctx.fillText(btn.label, btn.x, btn.y)
       }
     }
@@ -5569,13 +5497,6 @@ window._joystick = new VirtualJoystick()
  * Integration Lead (메인 에이전트) 통합 버전
  */
 
-async function tryImport(path) {
-  try {
-    await import(path)
-  } catch (e) {
-    console.warn(`[game.js] optional module not found: ${path}`)
-  }
-}
 
 // ─────────────────────────────────────────
 // 전역 상태
@@ -5677,32 +5598,60 @@ function _drawEnemyAnnouncement(ctx, ann) {
   else if (ann.timer < 0.6) alpha = ann.timer / 0.6
   else alpha = 1
 
+  // 슬라이드인: 0~0.3초 동안 위에서 내려옴
+  const slideY = elapsed < 0.3 ? (1 - elapsed / 0.3) * -90 : 0
+
   ctx.save()
   ctx.globalAlpha = alpha
+  ctx.translate(0, slideY)
 
   // 배너 배경
-  ctx.fillStyle = 'rgba(12, 4, 28, 0.9)'
+  ctx.fillStyle = 'rgba(8, 2, 18, 0.96)'
   ctx.fillRect(20, 72, 760, 100)
-  ctx.strokeStyle = '#cc2222'
+
+  // 내부 상단 그래디언트
+  const bannerGrad = ctx.createLinearGradient(20, 72, 20, 172)
+  bannerGrad.addColorStop(0, 'rgba(200,30,10,0.22)')
+  bannerGrad.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = bannerGrad
+  ctx.fillRect(20, 72, 760, 100)
+
+  // 테두리 (glow)
+  ctx.save()
+  ctx.shadowColor = '#ff4422'
+  ctx.shadowBlur = 12
+  ctx.strokeStyle = '#ff4422'
   ctx.lineWidth = 2
   ctx.strokeRect(20, 72, 760, 100)
+  ctx.restore()
+
+  // 상하 테두리 강조선
+  ctx.strokeStyle = '#ff6633'
+  ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(20, 73); ctx.lineTo(780, 73); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(20, 171); ctx.lineTo(780, 171); ctx.stroke()
 
   // 레이블
-  ctx.fillStyle = '#ff6644'
-  ctx.font = '22px "VT323", cursive'
+  ctx.fillStyle = '#ff8855'
+  ctx.font = '20px "VT323", monospace'
   ctx.textAlign = 'center'
   ctx.fillText('⚠  신규 적 등장  ⚠', 400, 94)
 
-  // 적 이름
-  ctx.fillStyle = '#ff3333'
-  ctx.font = 'bold 38px "VT323", cursive'
-  ctx.fillText(ann.name, 400, 130)
+  // 적 이름 (glow)
+  ctx.save()
+  ctx.shadowColor = '#ff3322'
+  ctx.shadowBlur = 10
+  ctx.fillStyle = '#ff4433'
+  ctx.font = 'bold 38px "VT323", monospace'
+  ctx.fillText(ann.name, 400, 132)
+  ctx.restore()
 
   // 설명
-  ctx.fillStyle = '#ddbbaa'
-  ctx.font = '20px "VT323", cursive'
+  ctx.fillStyle = '#ccaa99'
+  ctx.font = '18px "VT323", monospace'
   ctx.fillText(ann.desc, 400, 158)
 
+  ctx.translate(0, -slideY)
   ctx.restore()
 }
 
@@ -6109,28 +6058,11 @@ function _loop(now) {
 // ─────────────────────────────────────────
 // 부트스트랩
 // ─────────────────────────────────────────
-;(async () => {
-  await tryImport('./entities/charsprites.js')
-  await tryImport('./entities/enemysprites.js')
-  await tryImport('./entities/player.js')
-  await tryImport('./entities/enemies.js')
-  await tryImport('./entities/skills.js')
-  await tryImport('./systems/tilemap.js')
-  await tryImport('./systems/spawner.js')
-  await tryImport('./systems/levelup.js')
-  await tryImport('./systems/score.js')
-  await tryImport('./systems/drops.js')
-  await tryImport('./systems/meta.js')
-  await tryImport('./ui/hud.js')
-  await tryImport('./ui/lobby.js')
-  await tryImport('./ui/result.js')
-  await tryImport('./ui/joystick.js')
 
-  // 모든 모듈 로드 완료 → gameReady 이벤트 발송
-  window.dispatchEvent(new Event('gameReady'))
+// 모든 모듈 이미 로드됨 — 동기 초기화
+window.dispatchEvent(new Event('gameReady'))
+Game.init()
 
-  Game.init()
-})()
 
   </script>
 

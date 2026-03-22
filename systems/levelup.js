@@ -352,18 +352,34 @@ class LevelUpManager {
       const cx = startX + i * (cardW + 20)
       const cy = 200
 
+      // 희귀도별 테두리 색
+      const _rarityColor = {
+        newSkill:     '#ffaa33',  // 골드 — 신규 스킬
+        upgradeSkill: '#aa55ff',  // 보라 — 강화
+        passiveSkill: '#33ddaa',  // 청록 — 패시브
+        statBoost:    '#4499ff',  // 파랑 — 스탯
+      }[c.type] || '#4466aa'
+
       // 카드 배경 — ui-pack-4 다크 패널 (9-slice)
       if (window.drawUIPanel) {
         drawUIPanel(ctx, cx, cy, cardW, cardH)
       } else {
-        ctx.fillStyle = '#1e2a4a'
-        ctx.strokeStyle = '#4466aa'
-        ctx.lineWidth = 2
+        ctx.fillStyle = '#1a2240'
         ctx.beginPath()
         ctx.roundRect(cx, cy, cardW, cardH, 8)
         ctx.fill()
-        ctx.stroke()
       }
+
+      // 희귀도 테두리 (glow)
+      ctx.save()
+      ctx.shadowColor = _rarityColor
+      ctx.shadowBlur = 8
+      ctx.strokeStyle = _rarityColor
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.roundRect(cx, cy, cardW, cardH, 8)
+      ctx.stroke()
+      ctx.restore()
 
       // ── 상단 아이콘 박스 (카드 상단 중앙) ────────────────────────────
       const _iconKey = c.skillId || c.iconId

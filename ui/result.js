@@ -102,7 +102,7 @@ class Result {
       ctx.strokeRect(188, 148, 424, 240)
     }
 
-    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     const t = GameState.gameTime
     const mins = Math.floor(t / 60)
@@ -293,7 +293,7 @@ class Result {
     const cause   = causes[GameState.killCount   % causes.length]
     const comment = comments[GameState.killCount % comments.length]
 
-    const RANKS = ['인턴', '주니어 개발자', '개발자', '주임 개발자', '시니어 개발자']
+    const RANKS = ['인턴', '주니어 개발자', '시니어 개발자', '팀장', '디렉터', '본부장', '임원', '대표']
     const rankName = RANKS[Math.min(GameState.playerLevel - 1, RANKS.length - 1)]
     const t = GameState.gameTime
     const mins = Math.floor(t / 60)
@@ -316,29 +316,45 @@ class Result {
     ctx.fillStyle = 'rgba(0,0,0,0.62)'
     ctx.fillRect(0, 0, 800, 600)
 
-    // 카드
+    // 카드 — 다크 테마
     const px = 104, py = 88, pw = 592, ph = 268
-    ctx.fillStyle = '#f0ece0'
+    ctx.fillStyle = '#08080f'
     ctx.fillRect(px, py, pw, ph)
-    ctx.strokeStyle = '#881111'
-    ctx.lineWidth = 3
+
+    // 카드 내부 상단 미묘한 red tint
+    const defeatGrad = ctx.createLinearGradient(px, py, px, py + ph)
+    defeatGrad.addColorStop(0, 'rgba(160,10,20,0.18)')
+    defeatGrad.addColorStop(0.5, 'rgba(60,5,10,0.08)')
+    defeatGrad.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = defeatGrad
+    ctx.fillRect(px, py, pw, ph)
+
+    // 카드 테두리
+    ctx.strokeStyle = '#cc2233'
+    ctx.lineWidth = 2
     ctx.strokeRect(px, py, pw, ph)
 
-    // 헤더
-    ctx.fillStyle = '#881111'
+    // 헤더 배경
+    ctx.fillStyle = '#220008'
     ctx.fillRect(px, py, pw, 40)
-    ctx.fillStyle = '#ffffff'
+
+    // 헤더 텍스트 (red glow)
+    ctx.save()
+    ctx.shadowColor = '#ff2233'
+    ctx.shadowBlur = 8
+    ctx.fillStyle = '#ff4455'
     ctx.font = 'bold 19px "VT323", monospace'
     ctx.textAlign = 'center'
     ctx.fillText('프로젝트 취소 — AI 승리', 400, py + 26)
+    ctx.restore()
 
     // 원인
-    ctx.fillStyle = '#444'
+    ctx.fillStyle = '#bb8899'
     ctx.font = '13px "VT323", monospace'
     ctx.fillText(cause, 400, py + 62)
 
     // 구분선 1
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(200,50,60,0.35)'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(px+24, py+74); ctx.lineTo(px+pw-24, py+74); ctx.stroke()
 
     // 스탯 (2열)
@@ -355,34 +371,34 @@ class Result {
     const c2l = px + 318, c2r = px + pw - 20
     statRows.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#7799aa'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c1l, ry)
-      ctx.fillStyle = '#111'; ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
+      ctx.fillStyle = '#ddeeff'; ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c1r, ry)
     })
     statRows2.forEach(([lbl, val], i) => {
       const ry = py + 100 + i * 26
-      ctx.fillStyle = '#666'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
+      ctx.fillStyle = '#7799aa'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'left'
       ctx.fillText(lbl, c2l, ry)
-      ctx.fillStyle = i === 1 ? '#1a44cc' : '#111'
+      ctx.fillStyle = i === 1 ? '#ff8888' : '#ddeeff'
       ctx.font = 'bold 12px "VT323", monospace'; ctx.textAlign = 'right'
       ctx.fillText(val, c2r, ry)
     })
 
     // 구분선 2
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(200,50,60,0.35)'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(px+24, py+178); ctx.lineTo(px+pw-24, py+178); ctx.stroke()
 
     // 포인트 요약
-    ctx.fillStyle = '#333'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#aabbcc'; ctx.font = '12px "VT323", monospace'; ctx.textAlign = 'center'
     ctx.fillText(`출시 포인트 +${earned} 획득  (누적: ${total}pt)`, 400, py + 200)
 
     // 블랙코미디 멘트
-    ctx.fillStyle = '#888'; ctx.font = '11px "VT323", monospace'
+    ctx.fillStyle = '#667788'; ctx.font = '11px "VT323", monospace'
     ctx.fillText(comment, 400, py + 222)
 
     // 구분선 3
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1
+    ctx.strokeStyle = 'rgba(200,50,60,0.35)'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(px+24, py+234); ctx.lineTo(px+pw-24, py+234); ctx.stroke()
 
     // 버튼

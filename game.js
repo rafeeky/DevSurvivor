@@ -111,32 +111,60 @@ function _drawEnemyAnnouncement(ctx, ann) {
   else if (ann.timer < 0.6) alpha = ann.timer / 0.6
   else alpha = 1
 
+  // 슬라이드인: 0~0.3초 동안 위에서 내려옴
+  const slideY = elapsed < 0.3 ? (1 - elapsed / 0.3) * -90 : 0
+
   ctx.save()
   ctx.globalAlpha = alpha
+  ctx.translate(0, slideY)
 
   // 배너 배경
-  ctx.fillStyle = 'rgba(12, 4, 28, 0.9)'
+  ctx.fillStyle = 'rgba(8, 2, 18, 0.96)'
   ctx.fillRect(20, 72, 760, 100)
-  ctx.strokeStyle = '#cc2222'
+
+  // 내부 상단 그래디언트
+  const bannerGrad = ctx.createLinearGradient(20, 72, 20, 172)
+  bannerGrad.addColorStop(0, 'rgba(200,30,10,0.22)')
+  bannerGrad.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = bannerGrad
+  ctx.fillRect(20, 72, 760, 100)
+
+  // 테두리 (glow)
+  ctx.save()
+  ctx.shadowColor = '#ff4422'
+  ctx.shadowBlur = 12
+  ctx.strokeStyle = '#ff4422'
   ctx.lineWidth = 2
   ctx.strokeRect(20, 72, 760, 100)
+  ctx.restore()
+
+  // 상하 테두리 강조선
+  ctx.strokeStyle = '#ff6633'
+  ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(20, 73); ctx.lineTo(780, 73); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(20, 171); ctx.lineTo(780, 171); ctx.stroke()
 
   // 레이블
-  ctx.fillStyle = '#ff6644'
-  ctx.font = '22px "VT323", cursive'
+  ctx.fillStyle = '#ff8855'
+  ctx.font = '20px "VT323", monospace'
   ctx.textAlign = 'center'
   ctx.fillText('⚠  신규 적 등장  ⚠', 400, 94)
 
-  // 적 이름
-  ctx.fillStyle = '#ff3333'
-  ctx.font = 'bold 38px "VT323", cursive'
-  ctx.fillText(ann.name, 400, 130)
+  // 적 이름 (glow)
+  ctx.save()
+  ctx.shadowColor = '#ff3322'
+  ctx.shadowBlur = 10
+  ctx.fillStyle = '#ff4433'
+  ctx.font = 'bold 38px "VT323", monospace'
+  ctx.fillText(ann.name, 400, 132)
+  ctx.restore()
 
   // 설명
-  ctx.fillStyle = '#ddbbaa'
-  ctx.font = '20px "VT323", cursive'
+  ctx.fillStyle = '#ccaa99'
+  ctx.font = '18px "VT323", monospace'
   ctx.fillText(ann.desc, 400, 158)
 
+  ctx.translate(0, -slideY)
   ctx.restore()
 }
 
